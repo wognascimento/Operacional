@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Operacional", "Operacional\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibliotecasSIG", "..\BibliotecasSIG\BibliotecasSIG\BibliotecasSIG.csproj", "{894B3E19-8B96-32B5-7879-F8352B0B74A2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Update", "..\Update\Update.csproj", "{DDC8E9A1-8E73-A446-F0DB-098EC8ED654D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{894B3E19-8B96-32B5-7879-F8352B0B74A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{894B3E19-8B96-32B5-7879-F8352B0B74A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{894B3E19-8B96-32B5-7879-F8352B0B74A2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DDC8E9A1-8E73-A446-F0DB-098EC8ED654D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DDC8E9A1-8E73-A446-F0DB-098EC8ED654D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DDC8E9A1-8E73-A446-F0DB-098EC8ED654D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DDC8E9A1-8E73-A446-F0DB-098EC8ED654D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

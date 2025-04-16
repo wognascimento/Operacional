@@ -1,0 +1,131 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>icones\logo.ico</ApplicationIcon>
+    <AssemblyVersion>1.0.0.4</AssemblyVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="icones\configuracao-de-dados-windows-metro-16.png" />
+    <None Remove="icones\icons8-adicionar-a-coleção-40.png" />
+    <None Remove="icones\icons8-adicionar-a-coleção-80.png" />
+    <None Remove="icones\icons8-adicionar-propriedade-40.png" />
+    <None Remove="icones\icons8-adicionar-propriedade-80.png" />
+    <None Remove="icones\icons8-copiar-40.png" />
+    <None Remove="icones\icons8-copiar-80.png" />
+    <None Remove="icones\icons8-detalhes-40.png" />
+    <None Remove="icones\icons8-detalhes-80.png" />
+    <None Remove="icones\icons8-editar-propriedade-40.png" />
+    <None Remove="icones\icons8-editar-propriedade-80.png" />
+    <None Remove="icones\icons8-excluir-40.png" />
+    <None Remove="icones\icons8-excluir-80.png" />
+    <None Remove="icones\icons8-impressão-40.png" />
+    <None Remove="icones\icons8-impressão-80.png" />
+    <None Remove="icones\icons8-lista-de-verificação-40.png" />
+    <None Remove="icones\icons8-lista-de-verificação-80.png" />
+    <None Remove="icones\icons8-ms-excel-blue-ui-120.png" />
+    <None Remove="icones\icons8-ms-excel-blue-ui-16.png" />
+    <None Remove="icones\icons8-ms-excel-blue-ui-32.png" />
+    <None Remove="icones\icons8-ms-excel-blue-ui-96.png" />
+    <None Remove="icones\icons8-next-page-blue-ui-16.png" />
+    <None Remove="icones\icons8-next-page-blue-ui-32.png" />
+    <None Remove="icones\icons8-next-page-blue-ui-96.png" />
+    <None Remove="icones\icons8-pesquisar-40.png" />
+    <None Remove="icones\icons8-pesquisar-80.png" />
+    <None Remove="icones\icons8-salvar-40.png" />
+    <None Remove="icones\icons8-salvar-80.png" />
+    <None Remove="icones\icons8-salvar-como-blue-ui-16.png" />
+    <None Remove="icones\icons8-salvar-como-blue-ui-32.png" />
+    <None Remove="icones\icons8-salvar-como-blue-ui-96.png" />
+    <None Remove="icones\icons8-usu_0025c3_0025a1rio-de-g_0025c3_0025aanero-neutro-windows-metro-16.png" />
+    <None Remove="icones\icons8-vassoura-40.png" />
+    <None Remove="icones\icons8-vassoura-80.png" />
+    <None Remove="icones\logo.ico" />
+    <None Remove="icones\logo.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="icones\logo.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.3" />
+    <PackageReference Include="Syncfusion.UI.WPF.NET" Version="27.1.58" />
+    <PackageReference Include="telerik.ui.for.wpf.60.xaml" Version="2024.4.1111" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\BibliotecasSIG\BibliotecasSIG\BibliotecasSIG.csproj" />
+    <ProjectReference Include="..\..\Update\Update.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="icones\configuracao-de-dados-windows-metro-16.png" />
+    <Resource Include="icones\icons8-adicionar-a-coleção-40.png" />
+    <Resource Include="icones\icons8-adicionar-a-coleção-80.png" />
+    <Resource Include="icones\icons8-adicionar-propriedade-40.png" />
+    <Resource Include="icones\icons8-adicionar-propriedade-80.png" />
+    <Resource Include="icones\icons8-copiar-40.png" />
+    <Resource Include="icones\icons8-copiar-80.png" />
+    <Resource Include="icones\icons8-detalhes-40.png" />
+    <Resource Include="icones\icons8-detalhes-80.png" />
+    <Resource Include="icones\icons8-editar-propriedade-40.png" />
+    <Resource Include="icones\icons8-editar-propriedade-80.png" />
+    <Resource Include="icones\icons8-excluir-40.png" />
+    <Resource Include="icones\icons8-excluir-80.png" />
+    <Resource Include="icones\icons8-impressão-40.png" />
+    <Resource Include="icones\icons8-impressão-80.png" />
+    <Resource Include="icones\icons8-lista-de-verificação-40.png" />
+    <Resource Include="icones\icons8-lista-de-verificação-80.png" />
+    <Resource Include="icones\icons8-ms-excel-blue-ui-120.png" />
+    <Resource Include="icones\icons8-ms-excel-blue-ui-16.png" />
+    <Resource Include="icones\icons8-ms-excel-blue-ui-32.png" />
+    <Resource Include="icones\icons8-ms-excel-blue-ui-96.png" />
+    <Resource Include="icones\icons8-next-page-blue-ui-16.png" />
+    <Resource Include="icones\icons8-next-page-blue-ui-32.png" />
+    <Resource Include="icones\icons8-next-page-blue-ui-96.png" />
+    <Resource Include="icones\icons8-pesquisar-40.png" />
+    <Resource Include="icones\icons8-pesquisar-80.png" />
+    <Resource Include="icones\icons8-salvar-40.png" />
+    <Resource Include="icones\icons8-salvar-80.png" />
+    <Resource Include="icones\icons8-salvar-como-blue-ui-16.png" />
+    <Resource Include="icones\icons8-salvar-como-blue-ui-32.png" />
+    <Resource Include="icones\icons8-salvar-como-blue-ui-96.png" />
+    <Resource Include="icones\icons8-usu_0025c3_0025a1rio-de-g_0025c3_0025aanero-neutro-windows-metro-16.png" />
+    <Resource Include="icones\icons8-vassoura-40.png" />
+    <Resource Include="icones\icons8-vassoura-80.png" />
+    <Resource Include="icones\logo.ico" />
+    <Resource Include="icones\logo.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Localization\GridViewResources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>GridViewResources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Localization\GridViewResources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>GridViewResources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Modelos\MODELO-RELATORIO-DESPESA.xlsx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Impressos\" />
+  </ItemGroup>
+
+</Project>

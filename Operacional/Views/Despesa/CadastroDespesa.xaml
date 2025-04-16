@@ -1,0 +1,270 @@
+﻿<UserControl x:Class="Operacional.Views.Despesa.CadastroDespesa"
+             x:Name="Root"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Operacional.Views.Despesa" 
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation" 
+             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="900" Loaded="UserControl_Loaded">
+
+   <Grid>
+
+       <syncfusion:SfDataGrid  
+           x:Name="dGRelatorio"
+           AutoGenerateColumns="False"
+           AutoGenerateRelations="False"    
+           AllowResizingColumns="True"
+           ItemsSource="{Binding Relatorios}" 
+           SelectedItem="{Binding Relatorio}"
+           AddNewRowPosition="Bottom" 
+           AllowEditing="True" 
+           RowValidating="dGRelatorio_RowValidating">
+
+
+            <syncfusion:SfDataGrid.RecordContextMenu>
+                <ContextMenu Style="{x:Null}">
+
+                    <MenuItem Command="{Binding Source={x:Static Member=local:CadastroDespesaContextMenuCommands.Imprimir}}"
+                              CommandParameter="{Binding}"
+                              Header="Imprimir"/>
+
+
+                </ContextMenu>
+            </syncfusion:SfDataGrid.RecordContextMenu>
+
+
+            <syncfusion:SfDataGrid.Columns>
+               
+               <syncfusion:GridNumericColumn 
+                   HeaderText="ID RELATÓRIO" 
+                   MappingName="cod_relatorio" />
+               
+               <syncfusion:GridComboBoxColumn  
+                   HeaderText="FUNCIONÁRIO"
+                   MappingName="codigo_funcionario"
+                   ColumnSizer="AutoLastColumnFill"
+                   IsEditable="True"
+                   DisplayMemberPath="nome_func"
+                   SelectedValuePath="cod_func"
+                   ItemsSource="{Binding Funcionarios}" />
+               
+               <syncfusion:GridComboBoxColumn  
+                   HeaderText="RELATÓRIO"
+                   MappingName="nome_relatorio"
+                   DisplayMemberPath="descricao_relatorio"
+                   SelectedValuePath="descricao_relatorio"
+                   ItemsSource="{Binding DespsRelatorio}" />
+
+                <syncfusion:GridTextColumn 
+                    HeaderText="LOCALIDADE" 
+                    MappingName="localidade" TextTrimming="None" />
+
+                <syncfusion:GridDateTimeColumn 
+                    HeaderText="DATA" 
+                    MappingName="data" />
+
+                <syncfusion:GridComboBoxColumn  
+                    HeaderText="FINANCEIRO"
+                    MappingName="classif_financeiro"
+                    ItemsSource="{Binding ClassFinanceiro}"/>
+
+
+                <syncfusion:GridComboBoxColumn  
+                    HeaderText="EMPRESA"
+                    MappingName="codigo_empresa"
+                    ColumnSizer="Auto"
+                    IsEditable="True"
+                    DisplayMemberPath="nome_empresa"
+                    SelectedValuePath="codigo_empresa"
+                    ItemsSource="{Binding Empresas}" />
+
+
+            </syncfusion:SfDataGrid.Columns>
+
+           <syncfusion:SfDataGrid.DetailsViewDefinition>
+               
+               <!--  FirstLevelNestedGrid is created here  -->
+               <syncfusion:GridViewDefinition RelationalColumn="RelatorioObservacao">
+                   <syncfusion:GridViewDefinition.DataGrid>
+                       <syncfusion:SfDataGrid  
+                           x:Name="dGRelatorioObservacao"
+                           AutoGenerateColumns="False"
+                           AutoGenerateRelations="False" 
+                           AllowEditing="True" 
+                           RowValidating="dGRelatorioObservacao_RowValidating">
+                            <syncfusion:SfDataGrid.Columns>
+
+                                <syncfusion:GridTextColumn
+                                    HeaderText="OBSERVAÇÃO" 
+                                    MappingName="observacao" 
+                                    ColumnSizer="AutoWithLastColumnFill" 
+                                    TextWrapping="Wrap" />
+
+                            </syncfusion:SfDataGrid.Columns>
+                       </syncfusion:SfDataGrid>
+                   </syncfusion:GridViewDefinition.DataGrid>
+               </syncfusion:GridViewDefinition>
+
+               <!--  FirstLevelNestedGrid is created here  -->
+               <syncfusion:GridViewDefinition RelationalColumn="RelatorioAdiantamento">
+                   <syncfusion:GridViewDefinition.DataGrid>
+                       <syncfusion:SfDataGrid  
+                           x:Name="dGRelatorioAdiantamento"
+                           AutoGenerateColumns="False"
+                           AutoGenerateRelations="False" 
+                           AllowEditing="True" 
+                           RowValidating="dGRelatorioAdiantamento_RowValidating">
+                            <syncfusion:SfDataGrid.Columns>
+
+                                <syncfusion:GridCurrencyColumn
+                                    HeaderText="VALOR ADIANTAMENTO" 
+                                    MappingName="valor_adiantamento"/>
+
+                                <syncfusion:GridCurrencyColumn
+                                    HeaderText="VALOR DO PESO" 
+                                    MappingName="valor_real_peso"/>
+
+                                <syncfusion:GridCurrencyColumn
+                                    HeaderText="COTAÇÃO PESO" 
+                                    MappingName="valor_cotacao_peso"/>
+
+                                <syncfusion:GridCurrencyColumn
+                                    HeaderText="VALOR PESO" 
+                                    MappingName="valor_peso_peso"/>
+
+                                <syncfusion:GridCurrencyColumn
+                                    HeaderText="VALOR DO US$" 
+                                    MappingName="valor_real_dolar"/>
+
+                                <syncfusion:GridCurrencyColumn
+                                    HeaderText="COTAÇÃO US$" 
+                                    MappingName="valor_cotacao_dolar"/>
+
+                                <syncfusion:GridCurrencyColumn
+                                    HeaderText="VALOR US$" 
+                                    MappingName="valor_dolar_dolar"/>
+
+                                <syncfusion:GridCurrencyColumn
+                                    HeaderText="TOTAL ADIANTAMENTO" 
+                                    MappingName="total_adiantamento"/>
+
+                                <syncfusion:GridDateTimeColumn 
+                                    HeaderText="DATA PAGAMENTO" 
+                                    MappingName="data_pagamento" />
+
+                                <syncfusion:GridComboBoxColumn  
+                                    HeaderText="FORMA PAGAMENTO"
+                                    MappingName="forma_pagto"
+                                    ItemsSource="{Binding FormaPagamento}"/>   
+
+                            </syncfusion:SfDataGrid.Columns>
+                       </syncfusion:SfDataGrid>
+                   </syncfusion:GridViewDefinition.DataGrid>
+               </syncfusion:GridViewDefinition>
+
+
+               <!--  FirstLevelNestedGrid is created here  -->
+                <syncfusion:GridViewDefinition RelationalColumn="RelatorioDespesaDetalhesEditaveis">
+                   <syncfusion:GridViewDefinition.DataGrid>
+                       <syncfusion:SfDataGrid  
+                           x:Name="dGRelatorioDetalhes"
+                           AutoGenerateColumns="False"
+                           AutoGenerateRelations="False" 
+                           AddNewRowPosition="Bottom" 
+                           AllowEditing="True"
+                           RowValidating="dGRelatorioDetalhes_RowValidating" 
+                           AddNewRowInitiating="dGRelatorioDetalhes_AddNewRowInitiating">
+                            <syncfusion:SfDataGrid.Columns>
+
+                                <syncfusion:GridDateTimeColumn 
+                                    HeaderText="DATA" 
+                                    MappingName="data" />
+
+                                <syncfusion:GridComboBoxColumn  
+                                   HeaderText="SIGLA"
+                                   MappingName="sigla"
+                                   ColumnSizer="Auto"
+                                   IsEditable="True"
+                                   DisplayMemberPath="sigla"
+                                   SelectedValuePath="sigla"
+                                   ItemsSource="{Binding Clientes}" />
+
+                                <syncfusion:GridNumericColumn 
+                                    HeaderText="QTDE" 
+                                    MappingName="quantidade" />
+
+                                <syncfusion:GridComboBoxColumn  
+                                   HeaderText="ETAPA"
+                                   MappingName="etapa"
+                                   ColumnSizer="Auto"
+                                   IsEditable="True"
+                                   ItemsSource="{Binding Fases}" />
+
+                                <!-- CLASSIFICAÇÃO -->
+                                <syncfusion:GridTemplateColumn 
+                                    HeaderText="CLASSIFICAÇÃO" 
+                                    MappingName="classificacao">
+                                    <syncfusion:GridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock 
+                                                Text="{Binding classificacao}"
+                                                VerticalAlignment="Center"
+                                                TextWrapping="Wrap">
+           
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </syncfusion:GridTemplateColumn.CellTemplate>
+                                    <syncfusion:GridTemplateColumn.EditTemplate>
+                                        <DataTemplate>
+                                            <ComboBox 
+                                                ItemsSource="{Binding DataContext.TiposClassificacao, ElementName=Root}"
+                                                SelectedItem="{Binding classificacao, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        </DataTemplate>
+                                    </syncfusion:GridTemplateColumn.EditTemplate>
+                                </syncfusion:GridTemplateColumn>
+                               
+                                <!-- DESCRIÇÃO -->
+                                <syncfusion:GridTemplateColumn 
+                                    HeaderText="DESCRIÇÃO" 
+                                    MappingName="descricao">
+                                    <syncfusion:GridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock 
+                                                Text="{Binding descricao}" 
+                                                VerticalAlignment="Center"
+                                                TextWrapping="Wrap"/>
+                                        </DataTemplate>
+                                    </syncfusion:GridTemplateColumn.CellTemplate>
+                                    <syncfusion:GridTemplateColumn.EditTemplate>
+                                        <DataTemplate>
+                                            <ComboBox 
+                                                ItemsSource="{Binding DescricoesDisponiveis}"
+                                                SelectedItem="{Binding descricao, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        </DataTemplate>
+                                    </syncfusion:GridTemplateColumn.EditTemplate>
+                                </syncfusion:GridTemplateColumn>
+                                
+                                <syncfusion:GridNumericColumn 
+                                    HeaderText="DOCUMENTO" 
+                                    MappingName="documento" />
+
+                                <syncfusion:GridCurrencyColumn
+                                    HeaderText="VALOR" 
+                                    MappingName="valor" />
+
+                            </syncfusion:SfDataGrid.Columns>
+                       </syncfusion:SfDataGrid>
+                   </syncfusion:GridViewDefinition.DataGrid>
+               </syncfusion:GridViewDefinition>
+
+           </syncfusion:SfDataGrid.DetailsViewDefinition>
+           
+       </syncfusion:SfDataGrid>
+       
+   </Grid>
+   
+</UserControl>

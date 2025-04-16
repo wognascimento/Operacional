@@ -1,0 +1,62 @@
+﻿<UserControl x:Class="Operacional.Views.Transporte.DataEfetivaView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Operacional.Views.Transporte" 
+             xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
+    
+    <Grid>
+
+
+        <telerik:RadGridView x:Name="radGridView" 
+                ItemsSource="{Binding DatasEfetiva}" 
+                AutoGenerateColumns="False"
+                ShowGroupPanel="False"
+                RowValidating="radGridView_RowValidating">
+            <telerik:RadGridView.Columns>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding siglaserv}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding tema}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding est}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding cidade}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding coordenador}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding lider_equipe}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding numero_equipe}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding prazotransportecliente}" />
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding data_inicio_montagem, StringFormat=\{0:dd/MM/yyyy\}}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding data_inauguracao, StringFormat=\{0:dd/MM/yyyy\}}" />
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding data_termino_montagem, StringFormat=\{0:dd/MM/yyyy\}}" />
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding data_contrato_mo_inicio, StringFormat=\{0:dd/MM/yyyy\}}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding data_contrato_mo_fim, StringFormat=\{0:dd/MM/yyyy\}}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding data_de_expedicao, StringFormat=\{0:dd/MM/yyyy\}}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding data_combinada_mo_inicio, StringFormat=\{0:dd/MM/yyyy\}}" />
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding data_combinada_mo_fim, StringFormat=\{0:dd/MM/yyyy\}}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding noites_previstas_cronograma}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding dias_montagem}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding diferenca}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding transporte_por_conta}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding data_informada_cliente, StringFormat=\{0:dd/MM/yyyy\}}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding obs_data_inicio_montagem}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding data_inicio_desmontagem, StringFormat=\{0:dd/MM/yyyy\}}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding obs_data_termino_montagem}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding data_final_desmontagem, StringFormat=\{0:dd/MM/yyyy\}}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding dias_desmontagem}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding diferenca_desmontagem}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding noites_previstas_cronograma_desmontagem}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding data_contrato_des_inicio, StringFormat=\{0:dd/MM/yyyy\}}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding data_contrato_des_fim, StringFormat=\{0:dd/MM/yyyy\}}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding obs_desmontagem}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding alterado_por}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding data_alterado, StringFormat=\{0:dd/MM/yyyy\}}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding data_libera_area_desmontagem, StringFormat=\{0:dd/MM/yyyy\}}"/>
+            </telerik:RadGridView.Columns>
+
+           
+        </telerik:RadGridView>
+
+
+    </Grid>
+    
+</UserControl>

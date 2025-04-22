@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Win32;
 using Operacional.DataBase.Models;
 using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.Grid.Helpers;
 using Syncfusion.UI.Xaml.Utility;
 using Syncfusion.XlsIO;
 using System.Collections.ObjectModel;
@@ -104,7 +106,43 @@ namespace Operacional.Views.Despesa
             }
         }
 
-        private async void dGRelatorio_RowValidating(object sender, Syncfusion.UI.Xaml.Grid.RowValidatingEventArgs e)
+        private async void dGRelatorio_CurrentCellDropDownSelectionChanged(object sender, CurrentCellDropDownSelectionChangedEventArgs e)
+        {
+            CadastroDespesaViewModel vm = (CadastroDespesaViewModel)DataContext;
+            var grid = ((SfDataGrid)sender);
+            var column = grid.Columns[grid.ResolveToGridVisibleColumnIndex(e.RowColumnIndex.ColumnIndex)];
+            var valueSelecionado = e.SelectedItem as OperacionalTDespFuncionarioModel;
+            var registro = grid.GetRecordAtRowIndex(e.RowColumnIndex.RowIndex) as OperacionalRelatorioDespesaModel;
+
+            try
+            {
+                using Context context = new();
+                if (column.MappingName == "codigo_funcionario")
+                {
+                    var empresa = await context.ComprasEmpresas
+                        .Where(e => e.abreviacao == valueSelecionado.empresa)
+                        .Select(f => f.totvs)
+                        .FirstOrDefaultAsync();
+
+                    //grid.SelectionController.CurrentCellManager.BeginEdit();
+                    //grid.View.BeginInit();
+                    registro.codigo_empresa = empresa.Value;
+                    //grid.SelectionController.CurrentCellManager.EndEdit();
+                    //grid.View.EndInit();
+                    grid.View.Refresh();
+
+                }
+
+            }
+            catch (DbUpdateException ex)
+            {
+                MessageBox.Show($"Erro: {ex.InnerException?.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            
+
+        }
+
+        private async void dGRelatorio_RowValidating(object sender, RowValidatingEventArgs e)
         {
             CadastroDespesaViewModel vm = (CadastroDespesaViewModel)DataContext;
             try
@@ -256,13 +294,6 @@ namespace Operacional.Views.Despesa
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
             }
         }
-
-        private void dGRelatorioDetalhes_AddNewRowInitiating(object sender, Syncfusion.UI.Xaml.Grid.AddNewRowInitiatingEventArgs e)
-        {
-            //CadastroDespesaViewModel vm = (CadastroDespesaViewModel)DataContext;
-
-            //(e.NewObject as RegistroDespesa).cod_relatorio = vm.Relatorios.cod_relatorio;
-        }
     }
 
     public partial class CadastroDespesaViewModel : INotifyPropertyChanged
@@ -402,6 +433,7 @@ namespace Operacional.Views.Despesa
                 using Context context = new();
                 var funcionariosComBancos = await context.DespFuncionarios
                     .Include(f => f.DadosBancarios)
+                    .OrderBy(f => f.nome_func)
                     .ToListAsync();
                 return [.. funcionariosComBancos];
             }
@@ -828,7 +860,7 @@ namespace Operacional.Views.Despesa
 
                     int linhaInicial = 11; // Inserir a partir da linha 11
 
-                    foreach (var item in record.RelatorioDespesaDetalhesEditaveis)
+                    foreach (var item in record.RelatorioDespesaDetalhesEditaveis.Where(r => r.valor is not null && r.valor != 0))
                     {
                         worksheet.Range["A" + linhaInicial].DateTime = item.data.Value;
                         worksheet.Range["B" + linhaInicial].Text = item.sigla;

@@ -22,7 +22,7 @@
            SelectedItem="{Binding Relatorio}"
            AddNewRowPosition="Bottom" 
            AllowEditing="True" 
-           RowValidating="dGRelatorio_RowValidating">
+           RowValidating="dGRelatorio_RowValidating" CurrentCellDropDownSelectionChanged="dGRelatorio_CurrentCellDropDownSelectionChanged">
 
 
             <syncfusion:SfDataGrid.RecordContextMenu>
@@ -176,8 +176,7 @@
                            AutoGenerateRelations="False" 
                            AddNewRowPosition="Bottom" 
                            AllowEditing="True"
-                           RowValidating="dGRelatorioDetalhes_RowValidating" 
-                           AddNewRowInitiating="dGRelatorioDetalhes_AddNewRowInitiating">
+                           RowValidating="dGRelatorioDetalhes_RowValidating" >
                             <syncfusion:SfDataGrid.Columns>
 
                                 <syncfusion:GridDateTimeColumn 

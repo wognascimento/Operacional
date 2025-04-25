@@ -128,4 +128,8 @@
     <Folder Include="Impressos\" />
   </ItemGroup>
 
+	<Target Name="IncludeEmptyFolders" AfterTargets="Publish">
+		<MakeDir Directories="$(PublishDir)Impressos" />
+	</Target>
+
 </Project>

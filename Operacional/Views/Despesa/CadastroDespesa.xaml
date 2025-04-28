@@ -22,8 +22,9 @@
            SelectedItem="{Binding Relatorio}"
            AddNewRowPosition="Bottom" 
            AllowEditing="True" 
-           RowValidating="dGRelatorio_RowValidating" CurrentCellDropDownSelectionChanged="dGRelatorio_CurrentCellDropDownSelectionChanged">
-
+           RowValidating="dGRelatorio_RowValidating" 
+           CurrentCellDropDownSelectionChanged="dGRelatorio_CurrentCellDropDownSelectionChanged" 
+           CurrentCellValueChanged="dGRelatorio_CurrentCellValueChanged">
 
             <syncfusion:SfDataGrid.RecordContextMenu>
                 <ContextMenu Style="{x:Null}">
@@ -32,16 +33,16 @@
                               CommandParameter="{Binding}"
                               Header="Imprimir"/>
 
-
                 </ContextMenu>
             </syncfusion:SfDataGrid.RecordContextMenu>
 
 
             <syncfusion:SfDataGrid.Columns>
                
-               <syncfusion:GridNumericColumn 
+               <syncfusion:GridTextColumn 
                    HeaderText="ID RELATÓRIO" 
-                   MappingName="cod_relatorio" />
+                   MappingName="cod_relatorio" 
+                   ColumnSizer="SizeToCells" />
                
                <syncfusion:GridComboBoxColumn  
                    HeaderText="FUNCIONÁRIO"
@@ -50,14 +51,16 @@
                    IsEditable="True"
                    DisplayMemberPath="nome_func"
                    SelectedValuePath="cod_func"
-                   ItemsSource="{Binding Funcionarios}" />
+                   ItemsSource="{Binding Funcionarios}" 
+                   Width="300" />
                
                <syncfusion:GridComboBoxColumn  
                    HeaderText="RELATÓRIO"
                    MappingName="nome_relatorio"
                    DisplayMemberPath="descricao_relatorio"
                    SelectedValuePath="descricao_relatorio"
-                   ItemsSource="{Binding DespsRelatorio}" />
+                   ItemsSource="{Binding DespsRelatorio}" 
+                   Width="180" />
 
                 <syncfusion:GridTextColumn 
                     HeaderText="LOCALIDADE" 
@@ -65,10 +68,12 @@
 
                 <syncfusion:GridDateTimeColumn 
                     HeaderText="DATA" 
+                    ColumnSizer="SizeToCells"
                     MappingName="data" />
 
                 <syncfusion:GridComboBoxColumn  
                     HeaderText="FINANCEIRO"
+                    ColumnSizer="SizeToHeader"
                     MappingName="classif_financeiro"
                     ItemsSource="{Binding ClassFinanceiro}"/>
 
@@ -76,11 +81,12 @@
                 <syncfusion:GridComboBoxColumn  
                     HeaderText="EMPRESA"
                     MappingName="codigo_empresa"
-                    ColumnSizer="Auto"
+                    ColumnSizer="SizeToCells"
                     IsEditable="True"
                     DisplayMemberPath="nome_empresa"
                     SelectedValuePath="codigo_empresa"
-                    ItemsSource="{Binding Empresas}" />
+                    ItemsSource="{Binding Empresas}" 
+                    Width="380" />
 
 
             </syncfusion:SfDataGrid.Columns>

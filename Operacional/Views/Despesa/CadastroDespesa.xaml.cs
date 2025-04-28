@@ -126,11 +126,14 @@ namespace Operacional.Views.Despesa
 
                     //grid.SelectionController.CurrentCellManager.BeginEdit();
                     //grid.View.BeginInit();
-                    registro.codigo_empresa = empresa.Value;
+                    registro.codigo_empresa = empresa; //empresa != null ? empresa : 0;
                     //grid.SelectionController.CurrentCellManager.EndEdit();
                     //grid.View.EndInit();
-                    grid.View.Refresh();
+                    //grid.View.Refresh();
 
+                }
+                else if (column.MappingName == "nome_funcionario")
+                {
                 }
 
             }
@@ -138,8 +141,19 @@ namespace Operacional.Views.Despesa
             {
                 MessageBox.Show($"Erro: {ex.InnerException?.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-            
 
+        }
+
+        private void dGRelatorio_CurrentCellValueChanged(object sender, CurrentCellValueChangedEventArgs e)
+        {
+
+            CadastroDespesaViewModel vm = (CadastroDespesaViewModel)DataContext;
+            var grid = ((SfDataGrid)e.OriginalSender);
+
+            if (e.Column.MappingName == "nome_relatorio")
+            {
+                grid.View.Refresh();
+            }
         }
 
         private async void dGRelatorio_RowValidating(object sender, RowValidatingEventArgs e)
@@ -294,6 +308,7 @@ namespace Operacional.Views.Despesa
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
             }
         }
+
     }
 
     public partial class CadastroDespesaViewModel : INotifyPropertyChanged

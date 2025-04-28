@@ -155,6 +155,8 @@ namespace Operacional
         {
             try
             {
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
+
                 using Context context = new();
                 var retorno = await context.QryCargasMontagem.AsNoTracking().ToListAsync();
                 

@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Win32;
+using Operacional.DataBase;
 using Operacional.DataBase.Models;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.Grid.Helpers;
@@ -824,6 +825,7 @@ namespace Operacional.Views.Despesa
 
     public static class CadastroDespesaContextMenuCommands
     {
+        private static readonly DataBaseSettings BaseSettings = DataBaseSettings.Instance;
         static BaseCommand? imprimir;
         public static BaseCommand Imprimir
         {
@@ -855,7 +857,7 @@ namespace Operacional.Views.Despesa
                     application.DefaultVersion = ExcelVersion.Excel2016;
 
                     // Abre o arquivo modelo
-                    FileStream inputStream = new(@"C:\SIG\Operacional S.I.G\Modelos\MODELO-RELATORIO-DESPESA.xlsx", FileMode.Open, FileAccess.Read);
+                    FileStream inputStream = new(@$"{BaseSettings.CaminhoSistema}Modelos\MODELO-RELATORIO-DESPESA.xlsx", FileMode.Open, FileAccess.Read);
                     IWorkbook workbook = application.Workbooks.Open(inputStream);
                     IWorksheet worksheet = workbook.Worksheets[0];
                     // Preenche células fixas

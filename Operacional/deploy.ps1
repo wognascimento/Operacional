@@ -11,7 +11,6 @@ $InnoCompiler = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 function Get-ApplicationVersion {
     # Tenta encontrar o arquivo .csproj
     $projFile = Get-ChildItem -Path $projectPath -Filter *.csproj | Select-Object -First 1
-    
     #if ($projFile) {
         # Ler conteúdo do arquivo de projeto
         $projContent = [xml](Get-Content $projFile.FullName)
@@ -21,10 +20,8 @@ function Get-ApplicationVersion {
         #if (-not $version) {
             $version = $projContent.Project.PropertyGroup.AssemblyVersion
         #}
-        
         return $version
     #}
-    
     # Fallback: versão manual
     #return "1.0.0"
 }
@@ -41,6 +38,15 @@ New-Item -ItemType Directory -Path $publishPath -Force
 $version = Get-ApplicationVersion
 $zipFileName = "application-$version.zip"
 $zipFullPath = "$projectPath\$zipFileName"
+$issFile = "$projectPath\Setup.iss"
+
+# Carrega todo o conteúdo do arquivo
+$content = Get-Content $issFile
+# Altera a linha que contém '#define MyAppVersion'
+$content = $content -replace '(?m)^#define\s+MyAppVersion\s+".*"$', "#define MyAppVersion `"$version`""
+
+# Salva o conteúdo de volta no arquivo
+Set-Content -Path $issFile -Value $content
 
 # Compilar o projeto
 dotnet publish $projectPath -c Release -o $publishPath
@@ -85,7 +91,7 @@ scp $zipFullPath $serverUploadPath
 scp "$projectPath\version.json" "root@192.168.0.49:/var/www/updates/downloads/operacional/version.json"
 
 $credencial = Get-Credential -UserName "cipodominio\administrador"
-New-PSDrive -Name "RedeTemp" -PSProvider FileSystem -Root "\\192.168.0.163\sig\instaladores" -Credential $credencial
+New-PSDrive -Name "RedeTemp" -PSProvider FileSystem -Root "\\192.168.0.4\sistemas\SIG" -Credential $credencial
 Copy-Item -Path "$projectPath\Output\Operacional.exe"  -Destination "RedeTemp:"
 Remove-PSDrive -Name "RedeTemp"
 

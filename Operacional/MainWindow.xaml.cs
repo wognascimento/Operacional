@@ -2,6 +2,7 @@
 using Operacional.DataBase;
 using Operacional.DataBase.Models;
 using Operacional.Views;
+using Operacional.Views.Cronograma;
 using Operacional.Views.Despesa;
 using Operacional.Views.Transporte;
 using Producao;
@@ -15,8 +16,6 @@ using System.Drawing;
 using System.Windows;
 using System.Windows.Input;
 using Telerik.Windows.Controls;
-using Telerik.Windows.Documents.Spreadsheet.Expressions.Functions;
-using Telerik.Windows.Persistence.Core;
 using SizeMode = Syncfusion.SfSkinManager.SizeMode;
 
 namespace Operacional
@@ -32,7 +31,7 @@ namespace Operacional
         {
             InitializeComponent();
 
-            StyleManager.ApplicationTheme = new Windows11Theme();
+            //StyleManager.ApplicationTheme = new Windows11Theme();
 
             VisualStyles visualStyle = VisualStyles.Default;
             Enum.TryParse("Metro", out visualStyle);
@@ -272,6 +271,11 @@ namespace Operacional
         private void OnOpenCadastroDespesaClick(object sender, RoutedEventArgs e)
         {
             adicionarFilho(new CadastroDespesa(), "CADASTRO DESPESAS", "CADASTRO_DESPESAS");
+        }
+
+        private void OnCronogramaClick(object sender, RoutedEventArgs e)
+        {
+            adicionarFilho(new Cronograma(), "CRONOGRAMA", "CRONOGRAMA");
         }
     }
 }

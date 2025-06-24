@@ -54,7 +54,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.3" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Dapper" Version="2.1.66" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     <PackageReference Include="Syncfusion.UI.WPF.NET" Version="27.1.58" />
     <PackageReference Include="telerik.ui.for.wpf.60.xaml" Version="2024.4.1111" />
   </ItemGroup>
@@ -119,6 +121,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Modelos\CRONOGRAMA_CLIENTE.xlsx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Modelos\CRONOGRAMA_COORDENADOR.xlsx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Modelos\MODELO-RELATORIO-DESPESA.xlsx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -126,6 +134,7 @@
 
   <ItemGroup>
     <Folder Include="Impressos\" />
+    <Folder Include="Views\EquipeExterna\" />
   </ItemGroup>
 
 	<Target Name="IncludeEmptyFolders" AfterTargets="Publish">

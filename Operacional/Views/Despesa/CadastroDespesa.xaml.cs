@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Win32;
 using Operacional.DataBase;
 using Operacional.DataBase.Models;
 using Syncfusion.UI.Xaml.Grid;
@@ -897,14 +896,14 @@ namespace Operacional.Views.Despesa
                     linhaInicial+=3;
                     worksheet.Range[@$"A{linhaInicial}"].Text = record.RelatorioObservacao.FirstOrDefault().observacao;
                     // Salva como novo arquivo
-                    FileStream outputStream = new(@$"C:\SIG\Operacional S.I.G\Impressos\RELATORIO-DESPESA-{record.cod_relatorio}.xlsx", FileMode.Create, FileAccess.Write);
+                    FileStream outputStream = new(@$"{BaseSettings.CaminhoSistema}Impressos\RELATORIO-DESPESA-{record.cod_relatorio}.xlsx", FileMode.Create, FileAccess.Write);
                     workbook.SaveAs(outputStream);
 
                     workbook.Close();
                     inputStream.Close();
                     outputStream.Close();
 
-                    Process.Start("explorer", @$"C:\SIG\Operacional S.I.G\Impressos\RELATORIO-DESPESA-{record.cod_relatorio}.xlsx");
+                    Process.Start("explorer", @$"{BaseSettings.CaminhoSistema}Impressos\RELATORIO-DESPESA-{record.cod_relatorio}.xlsx");
                 }
 
                 Console.WriteLine("Arquivo gerado com sucesso!");

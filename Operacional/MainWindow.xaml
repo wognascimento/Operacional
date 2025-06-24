@@ -49,8 +49,18 @@
                 <syncfusion:MenuItemAdv Header="Consultas">
                     <syncfusion:MenuItemAdv Header="Detalhes Relatório"/>
                 </syncfusion:MenuItemAdv>
+            </syncfusion:MenuItemAdv>
 
+            <syncfusion:MenuItemAdv Header="Cronograma">
+                <syncfusion:MenuItemAdv Header="Montagem" Click="OnCronogramaClick"/>
+            </syncfusion:MenuItemAdv>
 
+            <syncfusion:MenuItemAdv Header="Equipe Externa">
+                <syncfusion:MenuItemAdv Header="Cadastro de Equipe"/>
+                <syncfusion:MenuItemAdv Header="Cadastro de Orçamento"/>
+                <syncfusion:MenuItemAdv Header="Consultas">
+                    <syncfusion:MenuItemAdv Header="Previsão Valores Cronograma"/>
+                </syncfusion:MenuItemAdv>
             </syncfusion:MenuItemAdv>
 
         </syncfusion:MenuAdv>

@@ -1,0 +1,283 @@
+﻿<UserControl x:Class="Operacional.Views.Cronograma.Cronograma"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Operacional.Views.Cronograma"
+             xmlns:system="clr-namespace:System;assembly=mscorlib"
+             xmlns:Converter="clr-namespace:Operacional.Converter" xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation"
+             mc:Ignorable="d" Loaded="UserControl_Loaded">
+
+    <UserControl.Resources>
+        <Converter:ValorParaCorConverter x:Key="ValorParaCorConverter"/>
+        <Converter:ValorParaFonteCorConverter x:Key="ValorParaFonteCorConverter"/>
+
+        <Style x:Key="EstiloCelulaDinamica" TargetType="DataGridCell">
+            <Setter Property="Background" Value="{Binding Path=Content.Text, RelativeSource={RelativeSource Self}, Converter={StaticResource ValorParaCorConverter}}"/>
+            <Setter Property="Foreground" Value="{Binding Path=Content.Text, RelativeSource={RelativeSource Self}, Converter={StaticResource ValorParaFonteCorConverter}}"/>
+        </Style>
+
+        <Converter:ValueToBackgroundConverter x:Key="ValueToBackgroundConverter"/>
+        <Converter:ValueToForegroundConverter x:Key="ValueToForegroundConverter"/>
+
+        <!-- Estilo simplificado usando apenas converters -->
+        <Style x:Key="ConditionalCellStyle" TargetType="telerik:GridViewCell">
+            <Setter Property="Background" Value="{Binding RelativeSource={RelativeSource Self}, Path=Value, Converter={StaticResource ValueToBackgroundConverter}}"/>
+            <Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource Self}, Path=Value, Converter={StaticResource ValueToForegroundConverter}}"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="4*" />
+            <ColumnDefinition Width="2*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- TOPO: CLIENTE + TEMA -->
+        <Grid Grid.ColumnSpan="2" Grid.Row="0" Margin="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="auto" />
+                <ColumnDefinition Width="3*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Background="#FFEADCB5">
+                <TextBlock Text="CLIENTE:" FontWeight="Bold" Margin="4" VerticalAlignment="Center"/>
+                <!--<TextBlock Text="SHOPPING ABC - ABC" Margin="4"/>-->
+                <ComboBox 
+                    x:Name="cmbAprovados" 
+                    ItemsSource="{Binding Aprovados}"
+                    Margin="4" 
+                    DisplayMemberPath="sigla_serv"
+                    SelectedValuePath="sigla_serv" 
+                    Width="200" 
+                    SelectionChanged="ComboBox_SelectionChanged" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Background="#FFEADCB5">
+                <TextBlock Text="ABRIR POR: " FontWeight="Bold" VerticalAlignment="Center" Margin="8"/>
+                <Button x:Name="btnSigla" Content="SIGLA" Margin="8" Width="70" Visibility="Collapsed" Click="OnOpenSigla"/>
+                <Button x:Name="btnCompleto" Content="COMPLETO" Margin="8" Width="70" Visibility="Collapsed" Click="OnOpenCompleto"/>
+            </StackPanel>
+
+
+
+        </Grid>
+
+        <!-- CORPO PRINCIPAL -->
+        <Grid Grid.Row="1" Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <!-- Notificações e opções -->
+                <RowDefinition Height="*" />
+                <!-- Tabela principal -->
+                <RowDefinition Height="Auto"/>
+                <!-- Responsável, Data, Botões -->
+                <RowDefinition Height="Auto"/>
+                <!-- Tabela pequena na base -->
+            </Grid.RowDefinitions>
+
+            <!-- Linha de Notificações/Opções (NOITE EXTRA, caixas de seleção, etc) -->
+            <!--
+            <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="4">
+                <TextBlock Text="NOITE EXTRA" FontWeight="Bold" VerticalAlignment="Center" Margin="4" />
+                <ItemsControl ItemsSource="{Binding Noites}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <CheckBox Content="{Binding}" Margin="2"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </StackPanel>
+            -->
+            <!-- Tabela principal dos locais/atividades -->
+            <telerik:RadGridView 
+                Grid.Row="1"
+                AutoGenerateColumns="False"
+                Margin="2"
+                SelectionUnit="Cell"
+                ShowGroupPanel="False"
+                ItemsSource="{Binding ViewCronogramas}" RowValidated="CronoRowValidated">
+                <telerik:RadGridView.Columns>
+                    <telerik:GridViewDataColumn Header="Item" DataMemberBinding="{Binding item}" IsReadOnly="True"/>
+                    <telerik:GridViewDataColumn Header="Local" DataMemberBinding="{Binding localitem}" IsReadOnly="True"/>
+                    <telerik:GridViewDataColumn Header="Descrição" DataMemberBinding="{Binding descricao}" Width="auto" IsReadOnly="True"/>
+                    <telerik:GridViewDataColumn Header="Qtd" DataMemberBinding="{Binding qtd}" Width="50" IsReadOnly="True" HeaderTextAlignment="Center" TextAlignment="Center"/>
+                    <telerik:GridViewDataColumn Header="N1" DataMemberBinding="{Binding n1, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HeaderTextAlignment="Center" TextAlignment="Center" CellStyle="{StaticResource ConditionalCellStyle}" IsFilterable="False"/>
+                    <telerik:GridViewDataColumn Header="N2" DataMemberBinding="{Binding n2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HeaderTextAlignment="Center" TextAlignment="Center" CellStyle="{StaticResource ConditionalCellStyle}" IsFilterable="False"/>
+                    <telerik:GridViewDataColumn Header="N3" DataMemberBinding="{Binding n3, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HeaderTextAlignment="Center" TextAlignment="Center" CellStyle="{StaticResource ConditionalCellStyle}" IsFilterable="False"/>
+                    <telerik:GridViewDataColumn Header="N4" DataMemberBinding="{Binding n4, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HeaderTextAlignment="Center" TextAlignment="Center" CellStyle="{StaticResource ConditionalCellStyle}" IsFilterable="False"/>
+                    <telerik:GridViewDataColumn Header="N5" DataMemberBinding="{Binding n5, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HeaderTextAlignment="Center" TextAlignment="Center" CellStyle="{StaticResource ConditionalCellStyle}" IsFilterable="False"/>
+                    <telerik:GridViewDataColumn Header="N6" DataMemberBinding="{Binding n6, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HeaderTextAlignment="Center" TextAlignment="Center" CellStyle="{StaticResource ConditionalCellStyle}" IsFilterable="False"/>
+                    <telerik:GridViewDataColumn Header="N7" DataMemberBinding="{Binding n7, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HeaderTextAlignment="Center" TextAlignment="Center" CellStyle="{StaticResource ConditionalCellStyle}" IsFilterable="False"/>
+                    <telerik:GridViewDataColumn Header="N8" DataMemberBinding="{Binding n8, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HeaderTextAlignment="Center" TextAlignment="Center" CellStyle="{StaticResource ConditionalCellStyle}" IsFilterable="False"/>
+                    <telerik:GridViewDataColumn Header="N9" DataMemberBinding="{Binding n9, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HeaderTextAlignment="Center" TextAlignment="Center" CellStyle="{StaticResource ConditionalCellStyle}" IsFilterable="False"/>
+                    <telerik:GridViewDataColumn Header="N10" DataMemberBinding="{Binding n10, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HeaderTextAlignment="Center" TextAlignment="Center" CellStyle="{StaticResource ConditionalCellStyle}" IsFilterable="False"/>
+                    <telerik:GridViewDataColumn Header="N11" DataMemberBinding="{Binding n11, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HeaderTextAlignment="Center" TextAlignment="Center" CellStyle="{StaticResource ConditionalCellStyle}" IsFilterable="False"/>
+                    <telerik:GridViewDataColumn Header="N12" DataMemberBinding="{Binding n12, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HeaderTextAlignment="Center" TextAlignment="Center" CellStyle="{StaticResource ConditionalCellStyle}" IsFilterable="False"/>
+                    <telerik:GridViewDataColumn Header="N13" DataMemberBinding="{Binding n13, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HeaderTextAlignment="Center" TextAlignment="Center" CellStyle="{StaticResource ConditionalCellStyle}" IsFilterable="False"/>
+                    <telerik:GridViewDataColumn Header="N14" DataMemberBinding="{Binding n14, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HeaderTextAlignment="Center" TextAlignment="Center" CellStyle="{StaticResource ConditionalCellStyle}" IsFilterable="False"/>
+                    <telerik:GridViewDataColumn Header="N15" DataMemberBinding="{Binding n15, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HeaderTextAlignment="Center" TextAlignment="Center" CellStyle="{StaticResource ConditionalCellStyle}" IsFilterable="False"/>
+                    <telerik:GridViewDataColumn Header="N16" DataMemberBinding="{Binding n16, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HeaderTextAlignment="Center" TextAlignment="Center" CellStyle="{StaticResource ConditionalCellStyle}" IsFilterable="False"/>
+                    <telerik:GridViewDataColumn Header="Obs Coordenador" DataMemberBinding="{Binding obs_coordenador}" Width="150"/>
+                    <telerik:GridViewDataColumn Header="Obs Cliente" DataMemberBinding="{Binding obs_cliente}" Width="150"/>
+                </telerik:RadGridView.Columns>
+            </telerik:RadGridView>
+
+            <!-- RESPONSÁVEL, DATA, BOTÕES -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="4">
+                <!--
+                <StackPanel>
+                    <TextBlock Text="RESPONSÁVEL:" FontWeight="Bold"/>
+                    <TextBlock Text="claudia_nascimento"/>
+                </StackPanel>
+                <StackPanel Margin="20,0,0,0">
+                    <TextBlock Text="DATA CONCLUSÃO:" FontWeight="Bold"/>
+                    <TextBlock Text="14/09/2024"/>
+                </StackPanel>
+                -->
+                <Button Content="Coordenador" Margin="10,0,0,0" Click="OnCronogramaCoordenadorClick" Width="75"/>
+                <Button Content="Cliente" Margin="4,0,0,0" Click="OnCronogramaClienteClick" Width="75"/>
+                <!--<Button Content="Valor Montagem" Margin="4,0,0,0"/>-->
+            </StackPanel>
+
+            <!-- Tabela Final (Preenchido, equipe etc) -->
+            <DataGrid Grid.Row="3"
+                      ItemsSource="{Binding CronogramaTotalGerais}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      HeadersVisibility="All" 
+                      IsReadOnly="True"
+                      Margin="2" 
+                      FontWeight="Bold"
+                      SelectionUnit="Cell">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="#" Binding="{Binding status}" />
+                    <DataGridTextColumn Header="N1" Binding="{Binding sn1}"/>
+                    <DataGridTextColumn Header="N2" Binding="{Binding sn2}"/>
+                    <DataGridTextColumn Header="N3" Binding="{Binding sn3}"/>
+                    <DataGridTextColumn Header="N4" Binding="{Binding sn4}"/>
+                    <DataGridTextColumn Header="N5" Binding="{Binding sn5}"/>
+                    <DataGridTextColumn Header="N6" Binding="{Binding sn6}"/>
+                    <DataGridTextColumn Header="N7" Binding="{Binding sn7}"/>
+                    <DataGridTextColumn Header="N8" Binding="{Binding sn8}"/>
+                    <DataGridTextColumn Header="N9" Binding="{Binding sn9}"/>
+                    <DataGridTextColumn Header="N10" Binding="{Binding sn10}"/>
+                    <DataGridTextColumn Header="N11" Binding="{Binding sn11}"/>
+                    <DataGridTextColumn Header="N12" Binding="{Binding sn12}"/>
+                    <DataGridTextColumn Header="N13" Binding="{Binding sn13}"/>
+                    <DataGridTextColumn Header="N14" Binding="{Binding sn14}"/>
+                    <DataGridTextColumn Header="N15" Binding="{Binding sn15}"/>
+                    <DataGridTextColumn Header="N16" Binding="{Binding sn16}"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+
+        <!-- COLUNA LATERAL DIREITA: BLOCO DE MONTAGEM/MANUTENÇÃO/DEMONSTAGEM/MONITOR -->
+        <StackPanel Grid.Row="1" Grid.Column="1" Margin="4" >
+            <!-- Card Montagem -->
+            <Border BorderBrush="Orange" BorderThickness="2" Margin="0,0,0,8" Background="#FFF9E5CF" Padding="8">
+                <StackPanel>
+                    <TextBlock Text="MONTAGEM" FontWeight="Bold" Foreground="Orange"/>
+                    <telerik:RadGridView 
+                        ItemsSource="{Binding NoitescronogPessoas}" 
+                        AutoGenerateColumns="False" 
+                        Height="200" 
+                        ShowGroupPanel="False"
+                        SelectionUnit="Cell" RowValidated="RadGridView_RowValidated">
+                        <telerik:RadGridView.Columns>
+                            <telerik:GridViewDataColumn Header="FUNÇÃO" DataMemberBinding="{Binding funcao}" IsReadOnly="True"/>
+                            <telerik:GridViewDataColumn Header="PESSOAS" DataMemberBinding="{Binding qtd_pessoas, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            <telerik:GridViewDataColumn Header="NOITES" DataMemberBinding="{Binding qtd_noites, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            <telerik:GridViewCheckBoxColumn Header="EQUIPE" DataMemberBinding="{Binding equipe, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        </telerik:RadGridView.Columns>
+                    </telerik:RadGridView>
+                    <!--
+                    <TextBlock Text="QTD NOITES PREVISTAS MONTAGEM" FontWeight="Bold"/>
+                    <TextBlock Text="10" FontSize="20" HorizontalAlignment="Right"/>
+                    -->
+                </StackPanel>
+            </Border>
+            <!-- Outros cards: Manutenção, Desmontagem, Monitor (mude a cor de fundo e borda) -->
+            <Border BorderBrush="CornflowerBlue" BorderThickness="2" Margin="0,0,0,8" Background="#FFBADFF7" Padding="8">
+                <StackPanel>
+                    <TextBlock Text="MANUTENÇÃO" FontWeight="Bold" Foreground="CornflowerBlue"/>
+                    <telerik:RadGridView 
+                        x:Name="DataGridPessoasManutencao"
+                        ShowGroupPanel="False"
+                        AutoGenerateColumns="False" 
+                        ItemsSource="{Binding NoitescronogPessoasManutencao}" 
+                        GroupRenderMode="Flat" 
+                        NewRowPosition="Bottom"
+                        Height="150" 
+                        AddingNewDataItem="DataGridPessoasManutencao_AddingNewDataItem" RowValidated="RadGridView_RowValidated" CellValidating="RadGridView_CellValidating"  >
+                        <telerik:RadGridView.Columns>
+                            <telerik:GridViewComboBoxColumn
+                                UniqueName="funcaoCombo"
+                                Header="FUNÇÃO" 
+                                DataMemberBinding="{Binding funcao}"
+                                SelectedValueMemberPath="funcao"
+                                DisplayMemberPath="funcao"
+                                ItemsSource="{Binding Funcoes}"/>
+                            <telerik:GridViewDataColumn Header="PESSOAS" DataMemberBinding="{Binding qtd_pessoas, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            <telerik:GridViewDataColumn Header="NOITES" DataMemberBinding="{Binding qtd_noites, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        </telerik:RadGridView.Columns>
+                    </telerik:RadGridView>
+                    <!--
+                    <TextBlock Text="QTD PREVISTAS MANUTENÇÃO PREVENTIVA" FontWeight="Bold"/>
+                    <TextBlock Text="5" FontSize="20" HorizontalAlignment="Right"/>
+                    -->
+                </StackPanel>
+            </Border>
+            <!--
+            <Border BorderBrush="Red" BorderThickness="2" Margin="0,0,0,8" Background="#FFF591A8" Padding="8">
+                <StackPanel>
+                    <TextBlock Text="DESMONTAGEM" FontWeight="Bold" Foreground="Red"/>
+                    <DataGrid ItemsSource="{Binding Desmontagem}" AutoGenerateColumns="False" Height="110">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="FUNÇÃO" Binding="{Binding Total}"/>
+                            <DataGridTextColumn Header="PESSOAS" Binding="{Binding Total}"/>
+                            <DataGridTextColumn Header="NOITES" Binding="{Binding Total}"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <TextBlock Text="QTD NOITES PREVISTAS DESMONTAGEM" FontWeight="Bold"/>
+                    <TextBlock Text="4" FontSize="20" HorizontalAlignment="Right"/>
+                </StackPanel>
+            </Border>
+            -->
+            <Border BorderBrush="Gold" Background="#FFF9F9D6" BorderThickness="2" Padding="8">
+                <StackPanel>
+                    <TextBlock Text="EXTRA" FontWeight="Bold" Foreground="Gold"/>
+                    <telerik:RadGridView 
+                        ItemsSource="{Binding NoitesCronogPessoasManutencaoExtra}" 
+                        AutoGenerateColumns="False" 
+                        ShowGroupPanel="False"
+                        GroupRenderMode="Flat" 
+                        NewRowPosition="Bottom"
+                        Height="150"
+                        AddingNewDataItem="RadGridView_AddingNewDataItem" RowValidated="RadGridView_RowValidated" CellValidating="RadGridView_CellValidating">
+                        <telerik:RadGridView.Columns>
+                            <telerik:GridViewComboBoxColumn
+                                UniqueName="funcaoCombo"
+                                Header="FUNÇÃO" 
+                                DataMemberBinding="{Binding funcao}"
+                                SelectedValueMemberPath="funcao"
+                                DisplayMemberPath="funcao"
+                                ItemsSource="{Binding Funcoes}"/>
+                            <telerik:GridViewDataColumn Header="PESSOAS" DataMemberBinding="{Binding qtd_pessoas, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            <telerik:GridViewDataColumn Header="NOITES" DataMemberBinding="{Binding qtd_noites, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        </telerik:RadGridView.Columns>
+                    </telerik:RadGridView>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Grid>
+
+</UserControl>

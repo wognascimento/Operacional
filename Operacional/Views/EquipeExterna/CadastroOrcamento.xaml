@@ -1,0 +1,85 @@
+﻿<UserControl x:Class="Operacional.Views.EquipeExterna.CadastroOrcamento"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Operacional.Views.EquipeExterna" xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
+    
+    <Grid>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="auto" />
+            <ColumnDefinition Width="auto" />
+            <ColumnDefinition Width="3*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Background="#FFEADCB5">
+            <TextBlock Text="EQUIPE:" FontWeight="Bold" Margin="4" VerticalAlignment="Center"/>
+            <telerik:RadComboBox x:Name="cmbEquipe" 
+                     IsEditable="True"
+                     IsFilteringEnabled="True"
+                     OpenDropDownOnFocus="True"
+                     TextSearchMode="Contains"
+                     ItemsSource="{Binding Equipes}"
+                     SelectedValuePath="id"
+                     DisplayMemberPath="equipe_e" 
+                     Width="250" 
+                     SelectionChanged="Equipe_SelectionChanged" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Background="#FFEADCB5">
+            <TextBlock Text="CLIENTE: " FontWeight="Bold" VerticalAlignment="Center" Margin="4"/>
+            <telerik:RadComboBox x:Name="cmbAprovado" 
+                     IsEditable="True"
+                     IsFilteringEnabled="True"
+                     OpenDropDownOnFocus="True"
+                     TextSearchMode="Contains"
+                     ItemsSource="{Binding SiglasCrono}"
+                     Width="200" 
+                     SelectionChanged="Aprovado_SelectionChanged" />
+            
+        </StackPanel>
+
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Background="#FFEADCB5">
+            <Button 
+                x:Name="btnCompleto" 
+                Content="ADICIONAR ORÇAMENTO" 
+                Width="163" Click="OnFinalizaOrcamentoPagamentoClick" />
+        </StackPanel>
+
+        <telerik:RadGridView x:Name="itensOrcamento" 
+            Grid.Column="0"
+            Grid.ColumnSpan="3"
+            Grid.Row="1"
+            AutoGenerateColumns="False"
+            Margin="2"
+            SelectionUnit="Cell"
+            ShowGroupPanel="False"
+            ItemsSource="{Binding EquipePrevisoes}" 
+            RowValidated="RadGridView_RowValidated" >
+            <telerik:RadGridView.Columns>
+                <telerik:GridViewDataColumn Header="#" IsReadOnly="True" DataMemberBinding="{Binding cod_valor_previsao}" IsFilterable="False"/>
+                <telerik:GridViewDataColumn Header="cliente" IsReadOnly="True" DataMemberBinding="{Binding cliente}"/>
+                <telerik:GridViewDataColumn Header="fase" IsReadOnly="True" DataMemberBinding="{Binding fase}"/>
+                <telerik:GridViewDataColumn Header="funcao" IsReadOnly="True" DataMemberBinding="{Binding funcao}"/>
+                <telerik:GridViewDataColumn Header="valor anterior" IsReadOnly="True" DataMemberBinding="{Binding valor_ano_anterior}" IsFilterable="False"  />
+                <telerik:GridViewDataColumn Header="valor atual" IsReadOnly="False" DataMemberBinding="{Binding valor_ano_atual}" IsFilterable="False"  />
+                <telerik:GridViewDataColumn Header="lanche" IsReadOnly="False" DataMemberBinding="{Binding lanche}" IsFilterable="False"  />
+                <telerik:GridViewDataColumn Header="transporte" IsReadOnly="False" DataMemberBinding="{Binding transporte}" IsFilterable="False"  />
+                <telerik:GridViewDataColumn Header="inserido_por" IsReadOnly="True" DataMemberBinding="{Binding inserido_por}" IsFilterable="False"  />
+                <telerik:GridViewDataColumn Header="inserido_em" IsReadOnly="True" DataMemberBinding="{Binding inserido_em}" IsFilterable="False"  />
+                <telerik:GridViewDataColumn Header="alterado_por" IsReadOnly="True" DataMemberBinding="{Binding alterado_por}" IsFilterable="False"  />
+                <telerik:GridViewDataColumn Header="data_altera" IsReadOnly="True" DataMemberBinding="{Binding data_altera}" IsFilterable="False"  />
+                
+            </telerik:RadGridView.Columns>
+        </telerik:RadGridView>
+
+    </Grid>
+    
+</UserControl>

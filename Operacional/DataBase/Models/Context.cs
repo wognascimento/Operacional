@@ -35,6 +35,12 @@ public partial class Context : DbContext
     public virtual DbSet<ProducaoAprovadoModel> ProducaoAprovados { get; set; }
     public virtual DbSet<ViewCronogramaModel> ViewCronogramas { get; set; }
 
+    public virtual DbSet<EquipeExternaEquipeModel> Equipes { get; set; }
+    public virtual DbSet<EquipeExternaValoresPrevisaoEquipeModel> EquipePrevisoes { get; set; }
+    public virtual DbSet<RelatorioPagamentoModel> RelatorioPagamentos { get; set; }
+    public virtual DbSet<RelatorioDetalheModel> RelatorioDetalhes { get; set; }
+    public virtual DbSet<EquipeExternaDescricaoServicoModel> EquipeExternaDescricoes { get; set; }
+
     private readonly DataBaseSettings BaseSettings = DataBaseSettings.Instance;
 
     static Context() => AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);

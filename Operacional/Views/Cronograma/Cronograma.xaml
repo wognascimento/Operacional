@@ -58,8 +58,8 @@
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" Background="#FFEADCB5">
                 <TextBlock Text="ABRIR POR: " FontWeight="Bold" VerticalAlignment="Center" Margin="8"/>
-                <Button x:Name="btnSigla" Content="SIGLA" Margin="8" Width="70" Visibility="Collapsed" Click="OnOpenSigla"/>
-                <Button x:Name="btnCompleto" Content="COMPLETO" Margin="8" Width="70" Visibility="Collapsed" Click="OnOpenCompleto"/>
+                <Button x:Name="btnSigla" Content="SIGLA" Margin="4" Width="70" Visibility="Collapsed" Click="OnOpenSigla"/>
+                <Button x:Name="btnCompleto" Content="COMPLETO" Margin="4" Width="70" Visibility="Collapsed" Click="OnOpenCompleto"/>
             </StackPanel>
 
 

@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>icones\logo.ico</ApplicationIcon>
-    <AssemblyVersion>1.0.0.6</AssemblyVersion>
+    <AssemblyVersion>1.0.0.8</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -134,7 +134,6 @@
 
   <ItemGroup>
     <Folder Include="Impressos\" />
-    <Folder Include="Views\EquipeExterna\" />
   </ItemGroup>
 
 	<Target Name="IncludeEmptyFolders" AfterTargets="Publish">

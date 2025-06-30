@@ -1,9 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Dapper;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Operacional.DataBase;
 using Operacional.DataBase.Models;
+using Operacional.DataBase.Models.DTOs;
 using Operacional.Views;
 using Operacional.Views.Cronograma;
 using Operacional.Views.Despesa;
+using Operacional.Views.EquipeExterna;
 using Operacional.Views.Transporte;
 using Producao;
 using Syncfusion.SfSkinManager;
@@ -193,8 +197,8 @@ namespace Operacional
                     condition.BackColorRGB = Color.Yellow;
                 }
 
-                workbook.SaveAs("Impressos/QUERY_CARGAS_MONTAGEM.xlsx");
-                Process.Start(new ProcessStartInfo("Impressos\\QUERY_CARGAS_MONTAGEM.xlsx")
+                workbook.SaveAs(@$"{BaseSettings.CaminhoSistema}Impressos\QUERY_CARGAS_MONTAGEM.xlsx");
+                Process.Start(new ProcessStartInfo(@$"{BaseSettings.CaminhoSistema}Impressos\QUERY_CARGAS_MONTAGEM.xlsx")
                 {
                     UseShellExecute = true
                 });
@@ -235,8 +239,8 @@ namespace Operacional
                 //worksheet.IsGridLinesVisible = false;
                 worksheet.ImportData(retorno, 1, 1, true);
 
-                workbook.SaveAs("Impressos/QUERY_CARGAS_DESMONTAGEM.xlsx");
-                Process.Start(new ProcessStartInfo("Impressos\\QUERY_CARGAS_DESMONTAGEM.xlsx")
+                workbook.SaveAs(@$"{BaseSettings.CaminhoSistema}Impressos\QUERY_CARGAS_DESMONTAGEM.xlsx");
+                Process.Start(new ProcessStartInfo(@$"{BaseSettings.CaminhoSistema}Impressos\QUERY_CARGAS_DESMONTAGEM.xlsx")
                 {
                     UseShellExecute = true
                 });
@@ -276,6 +280,72 @@ namespace Operacional
         private void OnCronogramaClick(object sender, RoutedEventArgs e)
         {
             adicionarFilho(new Cronograma(), "CRONOGRAMA", "CRONOGRAMA");
+        }
+
+        private void OnOpenCadastroEquipesClick(object sender, RoutedEventArgs e)
+        {
+            adicionarFilho(new CadastroEquipe(), "CADASTRO DE EQUIPES", "CADASTRO_EQUIPES");
+        }
+
+        private void OnOpenCadastroOrcamentoClick(object sender, RoutedEventArgs e)
+        {
+            adicionarFilho(new CadastroOrcamento(), "CADASTRO DE ORÇAMENTO", "CADASTRO_ORCAMENTO");
+        }
+
+        private async void OnRelatorioPrevisaoValoresClick(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+
+                string sql = @"
+                    SELECT  
+                            sigla, qtd_pessoas, qtd_noites, equipe, 
+                            fase, funcao, valor_ano_atual, valor_total, 
+                            lanche, transporte, id_equipe, indice_pessoas_noite, 
+                            razaosocial, vai_equipe
+	                FROM equipe_externa.qry_previsao_valores_cronograma;
+                ";
+
+                var result = await connection.QueryAsync<PrevisaoValorCronogramaDTO>(sql);
+                using ExcelEngine excelEngine = new();
+                IApplication application = excelEngine.Excel;
+                application.DefaultVersion = ExcelVersion.Xlsx;
+                IWorkbook workbook = application.Workbooks.Create(1);
+                IWorksheet worksheet = workbook.Worksheets[0];
+                worksheet.ImportData(result, 1, 1, true);
+                workbook.SaveAs(@$"{BaseSettings.CaminhoSistema}Impressos\PrevisaoValores.xlsx");
+                Process.Start(new ProcessStartInfo(@$"{BaseSettings.CaminhoSistema}Impressos\PrevisaoValores.xlsx")
+                {
+                    UseShellExecute = true
+                });
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+            }
+            catch (PostgresException ex)
+            {
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                MessageBox.Show($"Erro do banco: {ex.MessageText}\nDetalhe: {ex.Detail}\nLocal: {ex.Where}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (NpgsqlException ex)
+            {
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                MessageBox.Show($"Erro do banco: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx)
+            {
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                MessageBox.Show($"Erro do banco: {pgEx.MessageText}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (Exception ex)
+            {
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void OnOpenNotasPagamentoClick(object sender, RoutedEventArgs e)
+        {
+            adicionarFilho(new NotaPagamento(), "NOTAS PARA PAGAMENTO", "NOTAS_PAGAMENTO");
         }
     }
 }

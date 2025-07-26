@@ -292,6 +292,12 @@ namespace Operacional
             adicionarFilho(new CadastroOrcamento(), "CADASTRO DE ORÇAMENTO", "CADASTRO_ORCAMENTO");
         }
 
+
+        private void OnOpenUsuarioClick(object sender, RoutedEventArgs e)
+        {
+            adicionarFilho(new CadastroUsuario(), "CADASTRO DE USUÁRIOS", "CADASTRO_USUARIOS");
+        }
+
         private async void OnRelatorioPrevisaoValoresClick(object sender, RoutedEventArgs e)
         {
             try
@@ -347,5 +353,6 @@ namespace Operacional
         {
             adicionarFilho(new NotaPagamento(), "NOTAS PARA PAGAMENTO", "NOTAS_PAGAMENTO");
         }
+
     }
 }

@@ -8,6 +8,7 @@ using Operacional.Views;
 using Operacional.Views.Cronograma;
 using Operacional.Views.Despesa;
 using Operacional.Views.EquipeExterna;
+using Operacional.Views.Manutencao;
 using Operacional.Views.Transporte;
 using Producao;
 using Syncfusion.SfSkinManager;
@@ -354,5 +355,9 @@ namespace Operacional
             adicionarFilho(new NotaPagamento(), "NOTAS PARA PAGAMENTO", "NOTAS_PAGAMENTO");
         }
 
+        private void OnOpenProgramacaoClick(object sender, RoutedEventArgs e)
+        {
+            adicionarFilho(new Programacao(), "PROGRAMAÇÃO MANUTENÇÃO", "PROGRAMACAO_MANUTENCAO");
+        }
     }
 }

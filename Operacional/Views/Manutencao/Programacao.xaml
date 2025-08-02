@@ -1,0 +1,75 @@
+﻿<UserControl x:Class="Operacional.Views.Manutencao.Programacao"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Operacional.Views.Manutencao" 
+             xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation"
+             xmlns:Converter="clr-namespace:Operacional.Converter"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
+
+    <UserControl.Resources>
+        <Converter:DiaSemanaConverter x:Key="DiaSemanaConverter"/>
+    </UserControl.Resources>
+    
+    <Grid>
+
+
+        <telerik:RadGridView x:Name="manutProgramacao" 
+            AutoGenerateColumns="False"
+            Margin="2"
+            SelectionUnit="Cell"
+            ShowGroupPanel="False"
+            NewRowPosition="Bottom"
+            GroupRenderMode="Flat"
+            ItemsSource="{Binding Programacoes}" 
+            RowValidated="EquipeRowValidated">
+            <telerik:RadContextMenu.ContextMenu>
+                <telerik:RadContextMenu>
+                    <telerik:RadMenuItem Header="Importar Programação" Click="OnImportProgramacaoClick" />
+                    <telerik:RadMenuItem Header="Adicionar Funções" Click="OnAddFuncoesClick" />
+                    <telerik:RadMenuItem Header="Adicionar Solicitações" Click="OnAddSolicitacoesClick" />
+                    <telerik:RadMenuItem Header="Criar Relatório" Click="OnCreatReportClick" />
+                </telerik:RadContextMenu>
+            </telerik:RadContextMenu.ContextMenu>
+            <telerik:RadGridView.Columns>
+                <telerik:GridViewDataColumn Header="#" DataMemberBinding="{Binding id}" IsReadOnly="True"/>
+                <telerik:GridViewComboBoxColumn
+                    Header="SIGLA" 
+                    DataMemberBinding="{Binding shopp}"
+                    SelectedValueMemberPath="sigla_serv"
+                    DisplayMemberPath="sigla_serv"
+                    ItemsSource="{Binding Aprovados}"/>
+                <telerik:GridViewDataColumn Header="CIDADE" DataMemberBinding="{Binding cidade}"/>
+                <telerik:GridViewDataColumn Header="ESTADO" DataMemberBinding="{Binding est}"/>
+                <telerik:GridViewDataColumn Header="DATA" DataMemberBinding="{Binding data}" DataFormatString="{} {0:dd/MM/yyyy}" />
+                <telerik:GridViewDataColumn Header="DIA" DataMemberBinding="{Binding data, Converter={StaticResource DiaSemanaConverter}}" IsReadOnly="True"  />
+                <telerik:GridViewComboBoxColumn
+                    Header="TIPO" 
+                    DataMemberBinding="{Binding tipo}"
+                    ItemsSource="{Binding Tipos}"/>
+                <!--
+                <telerik:GridViewDataColumn Header="PERÍODO" DataMemberBinding="{Binding periodo}"  />
+                <telerik:GridViewDataColumn Header="MOTIVO" DataMemberBinding="{Binding motivo}"  />
+                <telerik:GridViewDataColumn Header="DETALHES" DataMemberBinding="{Binding detalhes_motivo}"  />
+                <telerik:GridViewDataColumn Header="ORIENTAÇÃO" DataMemberBinding="{Binding orientacao}"  />
+                -->
+                <telerik:GridViewDataColumn Header="RESPONSÁVEL" DataMemberBinding="{Binding resp_atendimento}"  />
+                <telerik:GridViewComboBoxColumn
+                    Header="EQUIPE" 
+                    DataMemberBinding="{Binding nome_equipe}"
+                    ItemsSource="{Binding Equipes}"/>
+                <telerik:GridViewDataColumn Header="PESSOAS" DataMemberBinding="{Binding qtde_pessoa}"  />
+                <telerik:GridViewDataColumn Header="RETORNO" DataMemberBinding="{Binding obs_retorno}"  />
+                <telerik:GridViewDataColumn Header="CADASTRADO POR" DataMemberBinding="{Binding cadastrado_por}" IsReadOnly="True"  />
+                <telerik:GridViewDataColumn Header="CADASTRADO EM" DataMemberBinding="{Binding data_cadastro}" DataFormatString="{} {0:dd/MM/yyyy}" IsReadOnly="True"  />
+                <telerik:GridViewDataColumn Header="ALTERADO POR" DataMemberBinding="{Binding alterado_por}" IsReadOnly="True"  />
+                <telerik:GridViewDataColumn Header="ALTERADO EM" DataMemberBinding="{Binding data_alteracao}" DataFormatString="{} {0:dd/MM/yyyy}" IsReadOnly="True"  />
+            </telerik:RadGridView.Columns>
+        </telerik:RadGridView>
+
+
+    </Grid>
+    
+</UserControl>

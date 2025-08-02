@@ -66,7 +66,7 @@ public class ValueToBackgroundConverter : IValueConverter
         if (decimal.TryParse(value.ToString(), out decimal numValue))
         {
             if (numValue > 0)
-                return new SolidColorBrush(Colors.Blue);
+                return new SolidColorBrush(Color.FromRgb(164, 164, 235)); //new SolidColorBrush(Colors.Blue);
             if (numValue == 0)
                 return new SolidColorBrush(Colors.LightBlue);
         }

@@ -65,6 +65,14 @@
                 </syncfusion:MenuItemAdv>
             </syncfusion:MenuItemAdv>
 
+            <syncfusion:MenuItemAdv Header="Manutenção">
+                <syncfusion:MenuItemAdv Header="Programação" Click="OnOpenProgramacaoClick"/>
+                <syncfusion:MenuItemAdv Header="Contatos"/>
+                <syncfusion:MenuItemAdv Header="Atendentes"/>
+                <syncfusion:MenuItemAdv Header="Plantão"/>
+                <syncfusion:MenuItemAdv Header="Criticidade"/>
+            </syncfusion:MenuItemAdv>
+
         </syncfusion:MenuAdv>
 
         <syncfusion:DocumentContainer 

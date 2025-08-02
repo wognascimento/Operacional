@@ -144,7 +144,7 @@ public partial class CadastroOrcamento : UserControl
         var equipe = this.cmbEquipe.SelectedItem as EquipeExternaEquipeModel;
         RadWindow.Confirm(new DialogParameters
         {
-            Content = $"Deseja adicionar orçamento da equipe {equipe.equipe_e} nos pagamentos?",
+            Content = $"Deseja adicionar orçamento da equipe nos pagamentos?: {Environment.NewLine} {equipe.equipe_e}",
             Header = "Confirmação",
             Closed = ConfirmacaoOrcamento
         });

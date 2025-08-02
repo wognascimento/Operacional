@@ -5,7 +5,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:Operacional.Views.Cronograma"
              xmlns:system="clr-namespace:System;assembly=mscorlib"
-             xmlns:Converter="clr-namespace:Operacional.Converter" xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation"
+             xmlns:Converter="clr-namespace:Operacional.Converter" 
+             xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation"
              mc:Ignorable="d" Loaded="UserControl_Loaded">
 
     <UserControl.Resources>
@@ -189,7 +190,7 @@
                     <telerik:RadGridView 
                         ItemsSource="{Binding NoitescronogPessoas}" 
                         AutoGenerateColumns="False" 
-                        Height="200" 
+                        Height="235" 
                         ShowGroupPanel="False"
                         SelectionUnit="Cell" RowValidated="RadGridView_RowValidated">
                         <telerik:RadGridView.Columns>
@@ -252,7 +253,7 @@
                 </StackPanel>
             </Border>
             -->
-            <Border BorderBrush="Gold" Background="#FFF9F9D6" BorderThickness="2" Padding="8">
+            <Border BorderBrush="Gold" Background="#FFF9F9D6" BorderThickness="2" Margin="0,0,0,8" Padding="8">
                 <StackPanel>
                     <TextBlock Text="EXTRA" FontWeight="Bold" Foreground="Gold"/>
                     <telerik:RadGridView 
@@ -263,6 +264,34 @@
                         NewRowPosition="Bottom"
                         Height="150"
                         AddingNewDataItem="RadGridView_AddingNewDataItem" RowValidated="RadGridView_RowValidated" CellValidating="RadGridView_CellValidating">
+                        <telerik:RadGridView.Columns>
+                            <telerik:GridViewComboBoxColumn
+                                UniqueName="funcaoCombo"
+                                Header="FUNÇÃO" 
+                                DataMemberBinding="{Binding funcao}"
+                                SelectedValueMemberPath="funcao"
+                                DisplayMemberPath="funcao"
+                                ItemsSource="{Binding Funcoes}"/>
+                            <telerik:GridViewDataColumn Header="PESSOAS" DataMemberBinding="{Binding qtd_pessoas, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            <telerik:GridViewDataColumn Header="NOITES" DataMemberBinding="{Binding qtd_noites, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        </telerik:RadGridView.Columns>
+                    </telerik:RadGridView>
+                </StackPanel>
+            </Border>
+
+
+            <Border BorderBrush="#ff00ff" Background="#dbb0df" BorderThickness="2" Padding="8">
+                <StackPanel>
+                    <TextBlock Text="DESMONTAGEM" FontWeight="Bold" Foreground="#ff00ff"/>
+                    <telerik:RadGridView 
+                        ItemsSource="{Binding NoitesCronogPessoasManutencaoExtra}" 
+                        AutoGenerateColumns="False" 
+                        ShowGroupPanel="False"
+                        GroupRenderMode="Flat" 
+                        NewRowPosition="Bottom"
+                        Height="150"
+                        AddingNewDataItem="RadGridView_AddingNewDataItemDesmont" 
+                        RowValidated="RadGridView_RowValidated" CellValidating="RadGridView_CellValidating">
                         <telerik:RadGridView.Columns>
                             <telerik:GridViewComboBoxColumn
                                 UniqueName="funcaoCombo"

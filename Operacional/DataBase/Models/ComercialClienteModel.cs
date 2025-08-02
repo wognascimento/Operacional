@@ -8,5 +8,7 @@ namespace Operacional.DataBase.Models
     {
         [Key]
         public required string sigla { get; set; }
+        public required string cidade { get; set; }
+        public required string est { get; set; }
     }
 }

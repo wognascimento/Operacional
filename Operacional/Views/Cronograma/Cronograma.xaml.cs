@@ -81,7 +81,7 @@ public partial class Cronograma : UserControl
             _tipoCronograma = "SIGLA";
             await vm.AddCronoBySiglaAsync(aprovado.sigla_serv);
             vm.ViewCronogramas = await vm.GetViewCronogramasAsync(aprovado.sigla_serv);
-            vm.CronogramaTotalGerais = await vm.GetCronogramaTotalGeralAsync(aprovado.sigla_serv);
+            vm.CronogramaTotalGerais = await vm.GetCronogramaTotalGeralSiglaAsync(aprovado.sigla_serv);
             await vm.AddOperacionalNoitescronogPessoasAsync(aprovado.sigla_serv, "MONTAGEM");
             vm.NoitescronogPessoas = await vm.GetOperacionalNoitescronogPessoasAsync(aprovado.sigla_serv);
             vm.NoitescronogPessoasManutencao = await vm.GetOperacionalNoitescronogPessoasManutencaoAsync(aprovado.sigla_serv);
@@ -117,7 +117,7 @@ public partial class Cronograma : UserControl
             _tipoCronograma = "COMPLETO";
             await vm.AddCronoBySiglaAsync(aprovado.sigla);
             vm.ViewCronogramas = await vm.GetViewCronogramasAsync(aprovado.sigla);
-            vm.CronogramaTotalGerais = await vm.GetCronogramaTotalGeralAsync(aprovado.sigla);
+            vm.CronogramaTotalGerais = await vm.GetCronogramaTotalGeralCompletoAsync(aprovado.sigla);
             await vm.AddOperacionalNoitescronogPessoasAsync(aprovado.sigla, "MONTAGEM");
             vm.NoitescronogPessoas = await vm.GetOperacionalNoitescronogPessoasAsync(aprovado.sigla);
             vm.NoitescronogPessoasManutencao = await vm.GetOperacionalNoitescronogPessoasManutencaoAsync(aprovado.sigla);
@@ -172,7 +172,10 @@ public partial class Cronograma : UserControl
             if (e.Row.Item is ViewCronogramaModel linha)
             {
                 await vm.AtualizarPessoasNoiteCronograma(linha);
-                vm.CronogramaTotalGerais = await vm.GetCronogramaTotalGeralAsync(sigla);
+                if (_tipoCronograma == "COMPLETO")
+                    vm.CronogramaTotalGerais = await vm.GetCronogramaTotalGeralCompletoAsync(sigla);
+                else
+                    vm.CronogramaTotalGerais = await vm.GetCronogramaTotalGeralSiglaAsync(sigla);
             }
 
         }
@@ -259,6 +262,21 @@ public partial class Cronograma : UserControl
         };
     }
 
+    private void RadGridView_AddingNewDataItemDesmont(object sender, GridViewAddingNewEventArgs e)
+    {
+        if (cmbAprovados.SelectedItem is not ProducaoAprovadoModel aprovado)
+        {
+            MessageBox.Show("Selecione um aprovado.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        // Verifica se a sigla já existe
+        e.NewObject = new OperacionalNoitescronogPessoaFuncaoModel
+        {
+            sigla = _tipoCronograma == "COMPLETO" ? aprovado.sigla : aprovado.sigla_serv,
+            fase = "DESMONTAGEM"
+        };
+    }
+
     private async void RadGridView_RowValidated(object sender, GridViewRowValidatedEventArgs e)
     {
         if (e.Row.Item is OperacionalNoitescronogPessoaFuncaoModel linha)
@@ -266,7 +284,14 @@ public partial class Cronograma : UserControl
             try
             {
                 var vm = (CronogramaViewModel)DataContext;
+                var aprovado = cmbAprovados.SelectedItem as ProducaoAprovadoModel;
+                var sigla = _tipoCronograma == "COMPLETO" ? aprovado.sigla : aprovado.sigla_serv;
                 await vm.AtualizarPessoasNoiteFuncao(linha);
+                if (_tipoCronograma == "COMPLETO")
+                    vm.CronogramaTotalGerais = await vm.GetCronogramaTotalGeralCompletoAsync(sigla);
+                else
+                    vm.CronogramaTotalGerais = await vm.GetCronogramaTotalGeralSiglaAsync(sigla);
+           
             }
             catch (Exception ex)
             {
@@ -304,10 +329,14 @@ public partial class Cronograma : UserControl
             IWorksheet worksheet = workbook.Worksheets[0];
             // Preenche células fixas
             worksheet.Range["C1"].Text = @$"CRONOGRAMA DE MONTAGEM NATAL {BaseSettings.Database} {Environment.NewLine} {aprovado.nome} - {aprovado.sigla}";
-    
+
+            //TOTAL PREENCHIDO, EQUIPE EXTERNA, EQUIPE AUXILIAR, COORD.+ASSIST., ELETRICISTA, TOTAL GERAL
+            string[] status = ["EQUIPE EXTERNA", "COORD.+ASSIST.", "ELETRICISTA"];
             char coluna = 'E';
             int linhaInicial = 8; // Inserir a partir da linha 8
-            foreach (var item in vm.CronogramaTotalGerais.Where(x=> !x.status.Contains("TOTAL")))
+            //var cronogramaTotalGerais = vm.CronogramaTotalGerais.Where(x => status.Contains(x.status)).ToList();//vm.CronogramaTotalGerais.Where(x => !x.status.Contains("TOTAL")).ToList();
+            var cronogramaTotalGerais = vm.CronogramaTotalGerais.Where(x => status.Any(s => x.status.Contains(s))).ToList();
+            foreach (var item in cronogramaTotalGerais)
             {
                 var valores = new double?[]
                 {
@@ -478,6 +507,7 @@ public partial class Cronograma : UserControl
             MessageBox.Show(ex.Message);
         }
     }
+
 }
 
 public partial class CronogramaViewModel : ObservableObject
@@ -646,7 +676,24 @@ public partial class CronogramaViewModel : ObservableObject
         }
     }
 
-    public async Task<ObservableCollection<CronogramaTotalGeralDTO>> GetCronogramaTotalGeralAsync(string sigla)
+    public async Task<ObservableCollection<CronogramaTotalGeralDTO>> GetCronogramaTotalGeralSiglaAsync(string sigla)
+    {
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+
+        string sql = @"
+            SELECT status, 
+                   sn1, sn2, sn3, sn4, sn5, 
+                   sn6, sn7, sn8, sn9, sn10, 
+                   sn11, sn12, sn13, sn14, sn15, sn16
+            FROM operacional.qry_cronograma_total_geral
+            WHERE sigla = @Sigla;
+        ";
+
+        var result = await connection.QueryAsync<CronogramaTotalGeralDTO>(sql, new { Sigla = sigla });
+        return new ObservableCollection<CronogramaTotalGeralDTO>(result);
+    }
+
+    public async Task<ObservableCollection<CronogramaTotalGeralDTO>> GetCronogramaTotalGeralCompletoAsync(string sigla)
     {
         using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
 

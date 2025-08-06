@@ -45,6 +45,7 @@ public partial class Context : DbContext
     public virtual DbSet<RelatorioDetalheModel> RelatorioDetalhes { get; set; }
     public virtual DbSet<EquipeExternaDescricaoServicoModel> EquipeExternaDescricoes { get; set; }
     public virtual DbSet<EquipeExternaUsuarioModel> EquipeExternaUsuarios { get; set; }
+    public virtual DbSet<EquipeExternaContatoModel> EquipeExternaContatos { get; set; }
 
     private readonly DataBaseSettings BaseSettings = DataBaseSettings.Instance;
 

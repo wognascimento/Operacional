@@ -293,10 +293,14 @@ namespace Operacional
             adicionarFilho(new CadastroOrcamento(), "CADASTRO DE ORÇAMENTO", "CADASTRO_ORCAMENTO");
         }
 
-
         private void OnOpenUsuarioClick(object sender, RoutedEventArgs e)
         {
             adicionarFilho(new CadastroUsuario(), "CADASTRO DE USUÁRIOS", "CADASTRO_USUARIOS");
+        }
+
+        private void OnContatoClick(object sender, RoutedEventArgs e)
+        {
+            adicionarFilho(new Contato(), "CONTATOS", "EQUIPE_EXTERNA_CONTATOS");
         }
 
         private async void OnRelatorioPrevisaoValoresClick(object sender, RoutedEventArgs e)
@@ -359,5 +363,7 @@ namespace Operacional
         {
             adicionarFilho(new Programacao(), "PROGRAMAÇÃO MANUTENÇÃO", "PROGRAMACAO_MANUTENCAO");
         }
+
+       
     }
 }

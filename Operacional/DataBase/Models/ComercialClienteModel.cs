@@ -7,8 +7,8 @@ namespace Operacional.DataBase.Models
     public class ComercialClienteModel
     {
         [Key]
-        public required string sigla { get; set; }
-        public required string cidade { get; set; }
-        public required string est { get; set; }
+        public string  sigla { get; set; }
+        public string? cidade { get; set; }
+        public string? est { get; set; }
     }
 }

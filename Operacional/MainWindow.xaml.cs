@@ -364,6 +364,9 @@ namespace Operacional
             adicionarFilho(new Programacao(), "PROGRAMAÇÃO MANUTENÇÃO", "PROGRAMACAO_MANUTENCAO");
         }
 
-       
+        private void OnRelatorioNoturnoDiarioClick(object sender, RoutedEventArgs e)
+        {
+            adicionarFilho(new RelatorioNoturnoDiario(), "RELATÓRIO NOTURNO DIÁRIO", "RELATORIO_NOTURNO_DIARIO");
+        }
     }
 }

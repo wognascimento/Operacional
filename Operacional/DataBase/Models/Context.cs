@@ -35,6 +35,8 @@ public partial class Context : DbContext
     public virtual DbSet<OperacionalPessoasManutencaoModel> OperacionalPessoasManutencoes { get; set; }
     public virtual DbSet<OperacionalSolicitacaoManutencaoModel> OperacionalSolicitacaoManutencoes { get; set; }
     public virtual DbSet<OperacionalSolicitacaoManutencaoFotoModel> OperacionalSolicitacaoManutencaoFotos { get; set; }
+    public virtual DbSet<OperacionalRelatorioNoturnoModel> OperacionalRelatorioNoturnos { get; set; }
+    public virtual DbSet<OperacionalRelatorioNoturnoDeptoModel> OperacionalRelatorioNoturnoDptos { get; set; }
     public virtual DbSet<ComercialClienteModel> ComercialClientes { get; set; }
     public virtual DbSet<ProducaoAprovadoModel> ProducaoAprovados { get; set; }
     public virtual DbSet<ViewCronogramaModel> ViewCronogramas { get; set; }

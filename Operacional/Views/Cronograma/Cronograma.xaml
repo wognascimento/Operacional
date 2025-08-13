@@ -284,7 +284,7 @@
                 <StackPanel>
                     <TextBlock Text="DESMONTAGEM" FontWeight="Bold" Foreground="#ff00ff"/>
                     <telerik:RadGridView 
-                        ItemsSource="{Binding NoitesCronogPessoasManutencaoExtra}" 
+                        ItemsSource="{Binding NoitesCronogPessoasDesmontagem}" 
                         AutoGenerateColumns="False" 
                         ShowGroupPanel="False"
                         GroupRenderMode="Flat" 

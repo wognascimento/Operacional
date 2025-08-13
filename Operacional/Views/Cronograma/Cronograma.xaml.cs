@@ -80,12 +80,13 @@ public partial class Cronograma : UserControl
             }
             _tipoCronograma = "SIGLA";
             await vm.AddCronoBySiglaAsync(aprovado.sigla_serv);
-            vm.ViewCronogramas = await vm.GetViewCronogramasAsync(aprovado.sigla_serv);
+            vm.ViewCronogramas = await vm.GetViewCronogramasSiglaAsync(aprovado.sigla_serv);
             vm.CronogramaTotalGerais = await vm.GetCronogramaTotalGeralSiglaAsync(aprovado.sigla_serv);
             await vm.AddOperacionalNoitescronogPessoasAsync(aprovado.sigla_serv, "MONTAGEM");
             vm.NoitescronogPessoas = await vm.GetOperacionalNoitescronogPessoasAsync(aprovado.sigla_serv);
             vm.NoitescronogPessoasManutencao = await vm.GetOperacionalNoitescronogPessoasManutencaoAsync(aprovado.sigla_serv);
             vm.NoitesCronogPessoasManutencaoExtra = await vm.GetOperacionalNoitescronogPessoasManutencaoExtraAsync(aprovado.sigla_serv);
+            vm.NoitesCronogPessoasDesmontagem = await vm.GetOperacionalNoitescronogPessoasDesmontagemAsync(aprovado.sigla_serv);
         }
         catch (PostgresException ex)
         {
@@ -116,7 +117,7 @@ public partial class Cronograma : UserControl
             }
             _tipoCronograma = "COMPLETO";
             await vm.AddCronoBySiglaAsync(aprovado.sigla);
-            vm.ViewCronogramas = await vm.GetViewCronogramasAsync(aprovado.sigla);
+            vm.ViewCronogramas = await vm.GetViewCronogramasCompletoAsync(aprovado.sigla);
             vm.CronogramaTotalGerais = await vm.GetCronogramaTotalGeralCompletoAsync(aprovado.sigla);
             await vm.AddOperacionalNoitescronogPessoasAsync(aprovado.sigla, "MONTAGEM");
             vm.NoitescronogPessoas = await vm.GetOperacionalNoitescronogPessoasAsync(aprovado.sigla);
@@ -542,6 +543,9 @@ public partial class CronogramaViewModel : ObservableObject
     private ObservableCollection<OperacionalNoitescronogPessoaFuncaoModel> noitesCronogPessoasManutencaoExtra;
 
     [ObservableProperty]
+    private ObservableCollection<OperacionalNoitescronogPessoaFuncaoModel> noitesCronogPessoasDesmontagem;
+
+    [ObservableProperty]
     private ObservableCollection<OperacionalFuncoesCronogramaModel> operacionalFuncoes;
 
     [ObservableProperty]
@@ -571,7 +575,16 @@ public partial class CronogramaViewModel : ObservableObject
         return await connection.ExecuteAsync(sql, new { Sigla = sigla });
     }
 
-    public async Task<ObservableCollection<ViewCronogramaModel>> GetViewCronogramasAsync(string sigla)
+    public async Task<ObservableCollection<ViewCronogramaModel>> GetViewCronogramasSiglaAsync(string sigla)
+    {
+        var result = await _dbContext.ViewCronogramas
+            .OrderBy(f => f.item)
+            .Where(f => f.sigla == sigla)
+            .ToListAsync();
+        return new ObservableCollection<ViewCronogramaModel>(result);
+    }
+
+    public async Task<ObservableCollection<ViewCronogramaModel>> GetViewCronogramasCompletoAsync(string sigla)
     {
         var result = await _dbContext.ViewCronogramas
             .OrderBy(f => f.item)
@@ -603,6 +616,15 @@ public partial class CronogramaViewModel : ObservableObject
         var result = await _dbContext.OperacionalNoitescronogPessoas
             .OrderBy(f => f.funcao)
             .Where(f => f.sigla == sigla && f.fase == "EXTRA")
+            .ToListAsync();
+        return new ObservableCollection<OperacionalNoitescronogPessoaFuncaoModel>(result);
+    }
+
+    public async Task<ObservableCollection<OperacionalNoitescronogPessoaFuncaoModel>> GetOperacionalNoitescronogPessoasDesmontagemAsync(string sigla)
+    {
+        var result = await _dbContext.OperacionalNoitescronogPessoas
+            .OrderBy(f => f.funcao)
+            .Where(f => f.sigla == sigla && f.fase == "DESMONTAGEM")
             .ToListAsync();
         return new ObservableCollection<OperacionalNoitescronogPessoaFuncaoModel>(result);
     }
@@ -699,11 +721,12 @@ public partial class CronogramaViewModel : ObservableObject
 
         string sql = @"
             SELECT status, 
-                   sn1, sn2, sn3, sn4, sn5, 
-                   sn6, sn7, sn8, sn9, sn10, 
-                   sn11, sn12, sn13, sn14, sn15, sn16
+                   SUM(sn1) AS sn1, SUM(sn2) AS sn2, SUM(sn3) AS sn3, SUM(sn4) AS sn4, SUM(sn5) AS sn5, 
+                   SUM(sn6) AS sn6, SUM(sn7) AS sn7, SUM(sn8) AS sn8, SUM(sn9) AS sn9, SUM(sn10) AS sn10, 
+                   SUM(sn11) AS sn11, SUM(sn12) AS sn12, SUM(sn13) AS sn13, SUM(sn14) AS sn14, SUM(sn15) AS sn15, SUM(sn16) AS sn16
             FROM operacional.qry_cronograma_total_geral
-            WHERE sigla_completa = @Sigla;
+            WHERE sigla_completa = @Sigla
+            GROUP BY status;
         ";
 
         var result = await connection.QueryAsync<CronogramaTotalGeralDTO>(sql, new { Sigla = sigla });

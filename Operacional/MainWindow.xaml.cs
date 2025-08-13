@@ -206,8 +206,6 @@ namespace Operacional
 
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
 
-
-
             }
             catch (DbUpdateException ex)
             {
@@ -228,7 +226,6 @@ namespace Operacional
                 using Context context = new();
                 var retorno = await context.QryCargasDesmontagem.AsNoTracking().ToListAsync();
 
-
                 using ExcelEngine excelEngine = new();
                 IApplication application = excelEngine.Excel;
 
@@ -247,8 +244,6 @@ namespace Operacional
                 });
 
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-
-
 
             }
             catch (DbUpdateException ex)
@@ -281,6 +276,50 @@ namespace Operacional
         private void OnCronogramaClick(object sender, RoutedEventArgs e)
         {
             adicionarFilho(new Cronograma(), "CRONOGRAMA", "CRONOGRAMA");
+        }
+
+        private async void OnFuncoesCronogramaClick(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                using Context context = new();
+                var retorno = await context.OperacionalNoitescronogPessoas
+                    .Where(p => p.qtd_pessoas>0)
+                    .OrderBy(p => p.sigla)
+                    .ThenBy(p => p.fase)
+                    .ThenBy(p => p.funcao)
+                    .AsNoTracking().ToListAsync();
+
+                using ExcelEngine excelEngine = new();
+                IApplication application = excelEngine.Excel;
+
+                application.DefaultVersion = ExcelVersion.Xlsx;
+
+                //Create a workbook
+                IWorkbook workbook = application.Workbooks.Create(1);
+                IWorksheet worksheet = workbook.Worksheets[0];
+                //worksheet.IsGridLinesVisible = false;
+                worksheet.ImportData(retorno, 1, 1, true);
+
+                workbook.SaveAs(@$"{BaseSettings.CaminhoSistema}Impressos\QUERY_FUNCOES_CRONOGRAMA.xlsx");
+                Process.Start(new ProcessStartInfo(@$"{BaseSettings.CaminhoSistema}Impressos\QUERY_FUNCOES_CRONOGRAMA.xlsx")
+                {
+                    UseShellExecute = true
+                });
+
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+
+            }
+            catch (DbUpdateException ex)
+            {
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (Exception ex)  // Para qualquer outro erro
+            {
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void OnOpenCadastroEquipesClick(object sender, RoutedEventArgs e)
@@ -368,5 +407,6 @@ namespace Operacional
         {
             adicionarFilho(new RelatorioNoturnoDiario(), "RELATÓRIO NOTURNO DIÁRIO", "RELATORIO_NOTURNO_DIARIO");
         }
+
     }
 }

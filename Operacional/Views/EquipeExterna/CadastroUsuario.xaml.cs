@@ -3,15 +3,17 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Operacional.DataBase;
 using Operacional.DataBase.Models;
+using Operacional.DataBase.Models.DTOs.Api;
 using System.Collections.ObjectModel;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Telerik.Windows.Controls;
-using Telerik.Windows.Controls.DataVisualization.Map.BingRest;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+
 
 namespace Operacional.Views.EquipeExterna;
 
@@ -107,6 +109,15 @@ public partial class CadastroUsuario : UserControl
 
                 dataObject.aux = result.Usuario.Id.ToString();
                 await vm.AddUsuarioAsync(dataObject);
+
+                //public async Task<ObservableCollection<EquipeExternaValoresPrevisaoEquipeModel>> GetEquipePrevisoesAsync(long id_equipe)
+
+                
+
+                
+
+                //await PostClientesFasesAsync("https://rest-api.cipolatti.com.br", payload);
+
             }
             else if ((int)response.StatusCode == 409)
             {
@@ -124,6 +135,47 @@ public partial class CadastroUsuario : UserControl
         {
             MessageBox.Show($"{ex.Message}", "Erro ao cadastrar usuário", MessageBoxButton.OK, MessageBoxImage.Error);
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+        }
+    }
+
+    public async Task PostClientesFasesAsync(string baseUrl, BulkRequest payload)
+    {
+        using var http = new HttpClient();
+        http.BaseAddress = new Uri(baseUrl);
+        http.DefaultRequestHeaders.Accept.Clear();
+        http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        var options = new JsonSerializerOptions
+        {
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+            // Não alterar a PropertyNamingPolicy pois usamos JsonPropertyName para snake_case
+            PropertyNameCaseInsensitive = true
+        };
+
+        string json = System.Text.Json.JsonSerializer.Serialize(payload, options);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        HttpResponseMessage response = null;
+        try
+        {
+            response = await http.PostAsync("/api/clientes-fases", content);
+
+            var respBody = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Espera 201 conforme seu controller
+                Console.WriteLine($"Sucesso ({(int)response.StatusCode}): {respBody}");
+            }
+            else
+            {
+                // Lidando com erros comuns (422 validação, 401, 403, 500)
+                Console.WriteLine($"Erro ({(int)response.StatusCode}): {respBody}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Erro de requisição: " + ex.Message);
         }
     }
 }
@@ -182,6 +234,43 @@ public partial class CadastroUsuarioViewModel : ObservableObject
             .OrderBy(f => f.equipe_e)
             .ToListAsync();
         return new ObservableCollection<EquipeExternaEquipeModel>(result);
+    }
+
+    public async Task<ObservableCollection<EquipeExternaValoresPrevisaoEquipeModel>> GetEquipePrevisoesAsync(long id_equipe)
+    {
+        using var _db = new Context();
+        var result = await _db.EquipePrevisoes
+            .OrderBy(f => f.cliente)
+            .ThenBy(f => f.fase)
+            .Where(f => f.id_equipe == id_equipe)
+            .ToListAsync();
+
+
+        var payload = new BulkRequest
+        {
+            Items =
+                    [
+                        new ClienteFaseDto {
+                            IdAprovado = 1,
+                            SiglaServ = "ABC",
+                            DataInicio = DateTime.UtcNow.Date,
+                            DataFim = null,
+                            Fase = "inicial",
+                            IdUser = 10
+                        },
+                        new ClienteFaseDto {
+                            IdAprovado = 2,
+                            SiglaServ = "XYZ",
+                            DataInicio = null,
+                            DataFim = DateTime.Parse("2025-09-01"),
+                            Fase = "final",
+                            IdUser = 11
+                        }
+                    ]
+        };
+
+
+        return new ObservableCollection<EquipeExternaValoresPrevisaoEquipeModel>(result);
     }
 
 }

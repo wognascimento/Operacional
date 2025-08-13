@@ -53,6 +53,10 @@
 
             <syncfusion:MenuItemAdv Header="Cronograma">
                 <syncfusion:MenuItemAdv Header="Montagem" Click="OnCronogramaClick"/>
+                <syncfusion:MenuItemAdv Header="Consultas">
+                    <syncfusion:MenuItemAdv Header="Funções Cronograma" Click="OnFuncoesCronogramaClick" />
+
+                </syncfusion:MenuItemAdv>
             </syncfusion:MenuItemAdv>
 
             <syncfusion:MenuItemAdv Header="Equipe Externa">

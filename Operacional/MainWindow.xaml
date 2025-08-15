@@ -30,7 +30,7 @@
                 <syncfusion:MenuItemAdv Header="Transporte Desmontagem" Click="OnTransporteDesmontagemClick"/>
                 <syncfusion:MenuItemAdv Header="Data Efetiva" Click="OnDataEfetivaClick"/>
                 <syncfusion:MenuItemAdv Header="Consultas">
-                    <syncfusion:MenuItemAdv Header="Data Montagem"/>
+                    <syncfusion:MenuItemAdv Header="Data Montagem" Click="OnDataMontagemClick"/>
                     <syncfusion:MenuItemAdv Header="Carga Montagem" Click="OnQryCargaMontgemClick"/>
                     <syncfusion:MenuItemAdv Header="Carga Desmontagem" Click="OnQryCargaDesmontagemClick"/>
                 </syncfusion:MenuItemAdv>

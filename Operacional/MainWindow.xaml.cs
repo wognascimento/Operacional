@@ -219,6 +219,82 @@ namespace Operacional
             }
         }
 
+        private async void OnDataMontagemClick(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+
+
+                string sql = @"
+                    SELECT 
+                        sigla, 
+                        siglaserv, 
+                        grupo, 
+                        nome, 
+                        cidade, 
+                        post_data_alterado, 
+                        data_de_expedicao, 
+                        est, 
+                        dsl_inicio_montagem, 
+                        dsl_termino_montagem, 
+                        fecha_data_montagem, 
+                        data_inauguracao, 
+                        data_informada_cliente, 
+                        diarias_cronograma, 
+                        data_pedido_cliente_inicio_montagem, 
+                        data_pedido_cliente_termino_montagem, 
+                        contrato_inicio_mont, 
+                        contrato_final_mont, 
+                        ano
+	                FROM operacional.qry_datas_montagem;";
+
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
+
+                using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+                await connection.OpenAsync();
+
+                var dataTable = new System.Data.DataTable();
+                using (var command = new NpgsqlCommand(sql, connection))
+                using (var dataAdapter = new NpgsqlDataAdapter(command))
+                {
+                    dataAdapter.Fill(dataTable);
+                }
+
+                await connection.CloseAsync();
+
+                using ExcelEngine excelEngine = new();
+                IApplication application = excelEngine.Excel;
+                application.DefaultVersion = ExcelVersion.Excel2016;
+
+                // Create a workbook
+                IWorkbook workbook = application.Workbooks.Create(1);
+                IWorksheet worksheet = workbook.Worksheets[0];
+
+                // Import the DataTable
+                worksheet.ImportDataTable(dataTable, true, 1, 1);
+
+                workbook.SaveAs(@$"{BaseSettings.CaminhoSistema}Impressos\DATAS-MONTAGEM.xlsx");
+
+                Process.Start(new ProcessStartInfo(@$"{BaseSettings.CaminhoSistema}Impressos\DATAS-MONTAGEM.xlsx")
+                {
+                    UseShellExecute = true
+                });
+
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+
+            }
+            catch (DbUpdateException ex)
+            {
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (Exception ex)  // Para qualquer outro erro
+            {
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private async void OnQryCargaDesmontagemClick(object sender, RoutedEventArgs e)
         {
             try

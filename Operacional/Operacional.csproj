@@ -62,6 +62,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     <PackageReference Include="Syncfusion.UI.WPF.NET" Version="27.1.58" />
+    <PackageReference Include="System.DirectoryServices.AccountManagement" Version="9.0.8" />
     <PackageReference Include="telerik.ui.for.wpf.60.xaml" Version="2024.4.1111" />
   </ItemGroup>
 

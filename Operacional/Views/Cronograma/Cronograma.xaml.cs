@@ -123,6 +123,7 @@ public partial class Cronograma : UserControl
             vm.NoitescronogPessoas = await vm.GetOperacionalNoitescronogPessoasAsync(aprovado.sigla);
             vm.NoitescronogPessoasManutencao = await vm.GetOperacionalNoitescronogPessoasManutencaoAsync(aprovado.sigla);
             vm.NoitesCronogPessoasManutencaoExtra = await vm.GetOperacionalNoitescronogPessoasManutencaoExtraAsync(aprovado.sigla);
+            vm.NoitesCronogPessoasDesmontagem = await vm.GetOperacionalNoitescronogPessoasDesmontagemAsync(aprovado.sigla);
         }
         catch (PostgresException ex)
         {

@@ -232,9 +232,9 @@ public partial class CadastroOrcamentoViewModel : ObservableObject
     {
         using var _db = new Context();
         var result = await _db.OperacionalNoitescronogPessoas
-            .OrderBy(f => f.sigla)
             .GroupBy(f => f.sigla)
             .Select(g => g.Key)
+            .OrderBy(f => f)
             .ToListAsync();
         return new ObservableCollection<string>(result);
     }

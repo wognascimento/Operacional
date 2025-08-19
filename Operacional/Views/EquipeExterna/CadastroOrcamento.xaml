@@ -22,7 +22,6 @@
         <StackPanel Grid.Column="0" Orientation="Horizontal" Background="#FFEADCB5">
             <TextBlock Text="EQUIPE:" FontWeight="Bold" Margin="4" VerticalAlignment="Center"/>
             <telerik:RadComboBox x:Name="cmbEquipe" 
-                     IsEditable="True"
                      IsFilteringEnabled="True"
                      OpenDropDownOnFocus="True"
                      TextSearchMode="Contains"
@@ -36,7 +35,6 @@
         <StackPanel Grid.Column="1" Orientation="Horizontal" Background="#FFEADCB5">
             <TextBlock Text="CLIENTE: " FontWeight="Bold" VerticalAlignment="Center" Margin="4"/>
             <telerik:RadComboBox x:Name="cmbAprovado" 
-                     IsEditable="True"
                      IsFilteringEnabled="True"
                      OpenDropDownOnFocus="True"
                      TextSearchMode="Contains"

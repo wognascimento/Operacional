@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="Operacional.Views.EquipeExterna.NotaPagamento"
+﻿<UserControl x:Class="Operacional.Views.EquipeExterna.NotaDespesa"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -6,6 +6,8 @@
              xmlns:local="clr-namespace:Operacional.Views.EquipeExterna" xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
+
+
 
     <Grid>
 
@@ -19,7 +21,6 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-
         <StackPanel Grid.Column="0" Orientation="Horizontal" Background="#FFEADCB5">
             <TextBlock Text="EQUIPE:" FontWeight="Bold" Margin="4" VerticalAlignment="Center"/>
             <telerik:RadComboBox x:Name="cmbEquipe" 
@@ -29,8 +30,7 @@
                  ItemsSource="{Binding Equipes}"
                  SelectedValuePath="id_equipe"
                  DisplayMemberPath="equipe_e" 
-                 Width="250" 
-                 SelectionChanged="Equipe_SelectionChanged" />
+                 Width="250"/>
         </StackPanel>
 
         <StackPanel Grid.Column="1" Orientation="Horizontal" Background="#FFEADCB5">
@@ -39,9 +39,7 @@
                  IsFilteringEnabled="True"
                  OpenDropDownOnFocus="True"
                  TextSearchMode="Contains"
-                 ItemsSource="{Binding Siglas}"
-                 SelectedValuePath="sigla"
-                 DisplayMemberPath="sigla" 
+                 ItemsSource="{Binding Siglas}" 
                  Width="200" 
                  SelectionChanged="Aprovado_SelectionChanged" />
 
@@ -50,8 +48,6 @@
         <StackPanel Grid.Column="2" Orientation="Horizontal" Background="#FFEADCB5">
             <Button Content="ENVIAR FLUXO" Width="100" Click="OnSendFluxo"/>
         </StackPanel>
-
-
 
         <telerik:RadGridView 
             Grid.Column="0"
@@ -98,7 +94,6 @@
 
             </telerik:RadGridView.Columns>
         </telerik:RadGridView>
-
 
     </Grid>
 

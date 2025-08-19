@@ -1,4 +1,5 @@
-﻿using System.Configuration;
+﻿using Operacional.DataBase;
+using System.Configuration;
 using System.DirectoryServices.AccountManagement;
 using System.Windows;
 using Telerik.Windows.Controls;
@@ -10,6 +11,8 @@ namespace Producao
     /// </summary>
     public partial class Login : RadWindow
     {
+        DataBaseSettings BaseSettings = DataBaseSettings.Instance;
+
         public Login()
         {
             InitializeComponent();
@@ -36,7 +39,7 @@ namespace Producao
                         throw new Exception("Credenciais inválidas.");
 
                     // Atualiza config e fecha
-                    var config = ConfigurationManager.OpenExeConfiguration("Operacional.dll");
+                    var config = ConfigurationManager.OpenExeConfiguration(@$"{BaseSettings.CaminhoSistema}Operacional.dll");
                     config.AppSettings.Settings["Username"].Value = txtLogin.Text;
                     config.Save(ConfigurationSaveMode.Modified);
                     ConfigurationManager.RefreshSection("appSettings");

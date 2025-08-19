@@ -474,6 +474,11 @@ namespace Operacional
             adicionarFilho(new NotaPagamento(), "NOTAS PARA PAGAMENTO", "NOTAS_PAGAMENTO");
         }
 
+        private void OnOpenNotasDespesasClick(object sender, RoutedEventArgs e)
+        {
+            adicionarFilho(new NotaDespesa(), "NOTAS DE DESPESAS", "NOTAS_DESPESA");
+        }
+
         private void OnOpenProgramacaoClick(object sender, RoutedEventArgs e)
         {
             adicionarFilho(new Programacao(), "PROGRAMAÇÃO MANUTENÇÃO", "PROGRAMACAO_MANUTENCAO");

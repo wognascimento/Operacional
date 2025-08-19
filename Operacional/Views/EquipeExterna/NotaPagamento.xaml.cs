@@ -255,7 +255,7 @@ public partial class NotaPagamentoViewModel : ObservableObject
     {
         using var _db = new Context();
         var result = _db.RelatorioPagamentos
-            .Where(f => f.id_equipe == id_equipe)
+            .Where(f => f.id_equipe == id_equipe && f.tipo == "SERVIÇOS")
             .OrderBy(f => f.sigla);
         return new ObservableCollection<RelatorioPagamentoModel>(await result.ToListAsync());
     }
@@ -270,7 +270,10 @@ public partial class NotaPagamentoViewModel : ObservableObject
     public  async Task<ObservableCollection<EquipeExternaDescricaoServicoModel>> GetDescricoesAsync()
     {
         using var _db = new Context();
-        var result = await _db.EquipeExternaDescricoes.OrderBy(f => f.descricao).ToListAsync();
+
+
+        ObservableCollection<string> descricoes = ["ADIANTAMENTO ALIMENTAÇÃO","ADIANTAMENTO TRANSPORTE","PAGAMENTO DE ALIMENTAÇÃO","PAGAMENTO DE TRANSPORTE","PAGAMENTO DE IMPRESSÃO","PAGAMENTO DE MATERIAL"];
+        var result = await _db.EquipeExternaDescricoes.Where(d => !descricoes.Contains(d.descricao)).OrderBy(f => f.descricao).ToListAsync();
         return new ObservableCollection<EquipeExternaDescricaoServicoModel>(result);
     }
 

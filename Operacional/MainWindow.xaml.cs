@@ -56,9 +56,9 @@ namespace Operacional
                 SfSkinManager.ApplyStylesOnApplication = false;
             }
 
-            var appSettings = ConfigurationManager.GetSection("appSettings") as NameValueCollection;
-            if (appSettings[0].Length > 0)
-                BaseSettings.Username = appSettings[0];
+            //var appSettings = ConfigurationManager.GetSection("appSettings") as NameValueCollection;
+            //if (appSettings[0].Length > 0)
+            //   BaseSettings.Username = appSettings[0];
 
             txtUsername.Text = BaseSettings.Username;
             txtDataBase.Text = BaseSettings.Database;

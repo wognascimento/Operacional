@@ -290,7 +290,7 @@ public partial class CadastroOrcamentoViewModel : ObservableObject
                             valor_ano_atual = 0,
                             lanche = 0,
                             transporte = 0,
-                            inserido_por = Environment.UserName,
+                            inserido_por = BaseSettings.Username,
                             inserido_em = DateTime.Now,
                         });
                     }

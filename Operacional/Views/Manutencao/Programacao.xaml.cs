@@ -515,6 +515,8 @@ public partial class ProgramacaoViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<OperacionalPessoasManutencaoModel> manutencaoFuncoes;
 
+    DataBaseSettings BaseSettings = DataBaseSettings.Instance;
+
     public async Task<ObservableCollection<OperacionalProgramacaoManutencaoModel>> GetProgramacoesAsync()
     {
         using var _db = new Context();
@@ -571,7 +573,7 @@ public partial class ProgramacaoViewModel : ObservableObject
                     cidade = cliente?.cidade ?? "N/A",
                     est = cliente?.est ?? "N/A",
                     tipo = registro.Tipo,
-                    cadastrado_por = Environment.UserName,   
+                    cadastrado_por = BaseSettings.Username,   
                     data_cadastro = DateTimeOffset.Now
                 });
             }
@@ -597,7 +599,7 @@ public partial class ProgramacaoViewModel : ObservableObject
         }
         else
         {
-            model.alterado_por = Environment.UserName;
+            model.alterado_por = BaseSettings.Username;
             model.data_alteracao = DateTimeOffset.Now;
             _db.Entry(modelExistente).CurrentValues.SetValues(model); 
         }

@@ -1,6 +1,8 @@
 ﻿using BibliotecasSIG;
 using Operacional.DataBase;
 using Operacional.Localization;
+using System.Collections.Specialized;
+using System.Configuration;
 using System.Diagnostics;
 using System.Globalization;
 using System.Net.Http;
@@ -24,10 +26,15 @@ namespace Operacional
         {
             Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("MTU4NUAzMjM3MkUzMTJFMzluT08wbzRnYm4zUlFDOVRzWVpYbUtuSEl0aUhTZmNMYjQxekhrV0NVRnlzPQ==");
 
+            var appSettings = ConfigurationManager.GetSection("appSettings") as NameValueCollection;
+
             DataBaseSettings BaseSettings = DataBaseSettings.Instance;
+            if (appSettings[0].Length > 0)
+                BaseSettings.AppSetting = appSettings;
+
             BaseSettings.Database = DateTime.Now.Year.ToString();
             BaseSettings.Host = "192.168.0.23";
-            BaseSettings.Username = Environment.UserName;
+            BaseSettings.Username = BaseSettings.AppSetting[0].Length > 0 ? BaseSettings.AppSetting[0] : Environment.UserName;
             BaseSettings.Password = "123mudar";
             BaseSettings.ConnectionString = $"Host={BaseSettings.Host};Database={BaseSettings.Database};Username={BaseSettings.Username};Password={BaseSettings.Password}";
 

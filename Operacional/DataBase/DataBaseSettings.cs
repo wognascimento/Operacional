@@ -1,4 +1,6 @@
-﻿namespace Operacional.DataBase
+﻿using System.Collections.Specialized;
+
+namespace Operacional.DataBase
 {
     public sealed class DataBaseSettings
     {
@@ -8,6 +10,7 @@
         public string? Username { get; set; }
         public string? Password { get; set; }
         public string? ConnectionString { get; set; }
+        public NameValueCollection? AppSetting { get; set; }
         public string CaminhoSistema { get; set; } = $@"C:\SIG\Operacional S.I.G\";
         public static DataBaseSettings Instance => instance;
     }

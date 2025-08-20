@@ -18,6 +18,8 @@ namespace Operacional.Views.EquipeExterna;
 /// </summary>
 public partial class NotaPagamento : UserControl
 {
+    DataBaseSettings BaseSettings = DataBaseSettings.Instance;
+
     public NotaPagamento()
     {
         InitializeComponent();
@@ -101,7 +103,7 @@ public partial class NotaPagamento : UserControl
             id_equipe = relatorio.id_equipe,
             cliente = relatorio.sigla,
             inserido_em = DateTime.Now,
-            inserido_por = Environment.UserName,
+            inserido_por = BaseSettings.Username,
         };
     }
 
@@ -318,7 +320,7 @@ public partial class NotaPagamentoViewModel : ObservableObject
             var model = _db.RelatorioDetalhes.Find(item.cod_detalhe_relatorio);
             item.envia_fluxo = true;
             item.enviado_fluxo_em = DateTime.Now;
-            item.enviado_fluxo_por = Environment.UserName;  
+            item.enviado_fluxo_por = _dataBaseSettings.Username;  
             _db.Entry(model).CurrentValues.SetValues(item);
         }  
         await _db.SaveChangesAsync();

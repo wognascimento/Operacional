@@ -17,6 +17,9 @@ namespace Operacional.Views.EquipeExterna;
 /// </summary>
 public partial class NotaDespesa : UserControl
 {
+
+    DataBaseSettings BaseSettings = DataBaseSettings.Instance;
+
     public NotaDespesa()
     {
         InitializeComponent();
@@ -139,7 +142,7 @@ public partial class NotaDespesa : UserControl
             id_equipe = vm.Relatorio.id_equipe,
             cliente = vm.Relatorio.sigla,
             inserido_em = DateTime.Now,
-            inserido_por = Environment.UserName,
+            inserido_por = BaseSettings.Username,
         };
     }
 
@@ -326,7 +329,7 @@ public partial class NotaDespesaViewModel : ObservableObject
             var model = _db.RelatorioDetalhes.Find(item.cod_detalhe_relatorio);
             item.envia_fluxo = true;
             item.enviado_fluxo_em = DateTime.Now;
-            item.enviado_fluxo_por = Environment.UserName;
+            item.enviado_fluxo_por = _dataBaseSettings.Username;
             _db.Entry(model).CurrentValues.SetValues(item);
         }
         await _db.SaveChangesAsync();

@@ -34,7 +34,7 @@ namespace Operacional
 
             BaseSettings.Database = DateTime.Now.Year.ToString();
             BaseSettings.Host = "192.168.0.23";
-            BaseSettings.Username = BaseSettings.AppSetting[0].Length > 0 ? BaseSettings.AppSetting[0] : Environment.UserName;
+            BaseSettings.Username = BaseSettings.AppSetting != null ? BaseSettings.AppSetting[0] : Environment.UserName;
             BaseSettings.Password = "123mudar";
             BaseSettings.ConnectionString = $"Host={BaseSettings.Host};Database={BaseSettings.Database};Username={BaseSettings.Username};Password={BaseSettings.Password}";
 

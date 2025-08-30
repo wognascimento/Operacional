@@ -275,7 +275,8 @@ public partial class NotaPagamentoViewModel : ObservableObject
 
 
         ObservableCollection<string> descricoes = ["ADIANTAMENTO ALIMENTAÇÃO","ADIANTAMENTO TRANSPORTE","PAGAMENTO DE ALIMENTAÇÃO","PAGAMENTO DE TRANSPORTE","PAGAMENTO DE IMPRESSÃO","PAGAMENTO DE MATERIAL"];
-        var result = await _db.EquipeExternaDescricoes.Where(d => !descricoes.Contains(d.descricao)).OrderBy(f => f.descricao).ToListAsync();
+        //var result = await _db.EquipeExternaDescricoes.Where(d => !descricoes.Contains(d.descricao)).OrderBy(f => f.descricao).ToListAsync();
+        var result = await _db.EquipeExternaDescricoes.OrderBy(f => f.descricao).ToListAsync();
         return new ObservableCollection<EquipeExternaDescricaoServicoModel>(result);
     }
 

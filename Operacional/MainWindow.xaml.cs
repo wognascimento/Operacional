@@ -7,6 +7,7 @@ using Operacional.DataBase.Models.DTOs;
 using Operacional.Views;
 using Operacional.Views.Cronograma;
 using Operacional.Views.Despesa;
+using Operacional.Views.Documentos;
 using Operacional.Views.EquipeExterna;
 using Operacional.Views.Manutencao;
 using Operacional.Views.Transporte;
@@ -36,7 +37,7 @@ namespace Operacional
         {
             InitializeComponent();
 
-            //StyleManager.ApplicationTheme = new Windows11Theme();
+            StyleManager.ApplicationTheme = new Office2016Theme();
 
             VisualStyles visualStyle = VisualStyles.Default;
             Enum.TryParse("Metro", out visualStyle);
@@ -489,5 +490,9 @@ namespace Operacional
             adicionarFilho(new RelatorioNoturnoDiario(), "RELATÓRIO NOTURNO DIÁRIO", "RELATORIO_NOTURNO_DIARIO");
         }
 
+        private void OnOpenControleDocumentoClick(object sender, RoutedEventArgs e)
+        {
+            adicionarFilho(new ControleDocumento(), "CONTROLE DOCUMENTOS", "CONTROLE_DOCUMENTOS");
+        }
     }
 }

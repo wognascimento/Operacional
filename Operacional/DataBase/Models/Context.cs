@@ -40,6 +40,8 @@ public partial class Context : DbContext
     public virtual DbSet<ComercialClienteModel> ComercialClientes { get; set; }
     public virtual DbSet<ProducaoAprovadoModel> ProducaoAprovados { get; set; }
     public virtual DbSet<ViewCronogramaModel> ViewCronogramas { get; set; }
+    public virtual DbSet<OperacionalControleDocumentoModel> ControleDocumentos { get; set; }
+    public virtual DbSet<OperacionalControleDocumentoClienteModel> ControleDocumentoClientes { get; set; }
 
     public virtual DbSet<EquipeExternaEquipeModel> Equipes { get; set; }
     public virtual DbSet<EquipeExternaValoresPrevisaoEquipeModel> EquipePrevisoes { get; set; }

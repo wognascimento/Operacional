@@ -80,6 +80,10 @@
                 <syncfusion:MenuItemAdv Header="Criticidade"/>
             </syncfusion:MenuItemAdv>
 
+            <syncfusion:MenuItemAdv Header="Documentos">
+                <syncfusion:MenuItemAdv Header="Controle" Click="OnOpenControleDocumentoClick"/>
+            </syncfusion:MenuItemAdv>
+
         </syncfusion:MenuAdv>
 
         <syncfusion:DocumentContainer 

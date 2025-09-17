@@ -1,0 +1,91 @@
+﻿<UserControl x:Class="Operacional.Views.Documentos.ControleDocumento"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Operacional.Views.Documentos" 
+             xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
+
+    <UserControl.Resources>
+        <x:Array x:Key="StatusList" Type="sys:String" xmlns:sys="clr-namespace:System;assembly=mscorlib">
+            <sys:String>SIM</sys:String>
+            <sys:String>NÃO</sys:String>
+        </x:Array>
+    </UserControl.Resources>
+    
+    <Grid>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="auto" />
+            <ColumnDefinition Width="auto" />
+            <ColumnDefinition Width="3*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Column="1" Orientation="Horizontal">
+            <TextBlock Text="CLIENTE: " FontWeight="Bold" VerticalAlignment="Center" Margin="4"/>
+            <telerik:RadComboBox 
+                x:Name="cmbAprovado" 
+                IsFilteringEnabled="True"
+                OpenDropDownOnFocus="True"
+                TextSearchMode="Contains"
+                ItemsSource="{Binding Siglas}"
+                Width="200" 
+                SelectionChanged="Aprovado_SelectionChanged" />
+
+        </StackPanel>
+
+
+        <telerik:RadGridView 
+            x:Name="itens" 
+            Grid.Column="0"
+            Grid.ColumnSpan="3"
+            Grid.Row="1"
+            AutoGenerateColumns="False"
+            Margin="2"
+            ShowGroupPanel="False"
+            ClipboardCopyMode="Cells, Header"
+            ItemsSource="{Binding ControleDocumentoClientes}" 
+            RowValidated="RadGridView_RowValidated" >
+
+            <telerik:RadGridView.ColumnGroups>
+                <telerik:GridViewColumnGroup Name="direcionadoResp" Header="Direcionado ao Resp" />
+                <telerik:GridViewColumnGroup Name="emAnalise" Header="Em Análise" />
+                <telerik:GridViewColumnGroup Name="concluido" Header="Concluído" />
+                <telerik:GridViewColumnGroup Name="enviado" Header="Enviado" />
+            </telerik:RadGridView.ColumnGroups>
+
+            <telerik:RadGridView.Columns>
+                <!--<telerik:GridViewDataColumn Header="#" IsReadOnly="True" DataMemberBinding="{Binding id}" IsFilterable="False"/>-->
+                <telerik:GridViewDataColumn Header="ITEM" IsReadOnly="True" DataMemberBinding="{Binding item}"/>
+                <telerik:GridViewDataColumn Header="QUANDO ENVIAR" IsReadOnly="True" DataMemberBinding="{Binding quando_enviar}"/>
+                <telerik:GridViewDataColumn Header="RESPONSÁVEL LIBERAÇÃO" IsReadOnly="True" DataMemberBinding="{Binding responsavel_liberacao}"/>
+                <telerik:GridViewDataColumn Header="EMAIL RESPONSÁVEL LIBERAÇÃO" IsReadOnly="True" DataMemberBinding="{Binding email_responsavel_liberacao}" IsFilterable="False"  />
+                <telerik:GridViewComboBoxColumn Header="FECHA" ItemsSource="{StaticResource StatusList}" DataMemberBinding="{Binding fecha}" IsFilterable="False"  />
+
+                <telerik:GridViewCheckBoxColumn Header="" IsReadOnly="False" DataMemberBinding="{Binding direcionado_resp}" ColumnGroupName="direcionadoResp" IsFilterable="False" />
+                <telerik:GridViewDataColumn Header="" IsReadOnly="True" DataMemberBinding="{Binding direcionado_resp_por}" ColumnGroupName="direcionadoResp" IsFilterable="False" Width="70" />
+                <telerik:GridViewDataColumn Header="" IsReadOnly="True" DataMemberBinding="{Binding direcionado_resp_em}" ColumnGroupName="direcionadoResp" IsFilterable="False"  Width="70" />
+
+                <telerik:GridViewCheckBoxColumn Header="" IsReadOnly="False" DataMemberBinding="{Binding em_analise}" ColumnGroupName="emAnalise" IsFilterable="False" />
+                <telerik:GridViewDataColumn Header="" IsReadOnly="True" DataMemberBinding="{Binding em_analise_por}" ColumnGroupName="emAnalise" IsFilterable="False" Width="70"  />
+                <telerik:GridViewDataColumn Header="" IsReadOnly="True" DataMemberBinding="{Binding em_analise_em}" ColumnGroupName="emAnalise" IsFilterable="False"  Width="70" />
+
+                <telerik:GridViewCheckBoxColumn Header="" IsReadOnly="False" DataMemberBinding="{Binding concluido}" ColumnGroupName="concluido" IsFilterable="False" />
+                <telerik:GridViewDataColumn Header="" IsReadOnly="True" DataMemberBinding="{Binding concluido_por}" ColumnGroupName="concluido" IsFilterable="False" Width="70"  />
+                <telerik:GridViewDataColumn Header="" IsReadOnly="True" DataMemberBinding="{Binding concluido_em}" ColumnGroupName="concluido" IsFilterable="False"  Width="70" />
+
+                <telerik:GridViewCheckBoxColumn Header="" IsReadOnly="False" DataMemberBinding="{Binding enviado}" ColumnGroupName="enviado" IsFilterable="False" />
+                <telerik:GridViewDataColumn Header="" IsReadOnly="True" DataMemberBinding="{Binding enviado_por}" ColumnGroupName="enviado" IsFilterable="False" Width="70"  />
+                <telerik:GridViewDataColumn Header="" IsReadOnly="True" DataMemberBinding="{Binding enviado_em}" ColumnGroupName="enviado" IsFilterable="False"  Width="70" />
+
+            </telerik:RadGridView.Columns>
+        </telerik:RadGridView>
+
+    </Grid>
+</UserControl>

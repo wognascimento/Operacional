@@ -7,6 +7,7 @@ namespace Operacional.DataBase.Models
     [Table("qryfrmtransp_detalhe", Schema = "operacional")]
     public partial class QryfrmtranspDetalheModel
     {
+        public long id { get; set; }
         public DateTime? data { get; set; }
         public DateTime? data_de_expedicao { get; set; }
         public string? siglaserv { get; set; }

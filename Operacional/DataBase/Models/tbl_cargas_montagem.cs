@@ -5,17 +5,18 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Operacional.DataBase.Models;
 
-[PrimaryKey("siglaserv", "num_caminhao")]
+//[PrimaryKey("siglaserv", "num_caminhao")]
 [Table("tbl_cargas_montagem", Schema = "operacional")]
 public partial class tbl_cargas_montagem
 {
     [Key]
+    public long id { get; set; }
+
     [StringLength(50)]
     public string siglaserv { get; set; }
 
     public DateTime? data { get; set; }
 
-    [Key]
     [StringLength(10)]
     public string? num_caminhao { get; set; }
 
@@ -43,7 +44,7 @@ public partial class tbl_cargas_montagem
     [StringLength(50)]
     public string? veiculo_programado { get; set; }
 
-    public DateOnly? data_chegada { get; set; }
+    public DateTime? data_chegada { get; set; }
 
     public DateTime? data_chegada_efetiva { get; set; }
 

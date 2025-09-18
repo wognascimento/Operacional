@@ -97,6 +97,7 @@ namespace Operacional.Views
                 {
                     var carga = new tbl_cargas_montagem 
                     {
+                        id = c.id,
                         siglaserv = c.siglaserv,
                         data = c.data,
                         num_caminhao = c.num_caminhao,
@@ -181,6 +182,7 @@ namespace Operacional.Views
                               .OrderBy(c => c.num_caminhao)
                               .Select(c => new QryCargaMontagemDTO
                               {
+                                  id = c.id,
                                   siglaserv = c.siglaserv,
                                   data = c.data,
                                   num_caminhao = c.num_caminhao,
@@ -327,6 +329,7 @@ namespace Operacional.Views
                     .OrderBy(c => c.num_caminhao)
                     .Select(c => new QryCargaMontagemDTO
                     {
+                        id = c.id,
                         siglaserv = c.siglaserv,
                         data = c.data,
                         num_caminhao = c.num_caminhao,
@@ -366,7 +369,7 @@ namespace Operacional.Views
             try
             {
                 using Context context = new();
-                var cargaExistente = await context.cargasmontagens.FindAsync(cargaMontagem.siglaserv, cargaMontagem.num_caminhao);
+                var cargaExistente = await context.cargasmontagens.FindAsync(cargaMontagem.id);
 
                 if (cargaExistente == null)
                 {

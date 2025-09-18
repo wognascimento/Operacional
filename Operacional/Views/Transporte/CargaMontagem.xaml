@@ -1,0 +1,53 @@
+﻿<UserControl x:Class="Operacional.Views.Transporte.CargaMontagem"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Operacional.Views.Transporte" 
+             xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
+    
+    <Grid>
+
+        <telerik:RadGridView x:Name="radGridView" 
+                ItemsSource="{Binding CargasMontagem}" 
+                AutoGenerateColumns="false"
+                ShowGroupPanel="False"
+                RowEditEnded="RadGridView_RowEditEnded" >
+            <telerik:RadGridView.Columns>
+                <telerik:GridViewDataColumn Header="data caminhão" DataMemberBinding="{Binding data, StringFormat=\{0:dd/MM/yyyy\}}"/>
+                <telerik:GridViewDataColumn Header="sigla serviço" DataMemberBinding="{Binding siglaserv}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn Header="num caminhao" DataMemberBinding="{Binding num_caminhao}"/>
+                <telerik:GridViewDataColumn Header="noite montagem" DataMemberBinding="{Binding noite_montagem}"/>
+                <telerik:GridViewDataColumn Header="m3 contratado" DataMemberBinding="{Binding m3_contratado}" />
+                <telerik:GridViewDataColumn Header="data chegada" DataMemberBinding="{Binding data_chegada, StringFormat=\{0:dd/MM/yyyy\}}" />
+                <telerik:GridViewDataColumn Header="transporte" DataMemberBinding="{Binding transporte}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn Header="obscarga" DataMemberBinding="{Binding obscarga}" />
+                <telerik:GridViewDataColumn Header="regiao" DataMemberBinding="{Binding regiao}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn Header="cidade" DataMemberBinding="{Binding cidade}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn Header="veiculo programado" DataMemberBinding="{Binding veiculo_programado}" />
+                <telerik:GridViewDataColumn Header="transportadora" DataMemberBinding="{Binding trasnportadora}"/>
+                <telerik:GridViewDataColumn Header="obs saida" DataMemberBinding="{Binding obs_saida}"/>
+                <telerik:GridViewDataColumn Header="volume carga" DataMemberBinding="{Binding volume_da_carga}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn Header="distancia" DataMemberBinding="{Binding distancia}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn Header="local carga" DataMemberBinding="{Binding local_carga}"/>
+                <telerik:GridViewDataColumn Header="obs externas" DataMemberBinding="{Binding obs_externas}"/>
+                <telerik:GridViewDataColumn Header="valor frete contratado" DataMemberBinding="{Binding valor_frete_contratado_caminhao}"/>
+                <telerik:GridViewDataColumn Header="obs frete contratado" DataMemberBinding="{Binding obs_frete_contratado}"/>
+                <telerik:GridViewDataColumn Header="ok" DataMemberBinding="{Binding ok}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn Header="dataaltera" DataMemberBinding="{Binding dataaltera}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn Header="alteradopor" DataMemberBinding="{Binding alteradopor}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn Header="post_alterado" DataMemberBinding="{Binding post_alterado}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn Header="post_data_alterado" DataMemberBinding="{Binding post_data_alterado}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn Header="volume_informado" DataMemberBinding="{Binding volume_informado}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn Header="data_chegada_efetiva" DataMemberBinding="{Binding data_chegada_efetiva}" IsReadOnly="True"/>
+            </telerik:RadGridView.Columns>
+
+
+        </telerik:RadGridView>
+
+
+    </Grid>
+    
+</UserControl>

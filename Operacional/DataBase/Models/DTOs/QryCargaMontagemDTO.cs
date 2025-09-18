@@ -2,6 +2,7 @@
 {
     public class QryCargaMontagemDTO
     {
+        public long id { get; set; }
         public string siglaserv { get; set; }
         public DateTime? data { get; set; }
         public string? num_caminhao { get; set; }
@@ -14,7 +15,7 @@
         public string? obscarga { get; set; }
         public string? trasnportadora { get; set; }
         public string? veiculo_programado { get; set; }
-        public DateOnly? data_chegada { get; set; }
+        public DateTime? data_chegada { get; set; }
         public DateTime? data_chegada_efetiva { get; set; }
         public string? obs_saida { get; set; }
         public double? valor_frete_contratado_caminhao { get; set; }

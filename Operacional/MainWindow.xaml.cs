@@ -146,6 +146,11 @@ namespace Operacional
             adicionarFilho(new TransporteMontagem(), "TRANSPORTES MONTAGEM", "TRANSPORTE_MONTAGEM");
         }
 
+        private void OnCargaMontagemClick(object sender, RoutedEventArgs e)
+        {
+            adicionarFilho(new CargaMontagem(), "CARGAS MONTAGEM", "CARGAS_MONTAGEM");
+        }
+
         private void OnTransporteDesmontagemClick(object sender, RoutedEventArgs e)
         {
 

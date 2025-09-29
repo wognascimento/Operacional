@@ -51,7 +51,7 @@
             ShowGroupPanel="False"
             ClipboardCopyMode="Cells, Header"
             ItemsSource="{Binding ControleDocumentoClientes}" 
-            RowValidated="RadGridView_RowValidated" >
+            RowValidated="RadGridView_RowValidated" SelectionMode="Extended" >
 
             <telerik:RadGridView.ColumnGroups>
                 <telerik:GridViewColumnGroup Name="direcionadoResp" Header="Direcionado ao Resp" />
@@ -65,8 +65,8 @@
                 <telerik:GridViewDataColumn Header="ITEM" IsReadOnly="True" DataMemberBinding="{Binding item}"/>
                 <telerik:GridViewDataColumn Header="QUANDO ENVIAR" IsReadOnly="True" DataMemberBinding="{Binding quando_enviar}"/>
                 <telerik:GridViewDataColumn Header="RESPONSÁVEL LIBERAÇÃO" IsReadOnly="True" DataMemberBinding="{Binding responsavel_liberacao}"/>
-                <telerik:GridViewDataColumn Header="EMAIL RESPONSÁVEL LIBERAÇÃO" IsReadOnly="True" DataMemberBinding="{Binding email_responsavel_liberacao}" IsFilterable="False"  />
-                <telerik:GridViewComboBoxColumn Header="FECHA" ItemsSource="{StaticResource StatusList}" DataMemberBinding="{Binding fecha}" IsFilterable="False"  />
+                <telerik:GridViewDataColumn Header="EMAIL RESPONSÁVEL LIBERAÇÃO" IsReadOnly="True" DataMemberBinding="{Binding email_responsavel_liberacao}"/>
+                <telerik:GridViewComboBoxColumn Header="FECHA" ItemsSource="{StaticResource StatusList}" DataMemberBinding="{Binding fecha}" />
 
                 <telerik:GridViewCheckBoxColumn Header="" IsReadOnly="False" DataMemberBinding="{Binding direcionado_resp}" ColumnGroupName="direcionadoResp" IsFilterable="False" />
                 <telerik:GridViewDataColumn Header="" IsReadOnly="True" DataMemberBinding="{Binding direcionado_resp_por}" ColumnGroupName="direcionadoResp" IsFilterable="False" Width="70" />

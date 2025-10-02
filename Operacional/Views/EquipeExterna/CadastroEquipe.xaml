@@ -16,6 +16,8 @@
             SelectionUnit="Cell"
             ShowGroupPanel="False"
             ItemsSource="{Binding Equipes}" 
+            NewRowPosition="Bottom"
+            GroupRenderMode="Flat"
             RowValidated="EquipeRowValidated">
             <telerik:RadGridView.Columns>
                 <telerik:GridViewDataColumn Header="#" DataMemberBinding="{Binding id}"/>

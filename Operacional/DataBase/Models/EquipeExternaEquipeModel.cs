@@ -8,12 +8,12 @@ public class EquipeExternaEquipeModel
 {
     [Key]
     public long       id { get; set; }
-    public string?   equipe_e	{ get; set; }
+    public required string   equipe_e	{ get; set; }
     public string?   nome	{ get; set; }
     public string?   tipo    { get; set; }
     public string?   cidadereferencia    { get; set; }
-    public string?   razaosocial { get; set; }
-    public string?   cgc { get; set; }
+    public required string   razaosocial { get; set; }
+    public required string   cgc { get; set; }
     public string?   insc_estadual   { get; set; }
     public string?   insc_municipal  { get; set; }
     public string?   endereco_comercial  { get; set; }

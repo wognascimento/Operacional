@@ -13,7 +13,7 @@ public class EquipeExternaContatoModel
     [Required]
     public string funcao { get; set; }
     [Required]
-    public string tel_1 { get; set; }
+    public string? tel_1 { get; set; }
     public string? tel_2 { get; set; }
     public string? e_mail { get; set; }
 

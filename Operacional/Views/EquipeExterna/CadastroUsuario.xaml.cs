@@ -1,6 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using Dapper;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using Npgsql;
 using Operacional.DataBase;
 using Operacional.DataBase.Models;
 using Operacional.DataBase.Models.DTOs.Api;
@@ -22,6 +24,8 @@ namespace Operacional.Views.EquipeExterna;
 /// </summary>
 public partial class CadastroUsuario : UserControl
 {
+    DataBaseSettings BaseSettings = DataBaseSettings.Instance;
+
     public CadastroUsuario()
     {
         InitializeComponent();
@@ -70,7 +74,7 @@ public partial class CadastroUsuario : UserControl
     private async void OnEnviarWebClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
     {
         
-        var selectedItem = radUsuarios.CurrentItem;
+        var selectedItem = radUsuarios.CurrentCellInfo.Item;
         var dataObject = selectedItem as EquipeExternaUsuarioModel;
 
         await EnviarUsuárioAsync(dataObject);
@@ -109,21 +113,17 @@ public partial class CadastroUsuario : UserControl
 
                 dataObject.aux = result.Usuario.Id.ToString();
                 await vm.AddUsuarioAsync(dataObject);
-
-                //public async Task<ObservableCollection<EquipeExternaValoresPrevisaoEquipeModel>> GetEquipePrevisoesAsync(long id_equipe)
-
-                
-
-                
-
-                //await PostClientesFasesAsync("https://rest-api.cipolatti.com.br", payload);
-
+                await PostDadosEquipeWebAsync(long.Parse(dataObject.aux), dataObject.id_equipe);
+                MessageBox.Show($"Usuário {dataObject.nome} cadastrado com sucesso!\nID: {result.Usuario.Id}", "Sucesso", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else if ((int)response.StatusCode == 409)
             {
                 string errorResponse = await response.Content.ReadAsStringAsync();
                 ErrorResponse error = JsonConvert.DeserializeObject<ErrorResponse>(errorResponse);
                 MessageBox.Show($"{error.Message}", "Erro ao cadastrar usuário", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                await PostDadosEquipeWebAsync(long.Parse(dataObject.aux), dataObject.id_equipe);
+                
             }
             else
             {
@@ -138,6 +138,106 @@ public partial class CadastroUsuario : UserControl
         }
     }
 
+    public async Task PostDadosEquipeWebAsync(long id_user, long id_equipe)
+    {
+        using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+        var parametros = new { id_user, id_equipe };
+        /*clientes_fase*/
+        var clientesFase = connection.Query<ClienteFaseDto>(
+            @"SELECT  
+                qry_previsao_valores_cronograma.id_aprovado AS id_aprovado,
+                qry_previsao_valores_cronograma.sigla AS sigla_serv,
+                t_data_efetiva.data_inicio_montagem AS data_inicio,
+                t_data_efetiva.data_inicio_montagem + max(qry_previsao_valores_cronograma.qtd_noites)::INTEGER AS data_fim,
+                qry_previsao_valores_cronograma.fase AS fase,
+                @id_user AS id_user
+            FROM equipe_externa.qry_previsao_valores_cronograma
+            INNER JOIN operacional.t_data_efetiva 
+                ON qry_previsao_valores_cronograma.sigla = t_data_efetiva.siglaserv
+            WHERE qry_previsao_valores_cronograma.fase = 'MONTAGEM' AND id_equipe = @id_equipe
+            GROUP BY 
+                qry_previsao_valores_cronograma.id_aprovado, 
+                qry_previsao_valores_cronograma.sigla, 
+                qry_previsao_valores_cronograma.fase, 
+                t_data_efetiva.data_inicio_montagem
+            UNION
+            SELECT  
+                qry_previsao_valores_cronograma.id_aprovado AS id_aprovado,
+                qry_previsao_valores_cronograma.sigla AS sigla_serv,
+                t_data_efetiva.data_inicio_desmontagem AS data_inicio,
+                t_data_efetiva.data_inicio_desmontagem + max(qry_previsao_valores_cronograma.qtd_noites)::INTEGER AS data_fim,
+                qry_previsao_valores_cronograma.fase AS fase,
+                @id_user AS id_user
+            FROM equipe_externa.qry_previsao_valores_cronograma
+            INNER JOIN operacional.t_data_efetiva 
+                ON qry_previsao_valores_cronograma.sigla = t_data_efetiva.siglaserv
+            WHERE qry_previsao_valores_cronograma.fase = 'DESMONTAGEM' AND id_equipe = @id_equipe
+            GROUP BY 
+                qry_previsao_valores_cronograma.id_aprovado, 
+                qry_previsao_valores_cronograma.sigla, 
+                qry_previsao_valores_cronograma.fase, 
+                t_data_efetiva.data_inicio_desmontagem;", parametros).ToList();
+        /*liberacao_equipe*/
+        var liberacaoEquipe = connection.Query<LiberacaoEquipeDto>(
+            @"SELECT 
+                qry_previsao_valores_cronograma.id_aprovado AS id_aprovado,
+                qry_previsao_valores_cronograma.sigla AS sigla_serv,
+                qry_previsao_valores_cronograma.fase AS fase,
+                qry_previsao_valores_cronograma.funcao AS funcao,
+                qry_previsao_valores_cronograma.qtd_pessoas AS qtd_pessoas,
+                qry_previsao_valores_cronograma.valor_ano_atual AS valor_ano_atual,
+                qry_previsao_valores_cronograma.lanche AS lanche,
+                qry_previsao_valores_cronograma.transporte AS transporte,
+                @id_user AS id_user
+            FROM equipe_externa.qry_previsao_valores_cronograma
+            WHERE (fase = 'MONTAGEM' OR fase = 'DESMONTAGEM') 
+              AND valor_ano_atual > 0 
+              AND id_equipe = @id_equipe;", parametros).ToList();
+
+        /*liberacao_manutencao_equipe*/
+        var liberacaoManutencaoEquipe = connection.Query<LiberacaoManutencaoEquipeDto>(
+            @"SELECT 
+                id_aprovado AS id_aprovado, 
+                sigla AS sigla_serv, 
+                fase AS fase, 
+                funcao AS funcao, 
+                qtd_pessoas AS qtd_pessoas, 
+                valor_ano_atual AS valor_ano_atual, 
+                lanche AS lanche, 
+                transporte AS transporte, 
+                data AS data,
+                @id_user AS id_user
+            FROM equipe_externa.qry_funcoes_equipe_usuario_manutencao
+            WHERE id_equipe = @id_equipe;", parametros).ToList();
+
+        var payload = new BulkPayload
+        {
+            clientes_fase = clientesFase,
+            liberacao_equipe = liberacaoEquipe,
+            //liberacao_manutencao_equipe = liberacaoManutencaoEquipe
+        };
+
+        var json = JsonConvert.SerializeObject(payload, Formatting.Indented);
+
+        using var httpClient = new HttpClient();
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+        var response = await httpClient.PostAsync("https://rest-api.cipolatti.com.br/api/bulk/all", content);
+
+        if (response.IsSuccessStatusCode)
+        {
+            Console.WriteLine("✅ Dados enviados com sucesso!");
+            MessageBox.Show($"Dados da equipe enviados com sucesso!", "Sucesso", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        else
+        {
+            Console.WriteLine($"❌ Erro: {response.StatusCode}");
+            var error = await response.Content.ReadAsStringAsync();
+            Console.WriteLine(error);
+            MessageBox.Show($"Erro ao enviar dados da equipe: {response.StatusCode}\n{error}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+    }
+    /*
     public async Task PostClientesFasesAsync(string baseUrl, BulkRequest payload)
     {
         using var http = new HttpClient();
@@ -178,9 +278,10 @@ public partial class CadastroUsuario : UserControl
             Console.WriteLine("Erro de requisição: " + ex.Message);
         }
     }
-}
+    */
+    }
 
-public partial class CadastroUsuarioViewModel : ObservableObject
+    public partial class CadastroUsuarioViewModel : ObservableObject
 {
     DataBaseSettings BaseSettings = DataBaseSettings.Instance;
 
@@ -235,7 +336,7 @@ public partial class CadastroUsuarioViewModel : ObservableObject
             .ToListAsync();
         return new ObservableCollection<EquipeExternaEquipeModel>(result);
     }
-
+    /*
     public async Task<ObservableCollection<EquipeExternaValoresPrevisaoEquipeModel>> GetEquipePrevisoesAsync(long id_equipe)
     {
         using var _db = new Context();
@@ -272,5 +373,5 @@ public partial class CadastroUsuarioViewModel : ObservableObject
 
         return new ObservableCollection<EquipeExternaValoresPrevisaoEquipeModel>(result);
     }
-
+    */
 }

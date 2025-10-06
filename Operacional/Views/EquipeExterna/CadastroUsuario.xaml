@@ -15,7 +15,7 @@
             x:Name="radUsuarios" 
             AutoGenerateColumns="False"
             Margin="2"
-            SelectionUnit="Cell"
+            
             ShowGroupPanel="False"
             ItemsSource="{Binding Usuarios}" 
             NewRowPosition="Bottom"

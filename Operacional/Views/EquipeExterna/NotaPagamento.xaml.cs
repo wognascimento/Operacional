@@ -19,6 +19,7 @@ namespace Operacional.Views.EquipeExterna;
 public partial class NotaPagamento : UserControl
 {
     DataBaseSettings BaseSettings = DataBaseSettings.Instance;
+    private bool _initialized = false;
 
     public NotaPagamento()
     {
@@ -30,12 +31,18 @@ public partial class NotaPagamento : UserControl
     {
         try
         {
+            if (_initialized) return;
+            _initialized = true;
+
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
             NotaPagamentoViewModel vm = (NotaPagamentoViewModel)DataContext;
             vm.Equipes = await vm.GetEquipesAsync();
             vm.Descricoes = await vm.GetDescricoesAsync();
             vm.Empresas = await vm.GetEmpresasAsync();
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+
+            // opcional: desvincular o event handler
+            Loaded -= UserControl_Loaded;
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx)
         {

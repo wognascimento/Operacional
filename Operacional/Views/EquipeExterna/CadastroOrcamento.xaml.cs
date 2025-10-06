@@ -18,6 +18,8 @@ namespace Operacional.Views.EquipeExterna;
 /// </summary>
 public partial class CadastroOrcamento : UserControl
 {
+    private bool _initialized = false;
+
     public CadastroOrcamento()
     {
         InitializeComponent();
@@ -28,12 +30,18 @@ public partial class CadastroOrcamento : UserControl
     {
         try
         {
+            if (_initialized) return;
+            _initialized = true;
+
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
             CadastroOrcamentoViewModel vm = (CadastroOrcamentoViewModel)DataContext;
             vm.Equipes = await vm.GetEquipesAsync();
             //vm.Aprovados = await vm.GetAprovadosAsync();
             vm.SiglasCrono = await vm.GetSiglasCronoAsync();
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+
+            // opcional: desvincular o event handler
+            Loaded -= UserControl_Loaded;
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx)
         {

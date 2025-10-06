@@ -19,6 +19,7 @@ public partial class NotaDespesa : UserControl
 {
 
     DataBaseSettings BaseSettings = DataBaseSettings.Instance;
+    private bool _initialized = false;
 
     public NotaDespesa()
     {
@@ -30,6 +31,9 @@ public partial class NotaDespesa : UserControl
     {
         try
         {
+            if (_initialized) return;
+            _initialized = true;
+
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
             NotaDespesaViewModel vm = (NotaDespesaViewModel)DataContext;
             vm.Equipes = await vm.GetEquipesAsync();
@@ -37,6 +41,9 @@ public partial class NotaDespesa : UserControl
             vm.Empresas = await vm.GetEmpresasAsync();
             vm.Siglas = await vm.GetAprovadosAsync();
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+
+            // opcional: desvincular o event handler
+            Loaded -= UserControl_Loaded;
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx)
         {

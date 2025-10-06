@@ -24,6 +24,7 @@ public partial class Cronograma : UserControl
 {
     private readonly DataBaseSettings BaseSettings = DataBaseSettings.Instance;
     private string _tipoCronograma;
+    private bool _initialized = false;
 
     public Cronograma()
     {
@@ -35,11 +36,17 @@ public partial class Cronograma : UserControl
     {
         try
         {
+            if (_initialized) return;
+            _initialized = true;
+
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
             CronogramaViewModel vm = (CronogramaViewModel)DataContext;
             vm.Aprovados = await vm.GetAprovadosAsync();
             vm.Funcoes = await vm.GetFuncoesAsync();
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+
+            // opcional: desvincular o event handler
+            Loaded -= UserControl_Loaded;
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx)
         {

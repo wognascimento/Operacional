@@ -240,6 +240,7 @@ public partial class NotaPagamentoViewModel : ObservableObject
                     join valores in context.EquipePrevisoes
                     on equipe.id equals valores.id_equipe
                     group valores by new { valores.id_equipe, equipe.equipe_e } into g
+                    orderby g.Key.equipe_e
                     select new EquipeExternaEquipeDTO
                     {
                         id_equipe = g.Key.id_equipe,

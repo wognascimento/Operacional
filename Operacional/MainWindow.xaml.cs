@@ -477,7 +477,12 @@ namespace Operacional
 
         private void OnOpenNotasPagamentoClick(object sender, RoutedEventArgs e)
         {
-            adicionarFilho(new NotaPagamento(), "NOTAS PARA PAGAMENTO", "NOTAS_PAGAMENTO");
+            adicionarFilho(new NotaPagamento(), "NOTAS PARA PAGAMENTO LANÇAMENTO", "NOTAS_PAGAMENTO_LANCAMENTO");
+        }
+
+        private void OnOpenNotasPagamentoConsultaClick(object sender, RoutedEventArgs e)
+        {
+            adicionarFilho(new NotaPagamentoResumo(0), "NOTAS PARA PAGAMENTO RESUMO", "NOTAS_PAGAMENTO_RESUMO");
         }
 
         private void OnOpenNotasDespesasClick(object sender, RoutedEventArgs e)
@@ -499,5 +504,6 @@ namespace Operacional
         {
             adicionarFilho(new ControleDocumento(), "CONTROLE DOCUMENTOS", "CONTROLE_DOCUMENTOS");
         }
+
     }
 }

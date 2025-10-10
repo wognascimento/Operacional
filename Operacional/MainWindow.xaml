@@ -64,7 +64,11 @@
                 <syncfusion:MenuItemAdv Header="Cadastro de Equipe" Click="OnOpenCadastroEquipesClick"/>
                 <syncfusion:MenuItemAdv Header="Cadastro de Orçamento" Click="OnOpenCadastroOrcamentoClick"/>
                 <syncfusion:MenuItemAdv Header="Cadastro de Usuário" Click="OnOpenUsuarioClick"/>
-                <syncfusion:MenuItemAdv Header="Notas Pagamento" Click="OnOpenNotasPagamentoClick"/>
+                <syncfusion:MenuItemAdv Header="Notas Pagamento">
+                    <syncfusion:MenuItemAdv Header="Lançamento" Click="OnOpenNotasPagamentoClick"/>
+                    <syncfusion:MenuItemAdv Header="Consulta Resumo" Click="OnOpenNotasPagamentoConsultaClick"/>
+
+                </syncfusion:MenuItemAdv>
                 <syncfusion:MenuItemAdv Header="Notas Despesas" Click="OnOpenNotasDespesasClick"/>
                 <syncfusion:MenuItemAdv Header="Contatos" Click="OnContatoClick"/>
                 <syncfusion:MenuItemAdv Header="Relatório Noturno Diário" Click="OnRelatorioNoturnoDiarioClick"/>

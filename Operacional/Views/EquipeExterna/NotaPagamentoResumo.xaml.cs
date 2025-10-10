@@ -47,7 +47,12 @@ public partial class NotaPagamentoResumo : UserControl
         {
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
             NotaPagamentoResumoViewModel vm = (NotaPagamentoResumoViewModel)DataContext;
-            vm.RelatorioResumo = await vm.GetPagamentosEquipeResumoAsync(id_equipe);
+
+            if (id_equipe == 0)
+                vm.RelatorioResumo = await vm.GetPagamentosEquipeResumoAsync();
+            else
+                vm.RelatorioResumo = await vm.GetPagamentosEquipeResumoAsync(id_equipe);
+
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx)
@@ -71,7 +76,7 @@ public partial class NotaPagamentoResumo : UserControl
             NotaPagamentoResumoViewModel vm = (NotaPagamentoResumoViewModel)DataContext;
             var selectedItem = radResumo.CurrentCellInfo.Item;
             var dataObject = selectedItem as RelatorioResumoDTO;
-            var equipe = await vm.GetEquipeAsync(id_equipe);
+            var equipe = await vm.GetEquipeAsync(dataObject.equipe);
 
             var d = dataObject.data_pagto;
             var culture = new CultureInfo("pt-BR");
@@ -83,11 +88,11 @@ public partial class NotaPagamentoResumo : UserControl
 
             var fluxo = new FluxoDTO
             {
-                Debito = dataObject.valor_detalhe,
-                DataEmissao = dataObject.data,
+                Debito = (double)dataObject.valor_detalhe,
+                DataEmissao = (DateTime)dataObject.data,
                 NumeroDocumento = dataObject.numero_nf,
                 DataVencimento = dataObject.data_pagto,
-                DataPagamento = dataObject.data_pagto,
+                DataPagamento = (DateTime)dataObject.data_pagto,
                 Conta = await vm.GetContaAsync(dataObject.empresa_pagadora),
                 Descricao = equipe.razaosocial,
                 Depto = "RHE",
@@ -142,6 +147,7 @@ public partial class NotaPagamentoResumoViewModel : ObservableObject
             .Where(f => f.id_equipe == id_equipe)
             .GroupBy(f => new 
             {
+                f.empresa_nf,
                 f.tipo_detalhe,
                 f.descricao,
                 f.numero_nf,
@@ -151,6 +157,41 @@ public partial class NotaPagamentoResumoViewModel : ObservableObject
             })
             .Select(g => new RelatorioResumoDTO
             {
+                equipe = g.Key.empresa_nf,
+                tipo_detalhe = g.Key.tipo_detalhe,
+                descricao = g.Key.descricao,
+                numero_nf = g.Key.numero_nf,
+                data = (DateTime)g.Key.data,
+                data_pagto = (DateTime)g.Key.data_pagto,
+                empresa_pagadora = g.Key.empresa_pagadora,
+                valor_detalhe = g.Sum(x => x.valor_detalhe),
+                saldo = g.Sum(x => x.saldo)
+                // Se quiser manter outros campos (ex.: codrelatorio), pode usar g.Select(x => x.campo).FirstOrDefault()
+            })
+            .OrderBy(r => r.descricao)
+            .ToListAsync();
+
+        return new ObservableCollection<RelatorioResumoDTO>(result);
+    }
+
+    public async Task<ObservableCollection<RelatorioResumoDTO>> GetPagamentosEquipeResumoAsync()
+    {
+        using var _db = new Context();
+
+        var result = await _db.RelatorioDetalhes
+            .GroupBy(f => new
+            {
+                f.empresa_nf,
+                f.tipo_detalhe,
+                f.descricao,
+                f.numero_nf,
+                f.data,
+                f.data_pagto,
+                f.empresa_pagadora
+            })
+            .Select(g => new RelatorioResumoDTO
+            {
+                equipe = g.Key.empresa_nf,
                 tipo_detalhe = g.Key.tipo_detalhe,
                 descricao = g.Key.descricao,
                 numero_nf = g.Key.numero_nf,
@@ -177,11 +218,11 @@ public partial class NotaPagamentoResumoViewModel : ObservableObject
         return conta;
     }
 
-    public async Task<EquipeExternaEquipeModel> GetEquipeAsync(long id_equipe)
+    public async Task<EquipeExternaEquipeModel> GetEquipeAsync(string equipe)
     {
         using var _db = new Context();
         var razaosocial = await _db.Equipes
-            .FirstOrDefaultAsync(e => e.id == id_equipe);
+            .FirstOrDefaultAsync(e => e.equipe_e == equipe);
         return razaosocial;
     }
 

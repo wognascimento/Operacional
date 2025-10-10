@@ -1,0 +1,42 @@
+﻿<UserControl x:Class="Operacional.Views.EquipeExterna.NotaPagamentoResumo"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation"
+             xmlns:local="clr-namespace:Operacional.Views.EquipeExterna" 
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    
+    <Grid>
+
+        <telerik:RadGridView x:Name="radResumo" 
+            AutoGenerateColumns="False"
+            IsReadOnly="True"
+            ShowGroupPanel="False"
+            GroupRenderMode="Flat"
+            SelectionMode="Extended"
+            ClipboardCopyMode="Cells, Header"
+            ItemsSource="{Binding RelatorioResumo}">
+            <telerik:RadContextMenu.ContextMenu>
+                <telerik:RadContextMenu>
+                    <telerik:RadMenuItem Header="Enviar Fluxo" Click="OnEnviarFluxoClick" />
+                </telerik:RadContextMenu>
+            </telerik:RadContextMenu.ContextMenu>
+            <telerik:RadGridView.Columns>
+                
+                <telerik:GridViewDataColumn Header="TIPO" DataMemberBinding="{Binding tipo_detalhe}"/>
+                <telerik:GridViewDataColumn Header="DESCRIÇÃO" DataMemberBinding="{Binding descricao}"/>
+                <telerik:GridViewDataColumn Header="NOTA" DataMemberBinding="{Binding numero_nf}" IsFilterable="False"  />
+                <telerik:GridViewDataColumn Header="VALOR NOTA" DataMemberBinding="{Binding valor_detalhe}" DataFormatString="{}{0:C2}"/>
+                <telerik:GridViewDataColumn Header="DATA NOTA" DataMemberBinding="{Binding data}" DataFormatString="{} {0:dd/MM/yyyy}" IsFilterable="False"  />
+                <telerik:GridViewDataColumn Header="DATA PAGAMENTO" DataMemberBinding="{Binding data_pagto}" DataFormatString="{} {0:dd/MM/yyyy}" IsFilterable="False"  />
+                <telerik:GridViewDataColumn Header="SALDO" DataMemberBinding="{Binding saldo}" DataFormatString="{}{0:C2}"/>
+                <telerik:GridViewDataColumn Header="EMPRESA PAGADORA" DataMemberBinding="{Binding empresa_pagadora}"/>
+                
+            </telerik:RadGridView.Columns>
+        </telerik:RadGridView>
+
+    </Grid>
+    
+</UserControl>

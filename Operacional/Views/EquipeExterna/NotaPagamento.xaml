@@ -48,10 +48,8 @@
         </StackPanel>
 
         <StackPanel Grid.Column="2" Orientation="Horizontal" Background="#FFEADCB5">
-            <Button Content="ENVIAR FLUXO" Width="100" Click="OnSendFluxo"/>
+            <Button Content="RESUMO EQUIPE" Width="100" Click="OnSendFluxo"/>
         </StackPanel>
-
-
 
         <telerik:RadGridView 
             Grid.Column="0"
@@ -99,7 +97,6 @@
 
             </telerik:RadGridView.Columns>
         </telerik:RadGridView>
-
 
     </Grid>
 

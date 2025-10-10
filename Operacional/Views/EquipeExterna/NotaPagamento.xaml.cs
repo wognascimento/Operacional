@@ -161,6 +161,18 @@ public partial class NotaPagamento : UserControl
 
     private async void OnSendFluxo(object sender, RoutedEventArgs e)
     {
+
+        RadWindow radWindow = new()
+        {
+            Content = new NotaPagamentoResumo(((EquipeExternaEquipeDTO)cmbEquipe.SelectedItem).id_equipe),
+            ResizeMode = ResizeMode.NoResize,
+            Header = "Resumo de Pagamentos",
+            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            Owner = this // torna modal em relação à janela atual
+        };
+        radWindow.ShowDialog();
+
+        /*
         NotaPagamentoViewModel vm = (NotaPagamentoViewModel)DataContext;
         DateTime hoje = DateTime.Today;
         DateTime doisDiasDepois = hoje.AddDays(-2);
@@ -201,7 +213,7 @@ public partial class NotaPagamento : UserControl
         {
             MessageBox.Show("Todos os itens enviados ou com pagamento retroativo.", "Informação", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-
+        */
     }
 
 }

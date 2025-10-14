@@ -9,6 +9,7 @@ using Operacional.Views.Cronograma;
 using Operacional.Views.Despesa;
 using Operacional.Views.Documentos;
 using Operacional.Views.EquipeExterna;
+using Operacional.Views.EquipeExterna.Consultas;
 using Operacional.Views.Manutencao;
 using Operacional.Views.Transporte;
 using Producao;
@@ -426,6 +427,9 @@ namespace Operacional
 
         private async void OnRelatorioPrevisaoValoresClick(object sender, RoutedEventArgs e)
         {
+            adicionarFilho(new ValoresCronograma(), "PREVISÃO VALORES CRONOGRAMA", "PREVISAO_VALORES_CRONOGRAMA");
+            
+            /*
             try
             {
                 using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
@@ -473,6 +477,7 @@ namespace Operacional
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
                 MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+            */
         }
 
         private void OnOpenNotasPagamentoClick(object sender, RoutedEventArgs e)

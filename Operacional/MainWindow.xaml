@@ -74,6 +74,7 @@
                 <syncfusion:MenuItemAdv Header="Relatório Noturno Diário" Click="OnRelatorioNoturnoDiarioClick"/>
                 <syncfusion:MenuItemAdv Header="Consultas">
                     <syncfusion:MenuItemAdv Header="Previsão Valores Cronograma" Click="OnRelatorioPrevisaoValoresClick" />
+                    <syncfusion:MenuItemAdv Header="Comparação Previsão Realizado" Click="OnComparacaoPrevisaoRealizadoClick" />
                 </syncfusion:MenuItemAdv>
             </syncfusion:MenuItemAdv>
 

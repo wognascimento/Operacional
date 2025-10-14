@@ -480,6 +480,11 @@ namespace Operacional
             */
         }
 
+        private void OnComparacaoPrevisaoRealizadoClick(object sender, RoutedEventArgs e)
+        {
+            adicionarFilho(new ComparacaoPrevisarLancamento(), "COMPARAÇÃO PREVISÃO REALIZADO", "COMPARACAO_PREVISAO_REALIZADO");
+        }
+
         private void OnOpenNotasPagamentoClick(object sender, RoutedEventArgs e)
         {
             adicionarFilho(new NotaPagamento(), "NOTAS PARA PAGAMENTO LANÇAMENTO", "NOTAS_PAGAMENTO_LANCAMENTO");
@@ -510,5 +515,6 @@ namespace Operacional
             adicionarFilho(new ControleDocumento(), "CONTROLE DOCUMENTOS", "CONTROLE_DOCUMENTOS");
         }
 
+       
     }
 }

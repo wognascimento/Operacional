@@ -4,13 +4,14 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Operacional.DataBase;
 using Operacional.DataBase.Models.DTOs;
+using Operacional.DataBase.Models.DTOs.Api;
 using System.Collections.ObjectModel;
+using System.Net.Http;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
-using Telerik.Windows.Controls;
 using System.Windows.Data;
 using Telerik.Windows.Controls;
-using Telerik.Windows.Controls.GridView;
 
 namespace Operacional.Views.EquipeExterna.Consultas;
 
@@ -26,7 +27,7 @@ public partial class ComparacaoPrevisarLancamento : UserControl
         this.Loaded += ComparacaoPrevisarLancamento_Loaded;
     }
 
-    private async void ComparacaoPrevisarLancamento_Loaded(object sender, System.Windows.RoutedEventArgs e)
+    private async void ComparacaoPrevisarLancamento_Loaded(object sender, RoutedEventArgs e)
     {
         try
         {
@@ -130,6 +131,61 @@ public partial class ComparacaoPrevisarLancamento : UserControl
         // largura star por padrão
         e.Column.Width = new GridViewLength(1, GridViewLengthUnitType.Star);
     }
+
+    private async void OnBuscarLancamentosClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
+    {
+        // recupera a janela que contém este UserControl (se houver)
+        var ownerWindow = Window.GetWindow(this) ?? Application.Current.MainWindow;
+
+        ComparacaoPrevisarLancamentoViewModel vm = (ComparacaoPrevisarLancamentoViewModel)DataContext;
+        
+        RadWindow dlg = new BuscarLancamentos
+        {
+            // opcional: passar ViewModel ou dados para a janela:
+            DataContext = vm,
+            Owner = ownerWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+
+        vm.CloseAction = (result) =>
+        {
+            dlg.DialogResult = result;
+            dlg.Close();
+        };
+
+        // ShowDialog() abre modalmente (bloqueia a janela owner)
+        bool? resultado = dlg.ShowDialog();
+
+        if (resultado == true)
+        {
+            try
+            {
+                vm.IsBusy = true;
+                await vm.GetComparacaoPrevistoRealizadoAsync();
+                vm.IsBusy = false;
+            }
+            catch (PostgresException ex)
+            {
+                MessageBox.Show($"Erro do banco: {ex.MessageText}\nDetalhe: {ex.Detail}\nLocal: {ex.Where}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (NpgsqlException ex)
+            {
+                MessageBox.Show($"Erro do banco: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx)
+            {
+                MessageBox.Show($"Erro do banco: {pgEx.MessageText}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        else
+        {
+            // usuário cancelou ou fechou
+        }
+    }
 }
 
 public partial class ComparacaoPrevisarLancamentoViewModel : ObservableObject
@@ -141,6 +197,15 @@ public partial class ComparacaoPrevisarLancamentoViewModel : ObservableObject
 
     [ObservableProperty]
     private ObservableCollection<ComparacaoPrevisaoLancamentoDTO> comparacoes;
+
+    [ObservableProperty]
+    private ObservableCollection<EquipeUsuarioDTO> equipeUsuarios = [];
+
+    [ObservableProperty]
+    private EquipeUsuarioDTO? equipeUsuario;
+
+    [ObservableProperty]
+    public Action<bool?>? closeAction;
 
     public async Task GetComparacaoPrevistoRealizadoAsync()
     {
@@ -167,6 +232,89 @@ public partial class ComparacaoPrevisarLancamentoViewModel : ObservableObject
                     ORDER BY sigla, equipe_e, fase, funcoes;
                 ";
         Comparacoes = new ObservableCollection<ComparacaoPrevisaoLancamentoDTO>(await connection.QueryAsync<ComparacaoPrevisaoLancamentoDTO>(sql));
-
     }
+
+    public async Task GetEquipeUsuariosAsync()
+    {
+        using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+        string sql = @"
+                    SELECT usuario.id_equipe, equipe.equipe_e, usuario.aux FROM equipe_externa.tblequipesext equipe
+                    JOIN equipe_externa.tblusuario usuario ON equipe.id = usuario.id_equipe
+                    WHERE usuario.aux IS NOT NULL AND equipe.equipe_e <> 'CIPOLATTI'
+                    ORDER BY equipe.equipe_e;
+                ";
+        EquipeUsuarios = new ObservableCollection<EquipeUsuarioDTO>(await connection.QueryAsync<EquipeUsuarioDTO>(sql));
+    }
+
+    public async Task<ApiResponse<T>> GetLancamentosWeb<T>(string url, CancellationToken ct = default)
+    {
+        HttpClient _httpClient = new();
+        using var response = await _httpClient.GetAsync(url, ct);
+        response.EnsureSuccessStatusCode();
+
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            AllowTrailingCommas = true
+        };
+
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        var apiResponse = await JsonSerializer.DeserializeAsync<ApiResponse<T>>(stream, options, ct);
+        return apiResponse ?? new ApiResponse<T> { Message = "Nenhuma resposta", Data = [] };
+    }
+    //
+    public async Task InsertBatchAsync(List<EquipeLancamentoDto> items, CancellationToken ct = default)
+    {
+        const string upsertSql = @"
+        INSERT INTO equipe_externa.tbl_presenca_equipe (
+            id, id_equipe, id_aprovado, fase, funcao, data, pessoas, extra, created_at, updated_at
+        ) VALUES (
+            @id, @id_equipe, @id_aprovado, @fase, @funcao, @data, @pessoas, @extra, @created_at, @updated_at
+        )
+        ON CONFLICT (id) DO UPDATE
+            SET
+                id_equipe   = EXCLUDED.id_equipe,
+                id_aprovado = EXCLUDED.id_aprovado,
+                fase        = EXCLUDED.fase,
+                funcao      = EXCLUDED.funcao,
+                data        = EXCLUDED.data,
+                pessoas     = EXCLUDED.pessoas,
+                extra       = EXCLUDED.extra,
+                updated_at  = EXCLUDED.updated_at
+            RETURNING id;";
+
+        const string deleteSql = @"
+        DELETE FROM equipe_externa.tbl_presenca_equipe
+        WHERE id = @id;";
+
+        await using var conn = new NpgsqlConnection(BaseSettings.ConnectionString);
+        await conn.OpenAsync(ct);
+
+        await using var tran = await conn.BeginTransactionAsync(ct);
+        try
+        {
+            foreach (var item in items)
+            {
+                //await conn.ExecuteAsync(sql, item, transaction: tran);
+                // se pessoas == 0 => delete
+                if (item.pessoas == 0)
+                {
+                    await conn.ExecuteAsync(deleteSql, new { item.id }, transaction: tran);
+                }
+                else
+                {
+                    // upsert: retorna id (pode ser ignorado se não for usado)
+                    await conn.QuerySingleAsync<int>(upsertSql, item, transaction: tran);
+                }
+            }
+            await tran.CommitAsync(ct);
+        }
+        catch
+        {
+            await tran.RollbackAsync(ct);
+            throw;
+        }
+    }
+
+
 }

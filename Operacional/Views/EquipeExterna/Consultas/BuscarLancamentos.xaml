@@ -1,0 +1,55 @@
+﻿<telerik:RadWindow x:Class="Operacional.Views.EquipeExterna.Consultas.BuscarLancamentos"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation"
+        xmlns:local="clr-namespace:Operacional.Views.EquipeExterna.Consultas"
+        mc:Ignorable="d"
+        Height="200"
+        Width="500" 
+        Header="Buscar Lançamentos" 
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- RadBusyIndicator do Telerik -->
+    <telerik:RadBusyIndicator IsBusy="{Binding IsBusy}"
+                              BusyContent="Aguarde..."
+        HorizontalContentAlignment="Stretch"
+                              VerticalContentAlignment="Stretch">
+        <Grid Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <!-- Label + ComboBox -->
+                <RowDefinition Height="Auto"/>
+                <!-- botões -->
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Linha 0: Label acima do ComboBox (ocupa ambas colunas) -->
+            <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Vertical" Margin="0,0,0,10">
+                <Label Target="{Binding ElementName=cmbOpcoes}" FontWeight="SemiBold" Margin="0,0,0,4">
+                    Selecione Equipe:
+                </Label>
+                <ComboBox x:Name="cmbOpcoes"
+                          DisplayMemberPath="equipe_e"
+                          SelectedValuePath="aux"
+                          ItemsSource="{Binding EquipeUsuarios}"
+                          SelectedItem="{Binding EquipeUsuario, Mode=TwoWay}"
+                          HorizontalAlignment="Stretch"/>
+            </StackPanel>
+
+            <!-- Linha 1: dois botões, um em cada coluna -->
+            <Button Grid.Row="1" Grid.Column="0" Margin="0,0,5,0" Padding="8,4"
+                    Content="Baixar por Equipe" HorizontalAlignment="Stretch"
+                    Click="Button_Click"/>
+            <Button Grid.Row="1" Grid.Column="1" Margin="5,0,0,0" Padding="8,4"
+                    Content="Baixar Todos" HorizontalAlignment="Stretch"
+                    Click="Button_Click_1"/>
+        </Grid>
+    </telerik:RadBusyIndicator>
+
+</telerik:RadWindow>

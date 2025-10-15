@@ -31,6 +31,15 @@ public class BulkRequest
 }
 */
 
+public class ApiResponse<T>
+{
+    [JsonPropertyName("message")]
+    public string Message { get; set; }
+
+    [JsonPropertyName("data")]
+    public List<T> Data { get; set; }
+}
+
 public class ClienteFaseDto
 {
     public int id_aprovado { get; set; }
@@ -73,4 +82,42 @@ public class BulkPayload
     public List<ClienteFaseDto> clientes_fase { get; set; }
     public List<LiberacaoEquipeDto> liberacao_equipe { get; set; }
     public List<LiberacaoManutencaoEquipeDto> liberacao_manutencao_equipe { get; set; }
+}
+
+public class EquipeLancamentoDto
+{
+    //[JsonPropertyName("id")]
+    public int id { get; set; }
+
+    //[JsonPropertyName("id_user")]
+    public int id_user { get; set; }
+
+    public long id_equipe { get; set; }
+
+    //[JsonPropertyName("id_aprovado")]
+    public int? id_aprovado { get; set; }
+
+    //[JsonPropertyName("fase")]
+    public string fase { get; set; }
+
+    //[JsonPropertyName("funcao")]
+    public string funcao { get; set; }
+
+    //[JsonPropertyName("data")]
+    public DateTimeOffset? data { get; set; }
+
+    //[JsonPropertyName("pessoas")]
+    public int pessoas { get; set; }
+
+    //[JsonPropertyName("editado_usuario")]
+    public bool editado_usuario { get; set; }
+
+    //[JsonPropertyName("extra")]
+    public bool extra { get; set; }
+
+    //[JsonPropertyName("created_at")]
+    public DateTimeOffset? created_at { get; set; }
+
+    //[JsonPropertyName("updated_at")]
+    public DateTimeOffset? updated_at { get; set; }
 }

@@ -20,7 +20,13 @@
             SelectionMode="Extended"
             ClipboardCopyMode="Cells, Header"
             ItemsSource="{Binding Comparacoes}"
-            AutoGeneratingColumn="RadGridView_AutoGeneratingColumn"/>
+            AutoGeneratingColumn="RadGridView_AutoGeneratingColumn">
+            <telerik:RadContextMenu.ContextMenu>
+                <telerik:RadContextMenu>
+                    <telerik:RadMenuItem Header="Buscar Lançamentos" Click="OnBuscarLancamentosClick" />
+                </telerik:RadContextMenu>
+            </telerik:RadContextMenu.ContextMenu>
+        </telerik:RadGridView>
 
 
     </Grid>

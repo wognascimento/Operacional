@@ -72,6 +72,7 @@
                 <syncfusion:MenuItemAdv Header="Notas Despesas" Click="OnOpenNotasDespesasClick"/>
                 <syncfusion:MenuItemAdv Header="Contatos" Click="OnContatoClick"/>
                 <syncfusion:MenuItemAdv Header="Relatório Noturno Diário" Click="OnRelatorioNoturnoDiarioClick"/>
+                <syncfusion:MenuItemAdv Header="Relatório Diário WEB" Click="OnRelatorioDiarioWebClick"/>
                 <syncfusion:MenuItemAdv Header="Consultas">
                     <syncfusion:MenuItemAdv Header="Previsão Valores Cronograma" Click="OnRelatorioPrevisaoValoresClick" />
                     <syncfusion:MenuItemAdv Header="Comparação Previsão Realizado" Click="OnComparacaoPrevisaoRealizadoClick" />

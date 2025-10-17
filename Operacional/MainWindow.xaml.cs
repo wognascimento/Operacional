@@ -505,6 +505,11 @@ namespace Operacional
             adicionarFilho(new Programacao(), "PROGRAMAÇÃO MANUTENÇÃO", "PROGRAMACAO_MANUTENCAO");
         }
 
+        private void OnRelatorioDiarioWebClick(object sender, RoutedEventArgs e)
+        {
+            adicionarFilho(new RelatorioDiarioWeb(), "RELATÓRIO DIÁRIO WEB", "RELATORIO_DIARIO_WEB");
+        }
+
         private void OnRelatorioNoturnoDiarioClick(object sender, RoutedEventArgs e)
         {
             adicionarFilho(new RelatorioNoturnoDiario(), "RELATÓRIO NOTURNO DIÁRIO", "RELATORIO_NOTURNO_DIARIO");
@@ -515,6 +520,5 @@ namespace Operacional
             adicionarFilho(new ControleDocumento(), "CONTROLE DOCUMENTOS", "CONTROLE_DOCUMENTOS");
         }
 
-       
     }
 }

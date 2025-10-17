@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Operacional.DataBase.Models.DTOs.Api;
 /*
@@ -30,6 +31,40 @@ public class BulkRequest
     public List<ClienteFaseDto> Items { get; set; }
 }
 */
+public class FlexibleBooleanConverter : JsonConverter<bool?>
+{
+    public override bool? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.Null) return null;
+        if (reader.TokenType == JsonTokenType.True) return true;
+        if (reader.TokenType == JsonTokenType.False) return false;
+
+        if (reader.TokenType == JsonTokenType.Number)
+        {
+            if (reader.TryGetInt32(out int i)) return i != 0;
+            if (reader.TryGetDouble(out double d)) return Math.Abs(d) > double.Epsilon;
+            return null;
+        }
+
+        if (reader.TokenType == JsonTokenType.String)
+        {
+            var s = reader.GetString();
+            if (string.IsNullOrWhiteSpace(s)) return null;
+            if (bool.TryParse(s, out var b)) return b;
+            if (int.TryParse(s, out var iv)) return iv != 0;
+            if (double.TryParse(s, out var dv)) return Math.Abs(dv) > double.Epsilon;
+            return null;
+        }
+
+        throw new JsonException($"Token inválido para bool?: {reader.TokenType}");
+    }
+
+    public override void Write(Utf8JsonWriter writer, bool? value, JsonSerializerOptions options)
+    {
+        if (value.HasValue) writer.WriteBooleanValue(value.Value);
+        else writer.WriteNullValue();
+    }
+}
 
 public class ApiResponse<T>
 {
@@ -120,4 +155,36 @@ public class EquipeLancamentoDto
 
     //[JsonPropertyName("updated_at")]
     public DateTimeOffset? updated_at { get; set; }
+}
+
+public class RelatorioWebDto
+{
+
+    public int? id { get; set; }
+    public int? user_id{ get; set; }
+    public string? assistente{ get; set; }
+    public string? coordenador { get; set; }
+    public DateTime? data { get; set; }
+    public string? descricao { get; set; }
+    public string? externa_lider1{ get; set; }
+    public string? externa_lider2{ get; set; }
+    public string? externa_lider3{ get; set; }
+    public int? externa_pessoas1{ get; set; }
+    public int? externa_pessoas2{ get; set; }
+    public int? externa_pessoas3{ get; set; }
+    public string? fase { get; set; }
+    public TimeSpan? interna_entrada { get; set; }
+    public int? interna_pessoas{ get; set; }
+    public TimeSpan? interna_saida { get; set; }
+    public string? mensagem { get; set; }
+    public int? noite{ get; set; }
+    public int? id_aprovado{ get; set; }
+    public string? sigla_serv { get; set; }
+    public string? tipo { get; set; }
+    //[JsonConverter(typeof(FlexibleBooleanConverter))]
+    //public bool? enviado{ get; set; }
+    //[JsonConverter(typeof(FlexibleBooleanConverter))]
+    //public bool? inseridoCipolatti{ get; set; }
+    public DateTime? created_at { get; set; }
+    public DateTime? updated_at { get; set; }
 }

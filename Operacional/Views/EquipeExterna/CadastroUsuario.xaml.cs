@@ -143,40 +143,81 @@ public partial class CadastroUsuario : UserControl
         using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
         var parametros = new { id_user, id_equipe };
         /*clientes_fase*/
-        var clientesFase = connection.Query<ClienteFaseDto>(
-            @"SELECT  
-                qry_previsao_valores_cronograma.id_aprovado AS id_aprovado,
-                qry_previsao_valores_cronograma.sigla AS sigla_serv,
-                t_data_efetiva.data_inicio_montagem AS data_inicio,
-                t_data_efetiva.data_inicio_montagem + max(qry_previsao_valores_cronograma.qtd_noites)::INTEGER AS data_fim,
-                qry_previsao_valores_cronograma.fase AS fase,
-                @id_user AS id_user
-            FROM equipe_externa.qry_previsao_valores_cronograma
-            INNER JOIN operacional.t_data_efetiva 
-                ON qry_previsao_valores_cronograma.sigla = t_data_efetiva.siglaserv
-            WHERE qry_previsao_valores_cronograma.fase = 'MONTAGEM' AND id_equipe = @id_equipe
-            GROUP BY 
-                qry_previsao_valores_cronograma.id_aprovado, 
-                qry_previsao_valores_cronograma.sigla, 
-                qry_previsao_valores_cronograma.fase, 
-                t_data_efetiva.data_inicio_montagem
-            UNION
-            SELECT  
-                qry_previsao_valores_cronograma.id_aprovado AS id_aprovado,
-                qry_previsao_valores_cronograma.sigla AS sigla_serv,
-                t_data_efetiva.data_inicio_desmontagem AS data_inicio,
-                t_data_efetiva.data_inicio_desmontagem + max(qry_previsao_valores_cronograma.qtd_noites)::INTEGER AS data_fim,
-                qry_previsao_valores_cronograma.fase AS fase,
-                @id_user AS id_user
-            FROM equipe_externa.qry_previsao_valores_cronograma
-            INNER JOIN operacional.t_data_efetiva 
-                ON qry_previsao_valores_cronograma.sigla = t_data_efetiva.siglaserv
-            WHERE qry_previsao_valores_cronograma.fase = 'DESMONTAGEM' AND id_equipe = @id_equipe
-            GROUP BY 
-                qry_previsao_valores_cronograma.id_aprovado, 
-                qry_previsao_valores_cronograma.sigla, 
-                qry_previsao_valores_cronograma.fase, 
-                t_data_efetiva.data_inicio_desmontagem;", parametros).ToList();
+        var clientesFase = new List<ClienteFaseDto>();
+        if (id_equipe == 237)
+        {
+            clientesFase = connection.Query<ClienteFaseDto>(
+                @"SELECT  
+                    qry_previsao_valores_cronograma.id_aprovado AS id_aprovado,
+                    qry_previsao_valores_cronograma.sigla AS sigla_serv,
+                    t_data_efetiva.data_inicio_montagem AS data_inicio,
+                    t_data_efetiva.data_inicio_montagem + max(qry_previsao_valores_cronograma.qtd_noites)::INTEGER AS data_fim,
+                    qry_previsao_valores_cronograma.fase AS fase,
+                    @id_user AS id_user
+                FROM equipe_externa.qry_previsao_valores_cronograma
+                INNER JOIN operacional.t_data_efetiva 
+                    ON qry_previsao_valores_cronograma.sigla = t_data_efetiva.siglaserv
+                WHERE qry_previsao_valores_cronograma.fase = 'MONTAGEM'
+                GROUP BY 
+                    qry_previsao_valores_cronograma.id_aprovado, 
+                    qry_previsao_valores_cronograma.sigla, 
+                    qry_previsao_valores_cronograma.fase, 
+                    t_data_efetiva.data_inicio_montagem
+                UNION
+                SELECT  
+                    qry_previsao_valores_cronograma.id_aprovado AS id_aprovado,
+                    qry_previsao_valores_cronograma.sigla AS sigla_serv,
+                    t_data_efetiva.data_inicio_desmontagem AS data_inicio,
+                    t_data_efetiva.data_inicio_desmontagem + max(qry_previsao_valores_cronograma.qtd_noites)::INTEGER AS data_fim,
+                    qry_previsao_valores_cronograma.fase AS fase,
+                    @id_user AS id_user
+                FROM equipe_externa.qry_previsao_valores_cronograma
+                INNER JOIN operacional.t_data_efetiva 
+                    ON qry_previsao_valores_cronograma.sigla = t_data_efetiva.siglaserv
+                WHERE qry_previsao_valores_cronograma.fase = 'DESMONTAGEM'
+                GROUP BY 
+                    qry_previsao_valores_cronograma.id_aprovado, 
+                    qry_previsao_valores_cronograma.sigla, 
+                    qry_previsao_valores_cronograma.fase, 
+                    t_data_efetiva.data_inicio_desmontagem;", parametros).ToList();
+        }
+        else
+        {
+            clientesFase = connection.Query<ClienteFaseDto>(
+                @"SELECT  
+                    qry_previsao_valores_cronograma.id_aprovado AS id_aprovado,
+                    qry_previsao_valores_cronograma.sigla AS sigla_serv,
+                    t_data_efetiva.data_inicio_montagem AS data_inicio,
+                    t_data_efetiva.data_inicio_montagem + max(qry_previsao_valores_cronograma.qtd_noites)::INTEGER AS data_fim,
+                    qry_previsao_valores_cronograma.fase AS fase,
+                    @id_user AS id_user
+                FROM equipe_externa.qry_previsao_valores_cronograma
+                INNER JOIN operacional.t_data_efetiva 
+                    ON qry_previsao_valores_cronograma.sigla = t_data_efetiva.siglaserv
+                WHERE qry_previsao_valores_cronograma.fase = 'MONTAGEM' AND id_equipe = @id_equipe
+                GROUP BY 
+                    qry_previsao_valores_cronograma.id_aprovado, 
+                    qry_previsao_valores_cronograma.sigla, 
+                    qry_previsao_valores_cronograma.fase, 
+                    t_data_efetiva.data_inicio_montagem
+                UNION
+                SELECT  
+                    qry_previsao_valores_cronograma.id_aprovado AS id_aprovado,
+                    qry_previsao_valores_cronograma.sigla AS sigla_serv,
+                    t_data_efetiva.data_inicio_desmontagem AS data_inicio,
+                    t_data_efetiva.data_inicio_desmontagem + max(qry_previsao_valores_cronograma.qtd_noites)::INTEGER AS data_fim,
+                    qry_previsao_valores_cronograma.fase AS fase,
+                    @id_user AS id_user
+                FROM equipe_externa.qry_previsao_valores_cronograma
+                INNER JOIN operacional.t_data_efetiva 
+                    ON qry_previsao_valores_cronograma.sigla = t_data_efetiva.siglaserv
+                WHERE qry_previsao_valores_cronograma.fase = 'DESMONTAGEM' AND id_equipe = @id_equipe
+                GROUP BY 
+                    qry_previsao_valores_cronograma.id_aprovado, 
+                    qry_previsao_valores_cronograma.sigla, 
+                    qry_previsao_valores_cronograma.fase, 
+                    t_data_efetiva.data_inicio_desmontagem;", parametros).ToList();
+        }
         /*liberacao_equipe*/
         var liberacaoEquipe = connection.Query<LiberacaoEquipeDto>(
             @"SELECT 

@@ -14,6 +14,8 @@
                 ItemsSource="{Binding CargasMontagem}" 
                 AutoGenerateColumns="false"
                 ShowGroupPanel="False"
+                SelectionMode="Extended"
+                ClipboardCopyMode="Cells, Header"
                 RowEditEnded="RadGridView_RowEditEnded" >
             <telerik:RadGridView.Columns>
                 <telerik:GridViewDataColumn Header="data caminhão" DataMemberBinding="{Binding data, StringFormat=\{0:dd/MM/yyyy\}}"/>

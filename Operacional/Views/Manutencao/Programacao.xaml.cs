@@ -8,6 +8,7 @@ using Operacional.DataBase.Models.DTOs;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -66,6 +67,161 @@ public partial class Programacao : UserControl
 
     private async void OnImportProgramacaoClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
     {
+        var vm = (ProgramacaoViewModel)DataContext;
+        var dlg = new OpenFileDialog
+        {
+            Title = "Selecione a programação em Excel",
+            Filter = "Arquivos Excel (*.xlsx;*.xls)|*.xlsx;*.xls",
+            Multiselect = false
+        };
+
+        if (dlg.ShowDialog() != true)
+            return;
+
+        try
+        {
+            vm.IsBusy = true;
+            vm.ProgressValue = 0;
+            vm.StatusMessage = "Lendo arquivo Excel...";
+
+            await Task.Delay(100); // força atualização da UI
+
+            var resultado = await CarregarProgramacaoAsync(dlg.FileName, vm);
+
+            if (resultado == null)
+                return;
+
+            if (resultado.Invalidos.Any())
+            {
+                vm.StatusMessage = $"Gerando relatório de erros...";
+                await Task.Delay(100);
+
+                string caminhoTxt = Path.Combine(Path.GetTempPath(), "ErrosImportacao.txt");
+                File.WriteAllLines(caminhoTxt, resultado.Invalidos.Select(e => $"Linha {e.Linha}: {e.Mensagem}"));
+                Process.Start(new ProcessStartInfo { FileName = caminhoTxt, UseShellExecute = true });
+
+                vm.ProgressValue = 100;
+                vm.StatusMessage = $"Importação com erros ({resultado.Invalidos.Count}).";
+                MessageBox.Show(vm.StatusMessage, "Importação", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            else
+            {
+                // 🔹 Reinicia progresso para a etapa de salvar
+                vm.ProgressValue = 0;
+                vm.StatusMessage = "Salvando registros...";
+
+                await vm.AddProgramacaoImportacaoAsync(resultado, vm);
+
+                vm.ProgressValue = 100;
+                vm.StatusMessage = $"Importação concluída com sucesso! {resultado.Validos.Count} registros.";
+                MessageBox.Show(vm.StatusMessage, "Importação", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                vm.Programacoes = await vm.GetProgramacoesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            vm.StatusMessage = "Erro ao importar";
+            MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            await Task.Delay(300);
+            vm.IsBusy = false;
+            vm.ProgressValue = 0;
+            vm.StatusMessage = string.Empty;
+        }
+    }
+
+    private async Task<ResultadoImportacao?> CarregarProgramacaoAsync(string caminhoArquivo, ProgramacaoViewModel vm)
+    {
+        try
+        {
+            using var workbook = new XLWorkbook(caminhoArquivo);
+            var ws = workbook.Worksheet(1);
+
+            // 🔹 Validação do cabeçalho
+            var headerRow = ws.Row(1);
+            var headers = headerRow.CellsUsed()
+                                   .ToDictionary(c => c.GetString().Trim().ToLower(), c => c.Address.ColumnNumber);
+
+            var obrigatorias = new[] { "data", "shopp", "tipo" };
+            var faltando = obrigatorias.Where(c => !headers.ContainsKey(c)).ToList();
+            if (faltando.Any())
+            {
+                MessageBox.Show(
+                    $"O Excel está faltando as colunas obrigatórias: {string.Join(", ", faltando)}",
+                    "Erro no cabeçalho",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                return null;
+            }
+
+            // 🔹 Índices das colunas
+            int colData = headers["data"];
+            int colShopp = headers["shopp"];
+            int colTipo = headers["tipo"];
+
+            var rows = ws.RowsUsed().Skip(1).ToList();
+            int total = rows.Count;
+            int count = 0;
+
+            var itens = new List<(int Linha, RegistroExcel? Registro, string? Erro)>();
+
+            foreach (var r in rows)
+            {
+                int linha = r.RowNumber();
+                string sData = r.Cell(colData).GetString().Trim();
+                string shopp = r.Cell(colShopp).GetString().Trim();
+                string tipo = r.Cell(colTipo).GetString().Trim();
+
+                var erros = new List<string>();
+
+                if (!DateTime.TryParse(sData, out DateTime data))
+                    erros.Add("Data inválida");
+
+                if (string.IsNullOrWhiteSpace(shopp))
+                    erros.Add("Shopp vazio");
+                else if (!await vm.GetValidateSiglaAsync(shopp))
+                    erros.Add($"Shopp '{shopp}' não encontrado nos aprovados");
+
+                if (string.IsNullOrWhiteSpace(tipo))
+                    erros.Add("Tipo vazio");
+                else if (!vm.Tipos.Contains(tipo))
+                    erros.Add($"Tipo '{tipo}' inválido. Valores permitidos: {string.Join(", ", vm.Tipos)}");
+
+                itens.Add((
+                    linha,
+                    erros.Count == 0 ? new RegistroExcel { Data = data, Shopp = shopp, Tipo = tipo } : null,
+                    erros.Count == 0 ? null : string.Join("; ", erros)
+                ));
+
+                // 🔹 Atualiza progresso de validação
+                count++;
+                vm.ProgressValue = (double)count / total * 100;
+                vm.StatusMessage = $"Validando registros... {vm.ProgressValue:0}%";
+                await Task.Yield(); // mantém a UI responsiva
+            }
+
+            return new ResultadoImportacao
+            {
+                Validos = itens.Where(x => x.Erro == null).Select(x => x.Registro!).ToList(),
+                Invalidos = itens.Where(x => x.Erro != null)
+                                 .Select(x => new ErroRegistro { Linha = x.Linha, Mensagem = x.Erro! })
+                                 .ToList()
+            };
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Erro ao ler o arquivo Excel: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            return null;
+        }
+    }
+
+
+    /*
+    private async void OnImportProgramacaoClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
+    {
         ProgramacaoViewModel vm = (ProgramacaoViewModel)DataContext;
         var dlg = new OpenFileDialog
         {
@@ -75,28 +231,29 @@ public partial class Programacao : UserControl
         };
 
         bool? result = dlg.ShowDialog();
+        Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
         if (result == true)
         {
             string arquivoExcel = dlg.FileName;
             var resultado = CarregarProgramacao(arquivoExcel);
             if (resultado.Invalidos.Any())
             {
-                // 1) Preparar linhas de texto
+                1) Preparar linhas de texto
                 var linhas = resultado.Invalidos
                     .Select(err => $"Linha {err.Linha}: {err.Mensagem}")
                     .ToList();
 
-                // 2) Definir um caminho de arquivo (por exemplo, na pasta temp)
+                2) Definir um caminho de arquivo(por exemplo, na pasta temp)
                 string caminhoTxt = System.IO.Path.Combine(
                     System.IO.Path.GetTempPath(),
                     "ErrosImportacao.txt");
 
                 try
                 {
-                    // 3) Escrever o arquivo (sobrescreve se já existir)
+                    3) Escrever o arquivo(sobrescreve se já existir)
                     File.WriteAllLines(caminhoTxt, linhas);
 
-                    // 4) Abrir o arquivo com o aplicativo padrão de .txt
+                    4) Abrir o arquivo com o aplicativo padrão de .txt
                     Process.Start(new ProcessStartInfo
                     {
                         FileName = caminhoTxt,
@@ -110,13 +267,13 @@ public partial class Programacao : UserControl
                       "Erro ao exportar",
                       MessageBoxButton.OK,
                       MessageBoxImage.Error);
+                    Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
                 }
             }
             else
             {
                 try
                 {
-                    Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
                     await vm.AddProgramacaoImportacaoAsync(resultado);
                     vm.Programacoes = await vm.GetProgramacoesAsync();
 
@@ -138,6 +295,8 @@ public partial class Programacao : UserControl
                 }
             }
         }
+        Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+
     }
 
     private ResultadoImportacao? CarregarProgramacao(string caminhoArquivo)
@@ -213,8 +372,9 @@ public partial class Programacao : UserControl
             MessageBox.Show($"Erro ao ler o arquivo Excel: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
             return null;
         }
-        
+
     }
+    */
 
     private void OnAddFuncoesClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
     {
@@ -504,16 +664,30 @@ public partial class ProgramacaoViewModel : ObservableObject
 {
     [ObservableProperty]
     private ObservableCollection<OperacionalProgramacaoManutencaoModel> programacoes;
+
     [ObservableProperty]
     private ObservableCollection<ProducaoAprovadoModel> aprovados;
+
     [ObservableProperty]
     private ObservableCollection<string> tipos = ["MANUTENÇÃO PROGRAMADA", "MANUTENÇÃO CORRETIVA", "FINALIZAÇÃO DE MONTAGEM", "COMPLEMENTO"];
+
     [ObservableProperty]
     private ObservableCollection<string> equipes;
+
     [ObservableProperty]
     private ObservableCollection<SolicitacaoManutencaoDTO> solicitacoes;
+
     [ObservableProperty]
     private ObservableCollection<OperacionalPessoasManutencaoModel> manutencaoFuncoes;
+
+    [ObservableProperty]
+    private bool isBusy;
+
+    [ObservableProperty]
+    private double progressValue;
+
+    [ObservableProperty]
+    private string statusMessage = "Pronto";
 
     DataBaseSettings BaseSettings = DataBaseSettings.Instance;
 
@@ -547,39 +721,104 @@ public partial class ProgramacaoViewModel : ObservableObject
                     select g.Key.equipe_e;
         return new ObservableCollection<string>(await query.ToListAsync());
     }
-
+    /*
     public bool GetValidateSiglaAsync(string sigla)
     {
         using var _db = new Context();
         var aprovado = _db.ProducaoAprovados.FirstOrDefault(x => x.sigla_serv == sigla);
-        //var funcionario = await _db.ComercialClientes.FirstOrDefaultAsync(x => x.sigla == aprovado.sigla);
         return aprovado != null;
     }
-
-    public async Task AddProgramacaoImportacaoAsync(ResultadoImportacao importacao)
+    */
+    public async Task<bool> GetValidateSiglaAsync(string sigla)
     {
-        using var _db = new Context();
-        foreach (var registro in importacao.Validos)
-        {
-            var programacao = _db.OperacionalProgramacaoManutencoes.FirstOrDefault(x => x.shopp == registro.Shopp && x.data == registro.Data && x.tipo == registro.Tipo);
-            var aprovado = _db.ProducaoAprovados.FirstOrDefault(x => x.sigla_serv == registro.Shopp);
-            var cliente = await _db.ComercialClientes.FirstOrDefaultAsync(x => x.sigla == aprovado.sigla);
-            if (programacao == null)
-            {
-                _db.OperacionalProgramacaoManutencoes.Add(new OperacionalProgramacaoManutencaoModel
-                {
-                    data = registro.Data,
-                    shopp = registro.Shopp,
-                    cidade = cliente?.cidade ?? "N/A",
-                    est = cliente?.est ?? "N/A",
-                    tipo = registro.Tipo,
-                    cadastrado_por = BaseSettings.Username,   
-                    data_cadastro = DateTimeOffset.Now
-                });
-            }
-        }
-        await _db.SaveChangesAsync();
+        await using var _db = new Context();
+        return await _db.ProducaoAprovados.AnyAsync(x => x.sigla_serv == sigla);
     }
+
+    public async Task AddProgramacaoImportacaoAsync(ResultadoImportacao resultado, ProgramacaoViewModel vm)
+    {
+        if (resultado.Validos.Count == 0)
+            return;
+
+        int total = resultado.Validos.Count;
+        int count = 0;
+
+        using var _db = new Context();
+
+        // 🔹 Buscar aprovações e clientes fora do loop para reduzir consultas
+        var siglas = resultado.Validos.Select(r => r.Shopp).Distinct().ToList();
+        var aprovadosDict = _db.ProducaoAprovados
+                                .Where(a => siglas.Contains(a.sigla_serv))
+                                .ToDictionary(a => a.sigla_serv, a => a);
+        var clientesDict = await _db.ComercialClientes
+                                    .Where(c => siglas.Contains(c.sigla))
+                                    .ToDictionaryAsync(c => c.sigla, c => c);
+
+        var funcoesDict = await _db.OperacionalNoitescronogPessoas
+                                   .Where(f => siglas.Contains(f.sigla)
+                                               && f.fase.Contains("MANUTENÇÃO PROGRAMADA")
+                                               && f.qtd_pessoas.HasValue      // não nulo
+                                               && f.qtd_pessoas.Value != 0)  // diferente de zero
+                                   .ToListAsync();
+
+        foreach (var registro in resultado.Validos)
+        {
+            var programacaoExistente = await _db.OperacionalProgramacaoManutencoes
+                .FirstOrDefaultAsync(x => x.shopp == registro.Shopp
+                                          && x.data == registro.Data
+                                          && x.tipo == registro.Tipo);
+
+            if (programacaoExistente != null)
+            {
+                count++;
+                vm.ProgressValue = ((double)count / total) * 100;
+                vm.StatusMessage = $"Salvando registros... {count}/{total}";
+                continue;
+            }
+
+            aprovadosDict.TryGetValue(registro.Shopp, out var aprovado);
+            clientesDict.TryGetValue(registro.Shopp, out var cliente);
+
+            var pSalva = new OperacionalProgramacaoManutencaoModel
+            {
+                data = registro.Data,
+                shopp = registro.Shopp,
+                cidade = cliente?.cidade ?? "N/A",
+                est = cliente?.est ?? "N/A",
+                tipo = registro.Tipo,
+                cadastrado_por = BaseSettings.Username,
+                data_cadastro = DateTimeOffset.Now
+            };
+
+            await _db.OperacionalProgramacaoManutencoes.AddAsync(pSalva);
+            await _db.SaveChangesAsync(); // necessário aqui para obter o Id gerado
+
+            // Inserção das funções relacionadas
+            var funcoesRegistro = funcoesDict.Where(f => f.sigla == registro.Shopp).ToList();
+            foreach (var func in funcoesRegistro)
+            {
+                //if (!int.TryParse(func.qtd_pessoas?.ToString(), out int qtd))
+                    //qtd = func.qtd_pessoas != null ? Convert.ToInt32(func.qtd_pessoas.Value) : 0;
+
+                var pessoa = new OperacionalPessoasManutencaoModel
+                {
+                    id_programacao = pSalva.id,
+                    funcao = func.funcao,
+                    qtd = (int)Math.Round((decimal)func.qtd_pessoas)
+                };
+                await _db.OperacionalPessoasManutencoes.AddAsync(pessoa);
+            }
+
+            await _db.SaveChangesAsync();
+
+            // Atualiza progresso
+            count++;
+            vm.ProgressValue = ((double)count / total) * 100;
+            vm.StatusMessage = $"Salvando registros... {count}/{total}";
+            await Task.Yield(); // mantém UI responsiva
+        }
+    }
+
 
     public async Task AddProgramacaoAsync(OperacionalProgramacaoManutencaoModel model)
     {

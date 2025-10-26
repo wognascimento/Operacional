@@ -8,9 +8,12 @@ namespace Operacional.DataBase.Models
     {
         [Key]
         public long? id { get; set; }
-        public long id_equipe { get; set; }
-        public string nome { get; set; }
-        public string email { get; set; }
+        [Required]
+        public required long id_equipe { get; set; }
+        [Required]
+        public required string nome { get; set; }
+        [Required]
+        public required string email { get; set; }
         public string? aux { get; set; }
     }
 }

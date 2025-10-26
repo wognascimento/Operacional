@@ -25,7 +25,7 @@
             VerticalContentAlignment="Center">
 
             <syncfusion:MenuItemAdv Header="Transportes">
-                <!--<syncfusion:MenuItemAdv Header="Transportadora"/>-->
+                <syncfusion:MenuItemAdv Header="Transportadora" Click="OnCadastroTransportadoraClick"/>
                 <syncfusion:MenuItemAdv Header="Transporte Montagem" Click="OnTransporteMontagemClick"/>
                 <syncfusion:MenuItemAdv Header="Cargas Montagem" Click="OnCargaMontagemClick"/>
                 <syncfusion:MenuItemAdv Header="Transporte Desmontagem" Click="OnTransporteDesmontagemClick"/>

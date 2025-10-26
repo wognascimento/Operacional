@@ -10,7 +10,7 @@ public partial class Context : DbContext
 
     public virtual DbSet<qryfrmtransp> qryfrmtransps { get; set; }
     public virtual DbSet<tbl_cargas_montagem> cargasmontagens { get; set; }
-    public virtual DbSet<tbltranportadora> tbltranportadoras { get; set; }
+    //public virtual DbSet<tbltranportadora> tbltranportadoras { get; set; }
     public virtual DbSet<TransporteMontagemModel> transporteMontagens { get; set; }
     public virtual DbSet<DataEfetivaModel> DatasEfetiva { get; set; }
     public virtual DbSet<QryDataEfetivaModel> QryDatasEfetiva { get; set; }
@@ -42,6 +42,7 @@ public partial class Context : DbContext
     public virtual DbSet<ViewCronogramaModel> ViewCronogramas { get; set; }
     public virtual DbSet<OperacionalControleDocumentoModel> ControleDocumentos { get; set; }
     public virtual DbSet<OperacionalControleDocumentoClienteModel> ControleDocumentoClientes { get; set; }
+    public virtual DbSet<TranportadoraModel> Tranportadoras { get; set; }
 
     public virtual DbSet<EquipeExternaEquipeModel> Equipes { get; set; }
     public virtual DbSet<EquipeExternaValoresPrevisaoEquipeModel> EquipePrevisoes { get; set; }

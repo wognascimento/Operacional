@@ -142,6 +142,11 @@ namespace Operacional
             return null;
         }
 
+        private void OnCadastroTransportadoraClick(object sender, RoutedEventArgs e)
+        {
+            adicionarFilho(new CadastroTransportadora(), "CADASTRO TRANSPORTADORA", "CADASTRO_TRANSPORTADORA");
+        }
+
         private void OnTransporteMontagemClick(object sender, RoutedEventArgs e)
         {
             adicionarFilho(new TransporteMontagem(), "TRANSPORTES MONTAGEM", "TRANSPORTE_MONTAGEM");

@@ -19,14 +19,14 @@
         <telerik:RadGridView x:Name="manutProgramacao" 
                              AutoGenerateColumns="False"
                              Margin="2"
-                             SelectionUnit="Cell"
+                             SelectionUnit="FullRow"
                              ShowGroupPanel="False"
-                             NewRowPosition="Bottom"
+                             NewRowPosition="Top"
                              GroupRenderMode="Flat"
                              ItemsSource="{Binding Programacoes}" 
                              RowValidated="EquipeRowValidated">
             <telerik:RadContextMenu.ContextMenu>
-                <telerik:RadContextMenu>
+                <telerik:RadContextMenu Opening="RadContextMenu_Opening">
                     <telerik:RadMenuItem Header="Importar Programação" Click="OnImportProgramacaoClick" />
                     <telerik:RadMenuItem Header="Adicionar Funções" Click="OnAddFuncoesClick" />
                     <telerik:RadMenuItem Header="Adicionar Solicitações" Click="OnAddSolicitacoesClick" />

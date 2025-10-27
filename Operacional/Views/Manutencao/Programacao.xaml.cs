@@ -376,16 +376,37 @@ public partial class Programacao : UserControl
     }
     */
 
+    private void RadContextMenu_Opening(object sender, Telerik.Windows.RadRoutedEventArgs e)
+    {
+        var menu = (Telerik.Windows.Controls.RadContextMenu)sender;
+
+        // Verifica em qual linha o menu foi aberto
+        var row = menu.GetClickedElement<Telerik.Windows.Controls.GridView.GridViewRow>();
+        if (row != null)
+        {
+            manutProgramacao.SelectedItem = row.Item;
+        }
+        else
+        {
+            // Cancela se não clicar em uma linha
+            e.Handled = true;
+        }
+    }
+
     private void OnAddFuncoesClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
     {
-        var selectedItem = manutProgramacao.CurrentItem;
-        var programacao = selectedItem as OperacionalProgramacaoManutencaoModel;
+        //var programacao = manutProgramacao.SelectedItem as OperacionalProgramacaoManutencaoModel;
+        //var selectedItem = manutProgramacao.CurrentCellInfo.Item; //manutProgramacao.CurrentItem;
+        //var programacao = selectedItem as OperacionalProgramacaoManutencaoModel;
+
+        if (manutProgramacao.SelectedItem is not OperacionalProgramacaoManutencaoModel programacao) return;
 
         AdicionarFuncoes radWindow = new(programacao.id)
         {
             Width = 600,
             ResizeMode = ResizeMode.NoResize,
-            CanMove = false
+            CanMove = false,
+            Header = @$"Adicionar Funções para a Programação: {programacao.shopp} - {programacao.data.Value:dd/MM}"
         };
         //StyleManager.SetTheme(radWindow, new Windows8Theme());
         radWindow.ShowDialog();
@@ -393,14 +414,17 @@ public partial class Programacao : UserControl
 
     private void OnAddSolicitacoesClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
     {
-        var selectedItem = manutProgramacao.CurrentItem;
-        var programacao = selectedItem as OperacionalProgramacaoManutencaoModel;
+        //var selectedItem = manutProgramacao.CurrentItem;
+        //var programacao = selectedItem as OperacionalProgramacaoManutencaoModel;
+        //var programacao = manutProgramacao.SelectedItem as OperacionalProgramacaoManutencaoModel;
+        if (manutProgramacao.SelectedItem is not OperacionalProgramacaoManutencaoModel programacao) return;
 
         AdicionarSolicitacao radWindow = new(programacao.id)
         {
             Width = 600,
             ResizeMode = ResizeMode.NoResize,
-            CanMove = false
+            CanMove = false,
+            Header = @$"Adicionar Solicitações para a Programação: {programacao.shopp} - {programacao.data.Value:dd/MM}"
         };
         //StyleManager.SetTheme(radWindow, new Windows8Theme());
         radWindow.ShowDialog();

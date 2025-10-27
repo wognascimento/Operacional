@@ -22,7 +22,7 @@
             GroupRenderMode="Flat"
             RowValidated="UsuarioRowValidated">
             <telerik:RadContextMenu.ContextMenu>
-                <telerik:RadContextMenu>
+                <telerik:RadContextMenu Opening="RadContextMenu_Opening">
                     <telerik:RadMenuItem Header="Enviar WEB" Click="OnEnviarWebClick" />
                 </telerik:RadContextMenu>
             </telerik:RadContextMenu.ContextMenu>

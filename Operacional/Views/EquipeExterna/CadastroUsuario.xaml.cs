@@ -71,13 +71,31 @@ public partial class CadastroUsuario : UserControl
         }
     }
 
+    private void RadContextMenu_Opening(object sender, Telerik.Windows.RadRoutedEventArgs e)
+    {
+        var menu = (Telerik.Windows.Controls.RadContextMenu)sender;
+
+        // Verifica em qual linha o menu foi aberto
+        var row = menu.GetClickedElement<Telerik.Windows.Controls.GridView.GridViewRow>();
+        if (row != null)
+        {
+            radUsuarios.SelectedItem = row.Item;
+        }
+        else
+        {
+            // Cancela se não clicar em uma linha
+            e.Handled = true;
+        }
+    }
+
     private async void OnEnviarWebClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
     {
-        
-        var selectedItem = radUsuarios.CurrentCellInfo.Item;
-        var dataObject = selectedItem as EquipeExternaUsuarioModel;
+        //var selectedItem = radUsuarios.CurrentCellInfo.Item;
+        //var dataObject = selectedItem as EquipeExternaUsuarioModel;
 
-        await EnviarUsuárioAsync(dataObject);
+        if (radUsuarios.SelectedItem is not EquipeExternaUsuarioModel itemSelecionado) return;
+
+        await EnviarUsuárioAsync(itemSelecionado);
     }
 
     private async Task EnviarUsuárioAsync(EquipeExternaUsuarioModel dataObject)
@@ -278,51 +296,53 @@ public partial class CadastroUsuario : UserControl
         }
 
     }
+
+    
     /*
-    public async Task PostClientesFasesAsync(string baseUrl, BulkRequest payload)
-    {
-        using var http = new HttpClient();
-        http.BaseAddress = new Uri(baseUrl);
-        http.DefaultRequestHeaders.Accept.Clear();
-        http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+public async Task PostClientesFasesAsync(string baseUrl, BulkRequest payload)
+{
+   using var http = new HttpClient();
+   http.BaseAddress = new Uri(baseUrl);
+   http.DefaultRequestHeaders.Accept.Clear();
+   http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-        var options = new JsonSerializerOptions
-        {
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
-            // Não alterar a PropertyNamingPolicy pois usamos JsonPropertyName para snake_case
-            PropertyNameCaseInsensitive = true
-        };
+   var options = new JsonSerializerOptions
+   {
+       DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+       // Não alterar a PropertyNamingPolicy pois usamos JsonPropertyName para snake_case
+       PropertyNameCaseInsensitive = true
+   };
 
-        string json = System.Text.Json.JsonSerializer.Serialize(payload, options);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
+   string json = System.Text.Json.JsonSerializer.Serialize(payload, options);
+   var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        HttpResponseMessage response = null;
-        try
-        {
-            response = await http.PostAsync("/api/clientes-fases", content);
+   HttpResponseMessage response = null;
+   try
+   {
+       response = await http.PostAsync("/api/clientes-fases", content);
 
-            var respBody = await response.Content.ReadAsStringAsync();
+       var respBody = await response.Content.ReadAsStringAsync();
 
-            if (response.IsSuccessStatusCode)
-            {
-                // Espera 201 conforme seu controller
-                Console.WriteLine($"Sucesso ({(int)response.StatusCode}): {respBody}");
-            }
-            else
-            {
-                // Lidando com erros comuns (422 validação, 401, 403, 500)
-                Console.WriteLine($"Erro ({(int)response.StatusCode}): {respBody}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("Erro de requisição: " + ex.Message);
-        }
-    }
-    */
-    }
+       if (response.IsSuccessStatusCode)
+       {
+           // Espera 201 conforme seu controller
+           Console.WriteLine($"Sucesso ({(int)response.StatusCode}): {respBody}");
+       }
+       else
+       {
+           // Lidando com erros comuns (422 validação, 401, 403, 500)
+           Console.WriteLine($"Erro ({(int)response.StatusCode}): {respBody}");
+       }
+   }
+   catch (Exception ex)
+   {
+       Console.WriteLine("Erro de requisição: " + ex.Message);
+   }
+}
+*/
+}
 
-    public partial class CadastroUsuarioViewModel : ObservableObject
+public partial class CadastroUsuarioViewModel : ObservableObject
 {
     DataBaseSettings BaseSettings = DataBaseSettings.Instance;
 

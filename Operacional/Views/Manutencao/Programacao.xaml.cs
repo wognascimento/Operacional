@@ -8,7 +8,6 @@ using Operacional.DataBase.Models.DTOs;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -39,6 +38,7 @@ public partial class Programacao : UserControl
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
             vm.Programacoes = await vm.GetProgramacoesAsync();
             vm.Aprovados = await vm.GetAprovadosAsync();
+            vm.Equipes = await vm.GetEquipesAsync();
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
         }
         catch (Exception ex)
@@ -436,8 +436,10 @@ public partial class Programacao : UserControl
         {
             ProgramacaoViewModel vm = (ProgramacaoViewModel)DataContext;
 
-            var selectedItem = manutProgramacao.CurrentItem;
-            var programacao = selectedItem as OperacionalProgramacaoManutencaoModel;
+            //var selectedItem = manutProgramacao.CurrentItem;
+            //var programacao = selectedItem as OperacionalProgramacaoManutencaoModel;
+
+            if (manutProgramacao.SelectedItem is not OperacionalProgramacaoManutencaoModel programacao) return;
 
             await vm.LoadManutencaoSolicitacaoAsync(programacao.id);
 
@@ -719,9 +721,9 @@ public partial class ProgramacaoViewModel : ObservableObject
     {
         using var _db = new Context();
         var programacoes = await _db.OperacionalProgramacaoManutencoes
-            .OrderBy(x => x.data)
-            .ThenBy(x => x.shopp)
+            .OrderBy(x => x.shopp)
             .ThenBy(x => x.tipo)
+            .ThenBy(x => x.data)
             .ToListAsync();
         return new ObservableCollection<OperacionalProgramacaoManutencaoModel>(programacoes);
     }   

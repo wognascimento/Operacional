@@ -87,13 +87,14 @@ public partial class AdicionarFuncoesViewModel : ObservableObject
         ManutencaoFuncoes = new ObservableCollection<OperacionalPessoasManutencaoModel>(
             await context.OperacionalPessoasManutencoes
                 .Where(x => x.id_programacao == idProgramacao)
+                .OrderBy(x => x.funcao)
                 .ToListAsync());
     }
 
     public async Task AddManutencaoFuncoesAsync(OperacionalPessoasManutencaoModel model)
     {
         using var context = new Context();
-        var modelExistente = await context.OperacionalProgramacaoManutencoes.FindAsync(model.id);
+        var modelExistente = await context.OperacionalPessoasManutencoes.FindAsync(model.id);
         if (modelExistente == null)
         {
 

@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Operacional S.I.G."
-#define MyAppVersion "1.0.0.30"
+#define MyAppVersion "1.0.0.31"
 #define MyAppPublisher "Cipolatti, Inc."
 #define MyAppURL "https://www.cipolatti.com.br.com.br/"
 #define MyAppExeName "Operacional.exe"

@@ -34,21 +34,29 @@
                     ItemsSource="{Binding Aprovados}"/>
                 <telerik:GridViewDataColumn Header="Data" DataMemberBinding="{Binding data}" DataFormatString="{} {0:dd/MM/yyyy}"/>
                 <telerik:GridViewDataColumn Header="Noite" DataMemberBinding="{Binding noite}"/>
-                <telerik:GridViewDataColumn Header="Cordenador" DataMemberBinding="{Binding coordenador}" HeaderTextWrapping="Wrap"/>
+                <telerik:GridViewDataColumn Header="Cordenador" DataMemberBinding="{Binding coordenador}"/>
                 <telerik:GridViewComboBoxColumn
                     Header="Departamento" 
                     DataMemberBinding="{Binding depto}"
                     SelectedValueMemberPath="depto"
                     DisplayMemberPath="depto"
                     ItemsSource="{Binding Deptos}"/>
-                <telerik:GridViewDataColumn Header="Informação" DataMemberBinding="{Binding detalhe}" HeaderTextWrapping="Wrap" Width="*"/>
+                <telerik:GridViewDataColumn 
+                    Header="Informação" 
+                    DataMemberBinding="{Binding detalhe}"
+                    TextWrapping="Wrap"
+                    Width="*"/>
                 <telerik:GridViewComboBoxColumn
                     Header="Grau de Urgência" 
                     DataMemberBinding="{Binding grau_de_urgencia}"
-                    ItemsSource="{Binding Urgencias}"/>
-                <telerik:GridViewDataColumn Header="Retorno da Informação" DataMemberBinding="{Binding retorno_informacao}" HeaderTextWrapping="Wrap"/>
-                <telerik:GridViewDataColumn Header="Inserido por" DataMemberBinding="{Binding inserido_por}" IsReadOnly="True"/>
-                <telerik:GridViewDataColumn Header="Inserido em" DataMemberBinding="{Binding inserido_em}" IsReadOnly="True"/>
+                    ItemsSource="{Binding Urgencias}"
+                    Width="auto"/>
+                <telerik:GridViewDataColumn 
+                    Header="Retorno da Informação" 
+                    DataMemberBinding="{Binding retorno_informacao}"
+                    TextWrapping="Wrap"/>
+                <telerik:GridViewDataColumn Header="Inserido por" DataMemberBinding="{Binding inserido_por}" IsReadOnly="True" Width="120"/>
+                <telerik:GridViewDataColumn Header="Inserido em" DataMemberBinding="{Binding inserido_em}" IsReadOnly="True" Width="120"/>
             </telerik:RadGridView.Columns>
         </telerik:RadGridView>
 

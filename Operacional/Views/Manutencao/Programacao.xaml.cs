@@ -744,6 +744,7 @@ public partial class ProgramacaoViewModel : ObservableObject
                     join valores in context.EquipePrevisoes
                     on equipe.id equals valores.id_equipe
                     group valores by new { valores.id_equipe, equipe.equipe_e } into g
+                    orderby g.Key.equipe_e
                     select g.Key.equipe_e;
         return new ObservableCollection<string>(await query.ToListAsync());
     }

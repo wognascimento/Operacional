@@ -273,7 +273,7 @@ public partial class CadastroUsuario : UserControl
         {
             clientes_fase = clientesFase,
             liberacao_equipe = liberacaoEquipe,
-            //liberacao_manutencao_equipe = liberacaoManutencaoEquipe
+            liberacao_manutencao_equipe = liberacaoManutencaoEquipe
         };
 
         var json = JsonConvert.SerializeObject(payload, Formatting.Indented);

@@ -507,7 +507,7 @@ namespace Operacional.Views.Despesa
             using Context context = new();
             try
             {
-                var retorno = await context.ComercialClientes.AsNoTracking().ToListAsync();
+                var retorno = await context.ComercialClientes.OrderBy(c => c.sigla).AsNoTracking().ToListAsync();
                 return [.. retorno];
             }
             catch (DbException ex)  // Para erros de banco de dados

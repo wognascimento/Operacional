@@ -23,6 +23,8 @@
                              ShowGroupPanel="False"
                              NewRowPosition="Top"
                              GroupRenderMode="Flat"
+                             SelectionMode="Extended"
+                             ClipboardCopyMode="Cells, Header"
                              ItemsSource="{Binding Programacoes}" 
                              RowValidated="EquipeRowValidated">
             <telerik:RadContextMenu.ContextMenu>

@@ -1,5 +1,7 @@
-﻿using Dapper;
+﻿using ClosedXML.Excel;
+using Dapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Win32;
 using Npgsql;
 using Operacional.DataBase;
 using Operacional.DataBase.Models;
@@ -510,6 +512,96 @@ namespace Operacional
             adicionarFilho(new Programacao(), "PROGRAMAÇÃO MANUTENÇÃO", "PROGRAMACAO_MANUTENCAO");
         }
 
+        private async void OnOpenConsultaGeralClick(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+
+
+                string sql = @"
+                    SELECT 
+	                    tbl_programacao_manutencao.id, shopp, cidade, est, data, 
+	                    tbl_programacao_manutencao.tipo, funcao, qtd, tbl_solicitacao_manutencao.tipo AS solicitado, 
+	                    item, solicitacao, caminho_imagem, resp_atendimento, nome_equipe, qtde_pessoa, obs_retorno, 
+	                    cadastrado_por, data_cadastro, alterado_por, data_alteracao 
+                    FROM operacional.tbl_programacao_manutencao
+                    LEFT JOIN operacional.tbl_pessoas_manutencao ON tbl_programacao_manutencao.id = tbl_pessoas_manutencao.id_programacao
+                    LEFT JOIN operacional.tbl_solicitacao_manutencao ON tbl_programacao_manutencao.id = tbl_solicitacao_manutencao.id_programacao
+                    LEFT JOIN operacional.tbl_solicitacao_manutencao_foto ON operacional.tbl_solicitacao_manutencao.id = tbl_solicitacao_manutencao_foto.id_solicitacao;
+                    ";
+
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
+
+                using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+                await connection.OpenAsync();
+
+                var dataTable = new System.Data.DataTable();
+                using (var command = new NpgsqlCommand(sql, connection))
+                using (var dataAdapter = new NpgsqlDataAdapter(command))
+                {
+                    dataAdapter.Fill(dataTable);
+                }
+
+                await connection.CloseAsync();
+
+                /*
+                using ExcelEngine excelEngine = new();
+                IApplication application = excelEngine.Excel;
+                application.DefaultVersion = ExcelVersion.Excel2016;
+
+                // Create a workbook
+                IWorkbook workbook = application.Workbooks.Create(1);
+                IWorksheet worksheet = workbook.Worksheets[0];
+
+                // Import the DataTable
+                worksheet.ImportDataTable(dataTable, true, 1, 1);
+
+                workbook.SaveAs(@$"{BaseSettings.CaminhoSistema}Impressos\CONSULTA-GERAL-MANUTENCAO.xlsx");
+
+                Process.Start(new ProcessStartInfo(@$"{BaseSettings.CaminhoSistema}Impressos\CONSULTA-GERAL-MANUTENCAO.xlsx")
+                {
+                    UseShellExecute = true
+                });
+                */
+
+                var path = @$"{BaseSettings.CaminhoSistema}Impressos\CONSULTA-GERAL-MANUTENCAO.xlsx";
+
+                // Salva em background (ClosedXML é síncrono)
+                await Task.Run(() =>
+                {
+                    using var wb = new XLWorkbook();
+                    wb.Worksheets.Add(dataTable, "CONSULTA GERAL MANUTENCAO");
+
+                    var ws = wb.Worksheet(1);
+                    var used = ws.RangeUsed();
+                    if (used != null)
+                    {
+                        ws.Row(1).Style.Font.Bold = true;
+                        //used.SetAutoFilter();
+                        ws.Columns().AdjustToContents();
+                    }
+
+                    wb.SaveAs(path);
+                });
+
+                // abrir
+                Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+
+            }
+            catch (DbUpdateException ex)
+            {
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (Exception ex)  // Para qualquer outro erro
+            {
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void OnRelatorioDiarioWebClick(object sender, RoutedEventArgs e)
         {
             adicionarFilho(new RelatorioDiarioWeb(), "RELATÓRIO DIÁRIO WEB", "RELATORIO_DIARIO_WEB");
@@ -525,5 +617,6 @@ namespace Operacional
             adicionarFilho(new ControleDocumento(), "CONTROLE DOCUMENTOS", "CONTROLE_DOCUMENTOS");
         }
 
+        
     }
 }

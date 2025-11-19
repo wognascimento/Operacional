@@ -85,6 +85,9 @@
                 <syncfusion:MenuItemAdv Header="Atendentes"/>
                 <syncfusion:MenuItemAdv Header="Plantão"/>
                 <syncfusion:MenuItemAdv Header="Criticidade"/>
+                <syncfusion:MenuItemAdv Header="Consultas">
+                    <syncfusion:MenuItemAdv Header="Geral" Click="OnOpenConsultaGeralClick"/>
+                </syncfusion:MenuItemAdv>
             </syncfusion:MenuItemAdv>
 
             <syncfusion:MenuItemAdv Header="Documentos">

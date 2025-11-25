@@ -404,6 +404,7 @@ public partial class Programacao : UserControl
         AdicionarFuncoes radWindow = new(programacao.id)
         {
             Width = 600,
+            Height = 400,
             ResizeMode = ResizeMode.NoResize,
             CanMove = false,
             Header = @$"Adicionar Funções para a Programação: {programacao.shopp} - {programacao.data.Value:dd/MM}"
@@ -422,6 +423,7 @@ public partial class Programacao : UserControl
         AdicionarSolicitacao radWindow = new(programacao.id)
         {
             Width = 600,
+            Height = 400,
             ResizeMode = ResizeMode.NoResize,
             CanMove = false,
             Header = @$"Adicionar Solicitações para a Programação: {programacao.shopp} - {programacao.data.Value:dd/MM}"

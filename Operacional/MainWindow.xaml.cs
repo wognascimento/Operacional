@@ -161,7 +161,7 @@ namespace Operacional
 
         private void OnTransporteDesmontagemClick(object sender, RoutedEventArgs e)
         {
-
+            adicionarFilho(new TransporteDesmontagem(), "TRANSPORTES DESMONTAGEM", "TRANSPORTE_DESMONTAGEM");
         }
 
         private void OnDataEfetivaClick(object sender, RoutedEventArgs e)

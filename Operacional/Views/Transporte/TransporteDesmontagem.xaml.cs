@@ -98,9 +98,52 @@ public partial class TransporteDesmontagem : UserControl
         }
     }
 
-    private void RadGridViewFilho_RowValidating(object sender, Telerik.Windows.Controls.GridViewRowValidatingEventArgs e)
+    private async void RadGridViewFilho_RowValidating(object sender, Telerik.Windows.Controls.GridViewRowValidatingEventArgs e)
     {
-
+        try
+        {
+            TransporteDesmontagemViewModel vm = (TransporteDesmontagemViewModel)DataContext;
+            if (!e.Row.IsInEditMode)
+                return;
+            if (e.Row.Item is OperacionalCargaDesmontagemModel c) //{Operacional.DataBase.Models.OperacionalCargaDesmontagemModel}
+            {
+                var carga = new t_cargas_desmontagem
+                {
+                    id = c.id,
+                    siglaserv = c.siglaserv,
+                    data_chegada_shopping = c.data_chegada_shopping,
+                    data_saida_shopping = c.data_saida_shopping,
+                    volume = c.volume,
+                    caminhao = c.caminhao,
+                    prev_volume = c.prev_volume,
+                    data_chegada_cipolatti = c.data_chegada_cipolatti,
+                    obs = c.obs,
+                    transportadora = c.transportadora,
+                    descarga_caminhao = c.descarga_caminhao,
+                    obs_recebimento = c.obs_recebimento,
+                    vl_est_frete = c.vl_est_frete,
+                    vl_est_seguro = c.vl_est_seguro,
+                    vl_est_icms = c.vl_est_icms,
+                    vl_est_total = c.vl_est_total,
+                    obs_embalagem = c.obs_embalagem,
+                    data_chegada_galpao = c.data_chegada_galpao,
+                    hora_chegada_galpao = c.hora_chegada_galpao,
+                    placa_caminhao = c.placa_caminhao,
+                    obs_frete_caminhao_desmont = c.obs_frete_caminhao_desmont
+                };
+                await vm.UpsertcargaDesmontagem(carga);
+            }
+        }
+        catch (DbUpdateException ex)
+        {
+            e.IsValid = false;
+            MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        catch (Exception ex)
+        {
+            e.IsValid = false;
+            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 }
 
@@ -520,9 +563,6 @@ public partial class TransporteDesmontagemViewModel : ObservableObject
         }
     }
 
-
-
-
     public async Task<ObservableCollection<OperacionalCargaDesmontagemModel>> CaminhoesSigla(string siglaServ)
     {
         using var conn = new NpgsqlConnection(BaseSettings.ConnectionString);
@@ -531,5 +571,165 @@ public partial class TransporteDesmontagemViewModel : ObservableObject
         return new ObservableCollection<OperacionalCargaDesmontagemModel>(lista);
     }
 
+    public async Task UpsertcargaDesmontagem(t_cargas_desmontagem model)
+    {
+        using var conn = new NpgsqlConnection(BaseSettings.ConnectionString);
 
+        var sqlSelect = @"SELECT * FROM operacional.t_cargas_desmontagem WHERE id = @id";
+        var existente = await conn.QueryFirstOrDefaultAsync<t_cargas_desmontagem?>(sqlSelect, new { model.id });
+
+        if (existente == null)
+        {
+            // INSERT
+            var sqlInsert = @"
+                INSERT INTO operacional.t_cargas_desmontagem
+                (   
+                    siglaserv,
+                    data_chegada_shopping,
+                    data_saida_shopping,
+                    volume,
+                    caminhao,
+                    prev_volume,
+                    data_chegada_cipolatti,
+                    obs,
+                    transportadora,
+                    confirmado,
+                    descarga_caminhao,
+                    obs_recebimento,
+                    vl_est_frete,
+                    vl_est_seguro,
+                    vl_est_icms,
+                    vl_est_total,
+                    obs_embalagem,
+                    data_chegada_galpao,
+                    hora_chegada_galpao,
+                    placa_caminhao,
+                    obs_frete_caminhao_desmont,
+                )
+                VALUES
+                (
+                    @siglaserv,
+                    @data_chegada_shopping,
+                    @data_saida_shopping,
+                    @volume,
+                    @caminhao,
+                    @prev_volume,
+                    @data_chegada_cipolatti,
+                    @obs,
+                    @transportadora,
+                    @confirmado,
+                    @descarga_caminhao,
+                    @obs_recebimento,
+                    @vl_est_frete,
+                    @vl_est_seguro,
+                    @vl_est_icms,
+                    @vl_est_total,
+                    @obs_embalagem,
+                    @data_chegada_galpao,
+                    @hora_chegada_galpao,
+                    @placa_caminhao,
+                    @obs_frete_caminhao_desmont
+                )
+                RETURNING id;
+            ";
+
+            model.id = await conn.ExecuteScalarAsync<int>(sqlInsert, model);
+        }
+        else
+        {
+            var tipo = typeof(t_cargas_desmontagem);
+
+            // 2) Lista de SETs só dos alterados
+            var setList = new List<string>();
+            var parametros = new DynamicParameters();
+
+            foreach (var prop in tipo.GetProperties())
+            {
+                if (prop.Name.Equals("id", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var valorNovo = prop.GetValue(model);
+                var valorAntigo = prop.GetValue(existente);
+
+                // Ignora valores nulos do modelo novo
+                // (você pode mudar esse comportamento)
+                if (valorNovo == null)
+                    continue;
+
+                // Só adiciona se mudou
+                if (!Equals(valorNovo, valorAntigo))
+                {
+                    setList.Add($"{prop.Name} = @{prop.Name}");
+                    parametros.Add(prop.Name, valorNovo);
+                }
+            }
+
+            // Se nada mudou, não atualizar
+            if (setList.Count == 0)
+                return;
+
+            // 3) Completar parâmetros com @id
+            parametros.Add("id", model.id);
+
+            // 4) Montar SQL final
+            var sqlUpdate = $@"
+                UPDATE operacional.t_cargas_desmontagem
+                SET {string.Join(", ", setList)}
+                WHERE id = @id;
+            ";
+
+            await conn.ExecuteAsync(sqlUpdate, model);
+
+            string[] campos = [
+                "placa_caminhao",
+                "data_chegada_cipolatti",
+                "transportadora"
+            ];
+
+            // verifica se algum dos campos monitorados realmente foi alterado
+            bool camposAlterados = setList.Any(s => campos.Any(c => s.Contains(c)));
+
+            if (camposAlterados)
+            {
+                var updateServicosList = new List<string>();
+                //var parametros = new DynamicParameters();
+                parametros = new DynamicParameters();
+
+                // SE placa mudou → incluir no UPDATE
+                if (setList.Any(s => s.Contains("placa_caminhao")))
+                {
+                    updateServicosList.Add("placa_carroceria = @placa_caminhao");
+                    parametros.Add("placa_caminhao", model.placa_caminhao);
+                }
+
+                // SE data mudou → incluir no UPDATE
+                if (setList.Any(s => s.Contains("data_chegada_cipolatti")))
+                {
+                    updateServicosList.Add("data_carregamento = @data_chegada_cipolatti");
+                    parametros.Add("data_chegada_cipolatti", model.data_chegada_cipolatti);
+                }
+
+                // (transportadora não tem equivalente no romaneio, mas se tiver você coloca aqui)
+
+                // se nenhum campo do romaneio mudou → não faz nada
+                if (updateServicosList.Count == 0)
+                    return;
+
+                // parametros fixos
+                parametros.Add("siglaserv", model.siglaserv);
+                parametros.Add("caminhao", int.Parse(model.caminhao));
+
+                var sqlUpdateServicos = $@"
+                    UPDATE expedicao.t_romaneio
+                    SET {string.Join(", ", updateServicosList)}
+                    WHERE shopping_destino = @siglaserv
+                      AND numero_caminhao = @caminhao
+                      AND operacao = 'DESCARREGAMENTO SHOPPING';
+                ";
+
+                await conn.ExecuteAsync(sqlUpdateServicos, parametros);
+            }
+
+        }
+    }
 }

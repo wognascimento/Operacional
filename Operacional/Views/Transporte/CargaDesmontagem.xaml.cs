@@ -71,7 +71,6 @@ public partial class CargaDesmontagem : UserControl
                         data_chegada_cipolatti = linha.data_chegada_cipolatti,
                         obs = linha.obs,
                         transportadora = linha.transportadora,
-                        confirmado = "N", // Sempre grava como "N" (não confirmado)
                         descarga_caminhao = linha.descarga_caminhao,
                         obs_recebimento = linha.obs_recebimento,
                         vl_est_frete = linha.vl_est_frete,
@@ -184,33 +183,6 @@ public partial class CargaDesmontagemViewModel : ObservableObject
         }
         else
         {
-            // UPDATE
-            /*var sqlUpdate = @"
-                UPDATE operacional.t_cargas_desmontagem SET
-                    siglaserv =	@siglaserv,
-                    data_chegada_shopping =	@data_chegada_shopping,
-                    data_saida_shopping	= @data_saida_shopping,
-                    volume = @volume,
-                    caminhao = @caminhao,
-                    prev_volume	= @prev_volume,
-                    data_chegada_cipolatti = @data_chegada_cipolatti,
-                    obs = @obs,
-                    transportadora = @transportadora,
-                    confirmado = @confirmado,
-                    descarga_caminhao =	@descarga_caminhao,
-                    obs_recebimento = @obs_recebimento,
-                    vl_est_frete = @vl_est_frete,
-                    vl_est_seguro =	@vl_est_seguro,
-                    vl_est_icms = @vl_est_icms,
-                    vl_est_total = @vl_est_total,
-                    obs_embalagem =	@obs_embalagem,
-                    data_chegada_galpao	= @data_chegada_galpao,
-                    hora_chegada_galpao	= @hora_chegada_galpao,
-                    placa_caminhao	= @placa_caminhao,
-                    obs_frete_caminhao_desmont = @obs_frete_caminhao_desmont
-                WHERE id = @id;
-            ";*/
-
             var tipo = typeof(t_cargas_desmontagem);
 
             // 2) Lista de SETs só dos alterados

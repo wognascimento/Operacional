@@ -549,9 +549,9 @@ public partial class TransporteDesmontagemViewModel : ObservableObject
             // 4. INSERT se não existe
             await conn.ExecuteAsync(@"
                 INSERT INTO expedicao.t_romaneio
-                    (data_carregamento, codtransportadora, numero_caminhao, shopping_destino, operacao)
+                    (data_carregamento, codtransportadora, numero_caminhao, shopping_destino, operacao, local_carregamento)
                 VALUES
-                    (@data, @codt, @num, @sigla, 'DESCARREGAMENTO SHOPPING');
+                    (@data, @codt, @num, @sigla, 'DESCARREGAMENTO SHOPPING', 'JACAREÍ');
             ",
                 new
                 {

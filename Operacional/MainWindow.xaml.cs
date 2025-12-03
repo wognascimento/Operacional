@@ -18,6 +18,7 @@ using Producao;
 using Syncfusion.SfSkinManager;
 using Syncfusion.Windows.Tools.Controls;
 using Syncfusion.XlsIO;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Configuration;
 using System.Diagnostics;
@@ -320,8 +321,13 @@ namespace Operacional
         {
             try
             {
-                using Context context = new();
-                var retorno = await context.QryCargasDesmontagem.AsNoTracking().ToListAsync();
+                //using Context context = new();
+                //var retorno = await context.QryCargasDesmontagem.AsNoTracking().ToListAsync();
+
+                using var conn = new NpgsqlConnection(BaseSettings.ConnectionString);
+                var sql = @"SELECT * FROM operacional.qrytranspdesmont_detalhes ORDER BY data_chegada_shopping, sigla_serv";
+                var lista = (await conn.QueryAsync<TranspDesmontDetalheModel>(sql)).ToList();
+                var retorno = new ObservableCollection<TranspDesmontDetalheModel>(lista);
 
                 using ExcelEngine excelEngine = new();
                 IApplication application = excelEngine.Excel;

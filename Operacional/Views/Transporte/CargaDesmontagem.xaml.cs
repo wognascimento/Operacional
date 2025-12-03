@@ -1,6 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using Dapper;
-using DocumentFormat.OpenXml.Office2010.Excel;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Operacional.DataBase;
@@ -10,7 +9,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Telerik.Windows.Controls.GridView;
-using Telerik.Windows.Documents.Spreadsheet.Expressions.Functions;
 
 namespace Operacional.Views.Transporte;
 

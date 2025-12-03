@@ -154,15 +154,22 @@ namespace Operacional
             adicionarFilho(new TransporteMontagem(), "TRANSPORTES MONTAGEM", "TRANSPORTE_MONTAGEM");
         }
 
+        private void OnTransporteDesmontagemClick(object sender, RoutedEventArgs e)
+        {
+            adicionarFilho(new TransporteDesmontagem(), "TRANSPORTES DESMONTAGEM", "TRANSPORTE_DESMONTAGEM");
+        }
+
         private void OnCargaMontagemClick(object sender, RoutedEventArgs e)
         {
             adicionarFilho(new CargaMontagem(), "CARGAS MONTAGEM", "CARGAS_MONTAGEM");
         }
 
-        private void OnTransporteDesmontagemClick(object sender, RoutedEventArgs e)
+
+        private void OnCargaDesmontagemClick(object sender, RoutedEventArgs e)
         {
-            adicionarFilho(new TransporteDesmontagem(), "TRANSPORTES DESMONTAGEM", "TRANSPORTE_DESMONTAGEM");
+            adicionarFilho(new CargaDesmontagem(), "CARGAS DESMONTAGEM", "CARGAS_DESMONTAGEM");
         }
+
 
         private void OnDataEfetivaClick(object sender, RoutedEventArgs e)
         {
@@ -617,6 +624,5 @@ namespace Operacional
             adicionarFilho(new ControleDocumento(), "CONTROLE DOCUMENTOS", "CONTROLE_DOCUMENTOS");
         }
 
-        
     }
 }

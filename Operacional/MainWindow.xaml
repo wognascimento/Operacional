@@ -27,8 +27,9 @@
             <syncfusion:MenuItemAdv Header="Transportes">
                 <syncfusion:MenuItemAdv Header="Transportadora" Click="OnCadastroTransportadoraClick"/>
                 <syncfusion:MenuItemAdv Header="Transporte Montagem" Click="OnTransporteMontagemClick"/>
-                <syncfusion:MenuItemAdv Header="Cargas Montagem" Click="OnCargaMontagemClick"/>
                 <syncfusion:MenuItemAdv Header="Transporte Desmontagem" Click="OnTransporteDesmontagemClick"/>
+                <syncfusion:MenuItemAdv Header="Cargas Montagem" Click="OnCargaMontagemClick"/>
+                <syncfusion:MenuItemAdv Header="Cargas Desmontagem" Click="OnCargaDesmontagemClick"/>
                 <syncfusion:MenuItemAdv Header="Data Efetiva" Click="OnDataEfetivaClick"/>
                 <syncfusion:MenuItemAdv Header="Consultas">
                     <syncfusion:MenuItemAdv Header="Data Montagem" Click="OnDataMontagemClick"/>

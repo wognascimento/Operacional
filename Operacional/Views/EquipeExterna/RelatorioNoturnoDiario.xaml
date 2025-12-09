@@ -28,6 +28,7 @@
                 <telerik:GridViewComboBoxColumn
                     Header="Sigla" 
                     Width="120"
+                    TextWrapping="Wrap"
                     DataMemberBinding="{Binding sigla}"
                     SelectedValueMemberPath="sigla_serv"
                     DisplayMemberPath="sigla_serv"
@@ -40,20 +41,21 @@
                     DataMemberBinding="{Binding depto}"
                     SelectedValueMemberPath="depto"
                     DisplayMemberPath="depto"
+                    TextWrapping="Wrap"
                     ItemsSource="{Binding Deptos}"/>
                 <telerik:GridViewDataColumn 
                     Header="Informação" 
                     DataMemberBinding="{Binding detalhe}"
-                    TextWrapping="Wrap"
-                    Width="*"/>
+                    Width="350"
+                    TextWrapping="Wrap"/>
                 <telerik:GridViewComboBoxColumn
                     Header="Grau de Urgência" 
                     DataMemberBinding="{Binding grau_de_urgencia}"
-                    ItemsSource="{Binding Urgencias}"
-                    Width="auto"/>
+                    ItemsSource="{Binding Urgencias}"/>
                 <telerik:GridViewDataColumn 
                     Header="Retorno da Informação" 
                     DataMemberBinding="{Binding retorno_informacao}"
+                    Width="350"
                     TextWrapping="Wrap"/>
                 <telerik:GridViewDataColumn Header="Inserido por" DataMemberBinding="{Binding inserido_por}" IsReadOnly="True" Width="120"/>
                 <telerik:GridViewDataColumn Header="Inserido em" DataMemberBinding="{Binding inserido_em}" IsReadOnly="True" Width="120"/>

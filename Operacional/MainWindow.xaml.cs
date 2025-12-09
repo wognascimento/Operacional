@@ -630,5 +630,84 @@ namespace Operacional
             adicionarFilho(new ControleDocumento(), "CONTROLE DOCUMENTOS", "CONTROLE_DOCUMENTOS");
         }
 
+        private async void OnControleDocumentoPreenchidosClick(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string sql = @"
+                    SELECT 
+	                    cli.id,
+	                    cli.sigla,
+	                    doc.item,
+	                    doc.quando_enviar,
+	                    doc.responsavel_liberacao,
+	                    doc.email_responsavel_liberacao,
+	                    cli.fecha,
+	                    cli.direcionado_resp,
+	                    cli.direcionado_resp_por,
+	                    cli.direcionado_resp_em	em_analise,
+	                    cli.em_analise_por	em_analise_em,
+	                    cli.concluido,
+	                    cli.concluido_por,
+	                    cli.concluido_em,
+	                    cli.enviado,
+	                    cli.enviado_por,
+	                    cli.enviado_em
+                    FROM operacional.tblcontrole_documento doc
+                    JOIN operacional.tblcontrole_documento_cliente cli ON doc.id = cli.id_documento
+                    ORDER BY cli.sigla, doc.quando_enviar, doc.responsavel_liberacao;
+                ";
+
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
+
+                using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+                await connection.OpenAsync();
+
+                var dataTable = new System.Data.DataTable();
+                using (var command = new NpgsqlCommand(sql, connection))
+                using (var dataAdapter = new NpgsqlDataAdapter(command))
+                {
+                    dataAdapter.Fill(dataTable);
+                }
+
+                await connection.CloseAsync();
+
+                var path = @$"{BaseSettings.CaminhoSistema}Impressos\CONTROLE-DOCUMENTOS.xlsx";
+
+                // Salva em background (ClosedXML é síncrono)
+                await Task.Run(() =>
+                {
+                    using var wb = new XLWorkbook();
+                    wb.Worksheets.Add(dataTable, "CONTROLE DOCUMENTOS");
+
+                    var ws = wb.Worksheet(1);
+                    var used = ws.RangeUsed();
+                    if (used != null)
+                    {
+                        ws.Row(1).Style.Font.Bold = true;
+                        //used.SetAutoFilter();
+                        ws.Columns().AdjustToContents();
+                    }
+
+                    wb.SaveAs(path);
+                });
+
+                // abrir
+                Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+
+            }
+            catch (DbUpdateException ex)
+            {
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (Exception ex)  // Para qualquer outro erro
+            {
+                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
     }
 }

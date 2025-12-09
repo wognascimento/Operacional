@@ -93,6 +93,9 @@
 
             <syncfusion:MenuItemAdv Header="Documentos">
                 <syncfusion:MenuItemAdv Header="Controle" Click="OnOpenControleDocumentoClick"/>
+                <syncfusion:MenuItemAdv Header="Consultas">
+                    <syncfusion:MenuItemAdv Header="Preenchidos" Click="OnControleDocumentoPreenchidosClick"/>
+                </syncfusion:MenuItemAdv>
             </syncfusion:MenuItemAdv>
 
         </syncfusion:MenuAdv>

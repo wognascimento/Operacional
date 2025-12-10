@@ -5,23 +5,11 @@ using Npgsql;
 using Operacional.DataBase;
 using Operacional.DataBase.Models;
 using Operacional.DataBase.Models.DTOs;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using Telerik.Windows.Documents.Spreadsheet.Expressions.Functions;
 
 namespace Operacional.Views.EquipeExterna;
 
@@ -148,8 +136,8 @@ public partial class NotaPagamentoResumoViewModel : ObservableObject
             .GroupBy(f => new 
             {
                 f.empresa_nf,
-                f.tipo_detalhe,
-                f.descricao,
+                //f.tipo_detalhe,
+                //f.descricao,
                 f.numero_nf,
                 f.data,
                 f.data_pagto,
@@ -158,8 +146,8 @@ public partial class NotaPagamentoResumoViewModel : ObservableObject
             .Select(g => new RelatorioResumoDTO
             {
                 equipe = g.Key.empresa_nf,
-                tipo_detalhe = g.Key.tipo_detalhe,
-                descricao = g.Key.descricao,
+                //tipo_detalhe = g.Key.tipo_detalhe,
+                //descricao = g.Key.descricao,
                 numero_nf = g.Key.numero_nf,
                 data = (DateTime)g.Key.data,
                 data_pagto = (DateTime)g.Key.data_pagto,
@@ -168,7 +156,8 @@ public partial class NotaPagamentoResumoViewModel : ObservableObject
                 saldo = g.Sum(x => x.saldo)
                 // Se quiser manter outros campos (ex.: codrelatorio), pode usar g.Select(x => x.campo).FirstOrDefault()
             })
-            .OrderBy(r => r.descricao)
+            .OrderBy(r => r.equipe)
+            .ThenBy(r => r.numero_nf)
             .ToListAsync();
 
         return new ObservableCollection<RelatorioResumoDTO>(result);
@@ -182,8 +171,8 @@ public partial class NotaPagamentoResumoViewModel : ObservableObject
             .GroupBy(f => new
             {
                 f.empresa_nf,
-                f.tipo_detalhe,
-                f.descricao,
+                //f.tipo_detalhe,
+                //f.descricao,
                 f.numero_nf,
                 f.data,
                 f.data_pagto,
@@ -192,8 +181,8 @@ public partial class NotaPagamentoResumoViewModel : ObservableObject
             .Select(g => new RelatorioResumoDTO
             {
                 equipe = g.Key.empresa_nf,
-                tipo_detalhe = g.Key.tipo_detalhe,
-                descricao = g.Key.descricao,
+                //tipo_detalhe = g.Key.tipo_detalhe,
+                //descricao = g.Key.descricao,
                 numero_nf = g.Key.numero_nf,
                 data = (DateTime)g.Key.data,
                 data_pagto = (DateTime)g.Key.data_pagto,
@@ -202,7 +191,8 @@ public partial class NotaPagamentoResumoViewModel : ObservableObject
                 saldo = g.Sum(x => x.saldo)
                 // Se quiser manter outros campos (ex.: codrelatorio), pode usar g.Select(x => x.campo).FirstOrDefault()
             })
-            .OrderBy(r => r.descricao)
+            .OrderBy(r => r.equipe)
+            .ThenBy(r => r.numero_nf)
             .ToListAsync();
 
         return new ObservableCollection<RelatorioResumoDTO>(result);

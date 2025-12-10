@@ -26,9 +26,11 @@
             <telerik:RadGridView.Columns>
 
                 <telerik:GridViewDataColumn Header="EQUIPE" DataMemberBinding="{Binding equipe}"/>
+                <!--
                 <telerik:GridViewDataColumn Header="TIPO" DataMemberBinding="{Binding tipo_detalhe}"/>
                 <telerik:GridViewDataColumn Header="DESCRIÇÃO" DataMemberBinding="{Binding descricao}"/>
-                <telerik:GridViewDataColumn Header="NOTA" DataMemberBinding="{Binding numero_nf}" IsFilterable="False"  />
+                -->
+                <telerik:GridViewDataColumn Header="NOTA" DataMemberBinding="{Binding numero_nf}" />
                 <telerik:GridViewDataColumn Header="VALOR NOTA" DataMemberBinding="{Binding valor_detalhe}" DataFormatString="{}{0:C2}"/>
                 <telerik:GridViewDataColumn Header="DATA NOTA" DataMemberBinding="{Binding data}" DataFormatString="{} {0:dd/MM/yyyy}" IsFilterable="False"  />
                 <telerik:GridViewDataColumn Header="DATA PAGAMENTO" DataMemberBinding="{Binding data_pagto}" DataFormatString="{} {0:dd/MM/yyyy}" IsFilterable="False"  />

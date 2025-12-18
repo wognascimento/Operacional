@@ -28,7 +28,7 @@
                 <telerik:GridViewDataColumn Header="num caminhao" DataMemberBinding="{Binding num_caminhoes_desmont}" IsReadOnly="True"/>
                 <telerik:GridViewDataColumn Header="caminhao" DataMemberBinding="{Binding caminhao}" IsReadOnly="True"/>
                 <telerik:GridViewDataColumn Header="transporte" DataMemberBinding="{Binding transporte}" IsReadOnly="True"/>
-                <telerik:GridViewDataColumn Header="transportadora" DataMemberBinding="{Binding trasnportadora}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn Header="transportadora" DataMemberBinding="{Binding transportadora}" IsReadOnly="True"/>
                 <telerik:GridViewDataColumn Header="placa caminhão" DataMemberBinding="{Binding placa_caminhao}"/>
                 <telerik:GridViewDataColumn Header="volume" DataMemberBinding="{Binding volume}"/>
                 <telerik:GridViewDataColumn Header="data chegada shopping" DataMemberBinding="{Binding data_chegada_shopping, StringFormat=\{0:dd/MM/yyyy\}}"/>

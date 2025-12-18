@@ -385,8 +385,7 @@ public partial class TransporteDesmontagemViewModel : ObservableObject
                     var sqlUpdate = @"
                         UPDATE operacional.t_cargas_desmontagem
                         SET 
-                            transportadora = @transportadora,
-                            data_chegada_shopping = @data
+                            transportadora = @transportadora
                         WHERE id = @id
                         RETURNING *;
                     ";

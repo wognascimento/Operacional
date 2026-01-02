@@ -79,6 +79,7 @@ namespace Operacional
             {
                 var appSettings = ConfigurationManager.GetSection("appSettings") as NameValueCollection;
                 BaseSettings.Username = appSettings[0];
+                BaseSettings.ConnectionString = $"Host={BaseSettings.Host};Database={BaseSettings.Database};Username={BaseSettings.Username};Password={BaseSettings.Password}";
                 txtUsername.Text = BaseSettings.Username;
             }
             catch (Exception ex)
@@ -98,6 +99,7 @@ namespace Operacional
                     if (e.PromptResult != null)
                     {
                         BaseSettings.Database = e.PromptResult;
+                        BaseSettings.ConnectionString = $"Host={BaseSettings.Host};Database={BaseSettings.Database};Username={BaseSettings.Username};Password={BaseSettings.Password}";
                         txtDataBase.Text = BaseSettings.Database;
                         _mdi.Items.Clear();
                     }

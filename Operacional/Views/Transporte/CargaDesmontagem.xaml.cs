@@ -102,7 +102,7 @@ public partial class CargaDesmontagem : UserControl
 
 public partial class CargaDesmontagemViewModel : ObservableObject
 {
-    private readonly DataBaseSettings BaseSettings = DataBaseSettings.Instance;
+    private DataBaseSettings BaseSettings = DataBaseSettings.Instance;
 
     [ObservableProperty]
     private ObservableCollection<TranspDesmontDetalheModel> cargasDesmontagem;

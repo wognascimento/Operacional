@@ -6,6 +6,7 @@ using Npgsql;
 using Operacional.DataBase;
 using Operacional.DataBase.Models;
 using Operacional.DataBase.Models.DTOs.Api;
+using SharpDX;
 using System.Collections.ObjectModel;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -140,6 +141,13 @@ public partial class CadastroUsuario : UserControl
                 ErrorResponse error = JsonConvert.DeserializeObject<ErrorResponse>(errorResponse);
                 MessageBox.Show($"{error.Message}", "Erro ao cadastrar usuário", MessageBoxButton.OK, MessageBoxImage.Error);
 
+                if(dataObject.aux == null)
+                {
+                    Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                    MessageBox.Show($"Dados da equipe inválidos ou alterado após orçamento.", "Erro ao cadastrar usuário", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
                 await PostDadosEquipeWebAsync(long.Parse(dataObject.aux), dataObject.id_equipe);
                 
             }
@@ -269,12 +277,25 @@ public partial class CadastroUsuario : UserControl
             FROM equipe_externa.qry_funcoes_equipe_usuario_manutencao
             WHERE id_equipe = @id_equipe;", parametros).ToList();
 
-        var payload = new BulkPayload
+        BulkPayload payload = new();
+
+        if(liberacaoManutencaoEquipe.Count == 0)
         {
-            clientes_fase = clientesFase,
-            liberacao_equipe = liberacaoEquipe,
-            liberacao_manutencao_equipe = liberacaoManutencaoEquipe
-        };
+            payload = new BulkPayload
+            {
+                clientes_fase = clientesFase,
+                liberacao_equipe = liberacaoEquipe
+            };
+        }
+        else
+        {
+            payload = new BulkPayload
+            {
+                clientes_fase = clientesFase,
+                liberacao_equipe = liberacaoEquipe,
+                liberacao_manutencao_equipe = liberacaoManutencaoEquipe
+            };
+        }
 
         var json = JsonConvert.SerializeObject(payload, Formatting.Indented);
 

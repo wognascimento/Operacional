@@ -116,7 +116,7 @@ public class BulkPayload
 {
     public List<ClienteFaseDto> clientes_fase { get; set; }
     public List<LiberacaoEquipeDto> liberacao_equipe { get; set; }
-    public List<LiberacaoManutencaoEquipeDto> liberacao_manutencao_equipe { get; set; }
+    public List<LiberacaoManutencaoEquipeDto>? liberacao_manutencao_equipe { get; set; }
 }
 
 public class EquipeLancamentoDto

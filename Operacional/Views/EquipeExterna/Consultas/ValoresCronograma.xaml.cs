@@ -70,7 +70,8 @@ public partial class ValoresCronogramaViewModel : ObservableObject
                             fase, funcao, valor_ano_atual, valor_total, 
                             lanche, transporte, id_equipe, indice_pessoas_noite, 
                             razaosocial, vai_equipe
-	                FROM equipe_externa.qry_previsao_valores_cronograma;
+	                FROM equipe_externa.qry_previsao_valores_cronograma
+                    ORDER BY sigla, equipe, fase, funcao;
                 ";
             PrevisaoValores = new ObservableCollection<PrevisaoValorCronogramaDTO>(await connection.QueryAsync<PrevisaoValorCronogramaDTO>(sql)); 
         

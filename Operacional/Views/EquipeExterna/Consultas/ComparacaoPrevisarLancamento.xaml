@@ -13,19 +13,57 @@
 
         <telerik:RadGridView
             IsBusy="{Binding IsBusy}" 
-            AutoGenerateColumns="True"
+            AutoGenerateColumns="False"
             IsReadOnly="True"
             ShowGroupPanel="False"
             GroupRenderMode="Flat"
             SelectionMode="Extended"
-            ClipboardCopyMode="Cells, Header"
+            ClipboardCopyMode="Cells, Header, Footer"
             ItemsSource="{Binding Comparacoes}"
+            ShowColumnFooters="True"
             AutoGeneratingColumn="RadGridView_AutoGeneratingColumn">
+            
             <telerik:RadContextMenu.ContextMenu>
                 <telerik:RadContextMenu>
                     <telerik:RadMenuItem Header="Buscar Lançamentos" Click="OnBuscarLancamentosClick" />
                 </telerik:RadContextMenu>
             </telerik:RadContextMenu.ContextMenu>
+
+            <telerik:RadGridView.Columns>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding sigla}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding equipe_e}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding fase}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding funcoes}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding noites_previstas}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding qtd_pessoas_prevista}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding valor_total_previsto}" DataFormatString="{}{0:C2}">
+                    <telerik:GridViewDataColumn.AggregateFunctions>
+                        <telerik:SumFunction SourceField="valor_total_previsto" ResultFormatString="Total: {0:C2}" />
+                    </telerik:GridViewDataColumn.AggregateFunctions>
+                </telerik:GridViewDataColumn>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding noites_lancadas}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding qtd_pessoas_lancadas}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding valor_total_lancada}" DataFormatString="{}{0:C2}">
+                    <telerik:GridViewDataColumn.AggregateFunctions>
+                        <telerik:SumFunction SourceField="valor_total_lancada" ResultFormatString="Total: {0:C2}" />
+                    </telerik:GridViewDataColumn.AggregateFunctions>
+                </telerik:GridViewDataColumn>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding noites_extras}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding qtd_pessoas_extra}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding valor_total_extra}" DataFormatString="{}{0:C2}">
+                    <telerik:GridViewDataColumn.AggregateFunctions>
+                        <telerik:SumFunction SourceField="valor_total_extra" ResultFormatString="Total: {0:C2}" />
+                    </telerik:GridViewDataColumn.AggregateFunctions>
+                </telerik:GridViewDataColumn>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding noites_total}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding qtd_pessoas_total}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding valor_total_lancadas}" DataFormatString="{}{0:C2}">
+                    <telerik:GridViewDataColumn.AggregateFunctions>
+                        <telerik:SumFunction SourceField="valor_total_lancadas" ResultFormatString="Total: {0:C2}" />
+                    </telerik:GridViewDataColumn.AggregateFunctions>
+                </telerik:GridViewDataColumn>
+            </telerik:RadGridView.Columns>
+            
         </telerik:RadGridView>
 
 

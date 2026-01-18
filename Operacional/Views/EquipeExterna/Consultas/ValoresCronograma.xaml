@@ -12,13 +12,37 @@
 
         <telerik:RadGridView
             IsBusy="{Binding IsBusy}" 
-            AutoGenerateColumns="True"
+            AutoGenerateColumns="False"
             IsReadOnly="True"
             ShowGroupPanel="False"
             GroupRenderMode="Flat"
             SelectionMode="Extended"
-            ClipboardCopyMode="Cells, Header"
-            ItemsSource="{Binding PrevisaoValores}"/>
+            ClipboardCopyMode="Cells, Header, Footer"
+            ItemsSource="{Binding PrevisaoValores}"
+            ShowColumnFooters="True">
+
+            <telerik:RadGridView.Columns>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding sigla}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding qtd_pessoas}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding qtd_noites}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding equipe}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding fase}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding funcao}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding valor_ano_atual}" DataFormatString="{}{0:C2}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding lanche}" DataFormatString="{}{0:C2}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding transporte}" DataFormatString="{}{0:C2}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding valor_total}" DataFormatString="{}{0:C2}">
+                    <telerik:GridViewDataColumn.AggregateFunctions>
+                        <telerik:SumFunction SourceField="valor_total" ResultFormatString="Total: {0:C2}" />
+                    </telerik:GridViewDataColumn.AggregateFunctions>
+                </telerik:GridViewDataColumn>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding id_equipe}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding indice_pessoas_noite}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding razaosocial}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding vai_equipe}"/>
+            </telerik:RadGridView.Columns>
+
+        </telerik:RadGridView>
 
     </Grid>
     

@@ -84,9 +84,10 @@ public partial class NotaPagamento : UserControl
         {
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
             NotaPagamentoViewModel vm = (NotaPagamentoViewModel)DataContext;
-            var relatorio = e.AddedItems[0] as RelatorioPagamentoModel;
+            var relatorio = e.AddedItems.Count == 0 ? new() : e.AddedItems[0] as RelatorioPagamentoModel; //e.AddedItems[0] as RelatorioPagamentoModel;
             vm.RelatorioDetalhes = await vm.GetPagamentosEquipeBySiglaAsync(relatorio.cod_relatorio);
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+            
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx)
         {

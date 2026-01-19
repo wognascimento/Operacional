@@ -17,7 +17,8 @@
             GroupRenderMode="Flat"
             SelectionMode="Extended"
             ClipboardCopyMode="Cells, Header"
-            ItemsSource="{Binding RelatorioResumo}">
+            ItemsSource="{Binding RelatorioResumo}"
+            ShowColumnFooters="True">
             <telerik:RadContextMenu.ContextMenu>
                 <telerik:RadContextMenu>
                     <telerik:RadMenuItem Header="Enviar Fluxo" Click="OnEnviarFluxoClick" />
@@ -31,7 +32,11 @@
                 <telerik:GridViewDataColumn Header="DESCRIÇÃO" DataMemberBinding="{Binding descricao}"/>
                 -->
                 <telerik:GridViewDataColumn Header="NOTA" DataMemberBinding="{Binding numero_nf}" />
-                <telerik:GridViewDataColumn Header="VALOR NOTA" DataMemberBinding="{Binding valor_detalhe}" DataFormatString="{}{0:C2}"/>
+                <telerik:GridViewDataColumn Header="VALOR NOTA" DataMemberBinding="{Binding valor_detalhe}" DataFormatString="{}{0:C2}">
+                    <telerik:GridViewDataColumn.AggregateFunctions>
+                        <telerik:SumFunction SourceField="valor_detalhe" ResultFormatString="Total: {0:C2}" />
+                    </telerik:GridViewDataColumn.AggregateFunctions>
+                </telerik:GridViewDataColumn>
                 <telerik:GridViewDataColumn Header="DATA NOTA" DataMemberBinding="{Binding data}" DataFormatString="{} {0:dd/MM/yyyy}" IsFilterable="False"  />
                 <telerik:GridViewDataColumn Header="DATA PAGAMENTO" DataMemberBinding="{Binding data_pagto}" DataFormatString="{} {0:dd/MM/yyyy}" IsFilterable="False"  />
                 <telerik:GridViewDataColumn Header="SALDO" DataMemberBinding="{Binding saldo}" DataFormatString="{}{0:C2}"/>

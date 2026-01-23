@@ -373,6 +373,11 @@ namespace Operacional
             adicionarFilho(new CadastroFuncionario(), "CADASTRO FUNCIONÁRIO", "CADASTRO_FUNCIONARIO");
         }
 
+        private void OnOpenCustosClick(object sender, RoutedEventArgs e)
+        {
+            adicionarFilho(new Custo(), "CUSTOS OPERACIONAL", "CUSTO_OPERACIONAL");
+        }
+
         private void OnOpenCadastroDespesaClick(object sender, RoutedEventArgs e)
         {
             adicionarFilho(new CadastroDespesa(), "CADASTRO DESPESAS", "CADASTRO_DESPESAS");
@@ -711,5 +716,6 @@ namespace Operacional
                 MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
     }
 }

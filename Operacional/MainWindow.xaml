@@ -42,6 +42,7 @@
                 <syncfusion:MenuItemAdv Header="Cadastros">
                     <syncfusion:MenuItemAdv Header="Relatórios" Click="OnOpenTiposRelatoriosClick"/>
                     <syncfusion:MenuItemAdv Header="Funcionários" Click="OnOpenCadastroFuncionarioClick"/>
+                    <syncfusion:MenuItemAdv Header="Custos" Click="OnOpenCustosClick"/>
                 </syncfusion:MenuItemAdv>
                 
                 <syncfusion:MenuItemAdv Header="Lançamento">

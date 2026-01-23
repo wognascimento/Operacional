@@ -1,0 +1,102 @@
+﻿<UserControl x:Class="Operacional.Views.Despesa.Custo"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation"
+             xmlns:local="clr-namespace:Operacional.Views.Despesa" 
+             xmlns:util="clr-namespace:Operacional.Views.Utils" 
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+
+    <UserControl.Resources>
+        <util:NullToBoolConverter x:Key="NullToBoolConverter"/>
+    </UserControl.Resources>
+
+    <Grid>
+
+        <telerik:RadGridView 
+            x:Name="radGridView" 
+            ItemsSource="{Binding Custos}" 
+            AutoGenerateColumns="False"
+            ShowGroupPanel="False"
+            NewRowPosition="Top"
+            GroupRenderMode="Flat"
+            SelectionMode="Extended"
+            ClipboardCopyMode="Cells, Header"
+            RowValidating="radGridViewRowValidating">
+
+            <telerik:RadGridView.Columns>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding codcusto}" Header="#" IsReadOnly="True"/>
+                <telerik:GridViewComboBoxColumn 
+                     Header="SIGLA"
+                     DataMemberBinding="{Binding sigla}" 
+                     ItemsSource="{Binding Siglas}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding data}" Header="DATA" DataFormatString="{}{0:dd/MM/yyyy}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding qtd}" Header="QTDE" DataFormatString="{}{0:N2}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding unid}" Header="UNID"/>
+                
+                
+                <telerik:GridViewComboBoxColumn 
+                    Header="ETAPA"
+                    DataMemberBinding="{Binding etapa}" 
+                    ItemsSource="{Binding Etapas}"/>
+
+                <telerik:GridViewDataColumn Header="CLASSIFICAÇÃO">
+                    <telerik:GridViewDataColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Classificacao}" />
+                        </DataTemplate>
+                    </telerik:GridViewDataColumn.CellTemplate>
+
+                    <telerik:GridViewDataColumn.CellEditTemplate>
+                        <DataTemplate>
+                            <telerik:RadComboBox
+                                ItemsSource="{Binding DataContext.Classificacoes, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                SelectedItem="{Binding Classificacao, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                SelectionChanged="Classificacao_SelectionChanged"/>
+                        </DataTemplate>
+                    </telerik:GridViewDataColumn.CellEditTemplate>
+                </telerik:GridViewDataColumn>
+                <telerik:GridViewDataColumn Header="DESCRIÇÃO">
+                    <telerik:GridViewDataColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Descricao}" />
+                        </DataTemplate>
+                    </telerik:GridViewDataColumn.CellTemplate>
+
+                    <telerik:GridViewDataColumn.CellEditTemplate>
+                        <DataTemplate>
+                            <telerik:RadComboBox
+                                ItemsSource="{Binding Descricoes}"
+                                SelectedItem="{Binding Descricao, Mode=TwoWay}"
+                                IsEnabled="{Binding Classificacao, Converter={StaticResource NullToBoolConverter}}"/>
+                        </DataTemplate>
+                    </telerik:GridViewDataColumn.CellEditTemplate>
+                </telerik:GridViewDataColumn>
+                
+                <!--                
+                <telerik:GridViewComboBoxColumn 
+                    Header="CLASSIFICAÇÃO"
+                    DataMemberBinding="{Binding Classificacao}" 
+                    ItemsSource="{Binding DataContext.Classificacoes, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                
+                <telerik:GridViewComboBoxColumn 
+                    Header="DESCRIÇÃO"
+                    DataMemberBinding="{Binding Descricao}" 
+                    ItemsSource="{Binding Descricoes}"/>
+-->
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding vunit}" Header="VUNIT" DataFormatString="{}{0:C2}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding cadastro_por}" Header="CADASTRADO POR"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding cadastro_data}" Header="CADASTRADO EM" DataFormatString="{}{0:dd/MM/yyyy}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding alterado_por}" Header="ALTERADO POR"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding alterado_data}" Header="ALTERADO EM" DataFormatString="{}{0:dd/MM/yyyy}"/>
+            </telerik:RadGridView.Columns>
+
+        </telerik:RadGridView>
+
+
+
+    </Grid>
+    
+</UserControl>

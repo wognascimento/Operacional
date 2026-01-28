@@ -1,11 +1,6 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using Dapper;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Npgsql;
-using Operacional.DataBase;
-using Operacional.DataBase.Models.DTOs;
 using Operacional.DataBase.Models.DTOs.Api;
-using System.Collections.ObjectModel;
 using System.Windows;
 using Telerik.Windows.Controls;
 

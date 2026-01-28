@@ -269,7 +269,7 @@ public partial class ComparacaoPrevisarLancamentoViewModel : ObservableObject
         INSERT INTO equipe_externa.tbl_presenca_equipe (
             id, id_equipe, id_aprovado, fase, funcao, data, pessoas, extra, created_at, updated_at
         ) VALUES (
-            @id, @id_equipe, @id_aprovado, @fase, @funcao, @data, @pessoas, @extra, @created_at, @updated_at
+            @id, @id_equipe, @id_aprovado, @fase, @funcao, @DataParaBanco, @pessoas, @extra, @created_at, @updated_at
         )
         ON CONFLICT (id) DO UPDATE
             SET

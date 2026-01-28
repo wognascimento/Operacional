@@ -141,6 +141,9 @@ public class EquipeLancamentoDto
     //[JsonPropertyName("data")]
     public DateTimeOffset? data { get; set; }
 
+    // Propriedade para uso no banco (apenas a data, sem timezone)
+    public DateTime? DataParaBanco => data.Value.Date;
+
     //[JsonPropertyName("pessoas")]
     public int pessoas { get; set; }
 

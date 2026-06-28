@@ -46,35 +46,51 @@ public partial class BuscarLancamentos : RadWindow
 
     private async void Button_Click(object sender, RoutedEventArgs e)
     {
-        ComparacaoPrevisarLancamentoViewModel vm = (ComparacaoPrevisarLancamentoViewModel)DataContext;
-        vm.IsBusy = true;
-        var url = $"https://rest-api.cipolatti.com.br/api/equipe-lancamentos/user/{vm.EquipeUsuario.aux}";
-        var resultado = await vm.GetLancamentosWeb<EquipeLancamentoDto>(url);
+        try
+        {
+            ComparacaoPrevisarLancamentoViewModel vm = (ComparacaoPrevisarLancamentoViewModel)DataContext;
+            vm.IsBusy = true;
+            var url = $"https://rest-api.cipolatti.com.br/api/equipe-lancamentos/user/{vm.EquipeUsuario.aux}";
+            var resultado = await vm.GetLancamentosWeb<EquipeLancamentoDto>(url);
 
-        foreach (var item in resultado.Data)
-            item.id_equipe = vm.EquipeUsuario.id_equipe;
+            foreach (var item in resultado.Data)
+                item.id_equipe = vm.EquipeUsuario.id_equipe;
+
+            await vm.InsertBatchAsync(resultado.Data);
+            //Console.WriteLine(resultado.Message);
+            vm.IsBusy = false;
+            vm.CloseAction?.Invoke(true);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
         
-        await vm.InsertBatchAsync(resultado.Data);
-        //Console.WriteLine(resultado.Message);
-        vm.IsBusy = false;
-        vm.CloseAction?.Invoke(true);
     }
 
     private async void Button_Click_1(object sender, RoutedEventArgs e)
     {
-        ComparacaoPrevisarLancamentoViewModel vm = (ComparacaoPrevisarLancamentoViewModel)DataContext;
-        vm.IsBusy = true;
-        foreach (var user in vm.EquipeUsuarios)
+        try
         {
-            var url = $"https://rest-api.cipolatti.com.br/api/equipe-lancamentos/user/{user.aux}";
-            var resultado = await vm.GetLancamentosWeb<EquipeLancamentoDto>(url);
+            ComparacaoPrevisarLancamentoViewModel vm = (ComparacaoPrevisarLancamentoViewModel)DataContext;
+            vm.IsBusy = true;
+            foreach (var user in vm.EquipeUsuarios)
+            {
+                var url = $"https://rest-api.cipolatti.com.br/api/equipe-lancamentos/user/{user.aux}";
+                var resultado = await vm.GetLancamentosWeb<EquipeLancamentoDto>(url);
 
-            foreach (var item in resultado.Data)
-                item.id_equipe = user.id_equipe;
+                foreach (var item in resultado.Data)
+                    item.id_equipe = user.id_equipe;
 
-            await vm.InsertBatchAsync(resultado.Data);
+                await vm.InsertBatchAsync(resultado.Data);
+            }
+            vm.IsBusy = false;
+            vm.CloseAction?.Invoke(true);
         }
-        vm.IsBusy = false;
-        vm.CloseAction?.Invoke(true);
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        
     }
 }

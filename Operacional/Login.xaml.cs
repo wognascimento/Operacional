@@ -24,7 +24,7 @@ namespace Producao
             this.DialogResult = false;
             this.Close();
         }
-
+        /*
         private void OnLogar(object sender, RoutedEventArgs e)
         {
             if (!string.IsNullOrWhiteSpace(txtLogin.Text) && !string.IsNullOrWhiteSpace(txtSenha.Password))
@@ -53,5 +53,41 @@ namespace Producao
                 }
             }
         }
+        */
+
+        private void OnLogar(object sender, RoutedEventArgs e)
+        {
+
+            if (!string.IsNullOrWhiteSpace(txtLogin.Text) && !string.IsNullOrWhiteSpace(txtSenha.Password))
+            {
+                try
+                {
+                    // ContextType.Domain já usa seu domínio padrão ou especifique "cipodominio.com.br"
+                    using var ctx = new PrincipalContext(
+                           ContextType.Domain,
+                           "192.168.0.254", // Controlador de domínio
+                           "cipodominio.com.br"); // Domínio
+                    if (!ctx.ValidateCredentials(txtLogin.Text, txtSenha.Password))
+                        throw new Exception("Credenciais inválidas.");
+
+                    // Atualiza config e fecha
+                    var config = ConfigurationManager.OpenExeConfiguration(@$"{BaseSettings.CaminhoSistema}Operacional.dll");
+                    config.AppSettings.Settings["Username"].Value = txtLogin.Text;
+                    config.Save(ConfigurationSaveMode.Modified);
+                    ConfigurationManager.RefreshSection("appSettings");
+
+                    BaseSettings.Username = txtLogin.Text;
+                    BaseSettings.ConnectionString = $"Host={BaseSettings.Host};Database={BaseSettings.Database};Username={BaseSettings.Username};Password={BaseSettings.Password}";
+
+                    this.DialogResult = true;
+                    this.Close();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Falha na autenticação: {ex.Message}");
+                }
+            }
+        }
+
     }
 }

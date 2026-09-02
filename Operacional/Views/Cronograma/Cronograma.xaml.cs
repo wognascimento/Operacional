@@ -1,14 +1,13 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
+using ClosedXML.Excel;
 using Dapper;
-using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Operacional.DataBase;
 using Operacional.DataBase.Models;
 using Operacional.DataBase.Models.DTOs;
-using Syncfusion.XlsIO;
+using Operacional.Utils;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -55,7 +54,7 @@ public partial class Cronograma : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
         }
     }
@@ -108,7 +107,7 @@ public partial class Cronograma : UserControl
         catch (Exception ex)
         {
             // Qualquer outro erro
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
         }
     }
 
@@ -149,9 +148,11 @@ public partial class Cronograma : UserControl
         catch (Exception ex)
         {
             // Qualquer outro erro
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
         }
     }
+
+    private static readonly string[] sourceArray = new[] { "EQUIPE EXTERNA", "COORD.+ASSIST.", "ELETRICISTA" };
 
     private async void Crono_CurrentCellChanged(object sender, EventArgs e)
     {
@@ -202,7 +203,7 @@ public partial class Cronograma : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
         }
     }
 
@@ -236,7 +237,7 @@ public partial class Cronograma : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
         }
     }
 
@@ -323,197 +324,205 @@ public partial class Cronograma : UserControl
 
     private void OnCronogramaCoordenadorClick(object sender, RoutedEventArgs e)
     {
-        try
-        {
-            CronogramaViewModel vm = (CronogramaViewModel)DataContext;
-            var aprovado = cmbAprovados.SelectedItem as ProducaoAprovadoModel;
-
-            using ExcelEngine excelEngine = new();
-            IApplication application = excelEngine.Excel;
-            application.DefaultVersion = ExcelVersion.Excel2016;
-
-            // Abre o arquivo modelo
-            FileStream inputStream = new(@$"{BaseSettings.CaminhoSistema}Modelos\CRONOGRAMA_COORDENADOR.xlsx", FileMode.Open, FileAccess.Read);
-            IWorkbook workbook = application.Workbooks.Open(inputStream);
-            IWorksheet worksheet = workbook.Worksheets[0];
-            // Preenche células fixas
-            worksheet.Range["C1"].Text = @$"CRONOGRAMA DE MONTAGEM NATAL {BaseSettings.Database} {Environment.NewLine} {aprovado.nome} - {aprovado.sigla}";
-
-            //TOTAL PREENCHIDO, EQUIPE EXTERNA, EQUIPE AUXILIAR, COORD.+ASSIST., ELETRICISTA, TOTAL GERAL
-            string[] status = ["EQUIPE EXTERNA", "COORD.+ASSIST.", "ELETRICISTA"];
-            char coluna = 'E';
-            int linhaInicial = 8; // Inserir a partir da linha 8
-            //var cronogramaTotalGerais = vm.CronogramaTotalGerais.Where(x => status.Contains(x.status)).ToList();//vm.CronogramaTotalGerais.Where(x => !x.status.Contains("TOTAL")).ToList();
-            var cronogramaTotalGerais = vm.CronogramaTotalGerais.Where(x => status.Any(s => x.status.Contains(s))).ToList();
-            foreach (var item in cronogramaTotalGerais)
-            {
-                var valores = new double?[]
-                {
-                    item.sn1, item.sn2, item.sn3, item.sn4, item.sn5, item.sn6, item.sn7, item.sn8,
-                    item.sn9, item.sn10, item.sn11, item.sn12, item.sn13, item.sn14, item.sn15, item.sn16
-                };
-
-                for (int i = 0; i < valores.Length; i++)
-                {
-                    var cell = worksheet.Range[$"{(char)(coluna + i)}{linhaInicial}"];
-                    if (valores[i].HasValue)
-                        cell.Number = valores[i].Value;
-                    else
-                        cell.Value = ""; // ou cell.Clear();
-                }
-
-                linhaInicial++;
-            }
-
-            linhaInicial = 7; // Inserir a partir da linha 7
-            foreach (var item in vm.ViewCronogramas)
-            {
-                worksheet.Range[$"A{linhaInicial}"].Text = item.item;
-                worksheet.Range[$"B{linhaInicial}"].Text = item.localitem;
-                worksheet.Range[$"C{linhaInicial}"].Text = item.descricao;
-                worksheet.Range[$"D{linhaInicial}"].Number = Convert.ToDouble(item.qtd);
-
-                var valores = new double?[]
-                {
-                    item.n1, item.n2, item.n3, item.n4, item.n5, item.n6, item.n7, item.n8,
-                    item.n9, item.n10, item.n11, item.n12, item.n13, item.n14, item.n15, item.n16
-                };
-
-                for (int i = 0; i < valores.Length; i++)
-                {
-                    var cell = worksheet.Range[$"{(char)(coluna + i)}{linhaInicial}"];
-                    if (valores[i].HasValue)
-                        cell.Number = valores[i].Value;
-                    else
-                        cell.Value = ""; // ou cell.Clear();
-                }
-
-                worksheet.Range["U" + linhaInicial].Text = item.obs_coordenador;
-                linhaInicial++;
-                worksheet.InsertRow(linhaInicial, 1, ExcelInsertOptions.FormatAsBefore);
-            }
-            worksheet.DeleteRow(linhaInicial, 1);
-
-            linhaInicial = 2; // Inserir a partir da linha 2
-            foreach (var item in vm.NoitescronogPessoas.Where(x => x.qtd_pessoas > 0))
-            {
-                worksheet.Range["V" + linhaInicial].Text = item.funcao;
-                worksheet.Range["W" + linhaInicial].Number = Convert.ToDouble(item.qtd_pessoas);
-
-                linhaInicial++;
-                //worksheet.InsertRow(linhaInicial, 1, ExcelInsertOptions.FormatAsBefore);
-            }
-            worksheet.UsedRange.AutofitRows();
-            // Salva como novo arquivo
-            FileStream outputStream = new(@$"{BaseSettings.CaminhoSistema}Impressos\CRONOGRAMA_COORDENADOR-{aprovado.sigla}.xlsx", FileMode.Create, FileAccess.Write);
-            workbook.SaveAs(outputStream);
-
-            workbook.Close();
-            inputStream.Close();
-            outputStream.Close();
-
-            Process.Start("explorer", @$"{BaseSettings.CaminhoSistema}Impressos\CRONOGRAMA_COORDENADOR-{aprovado.sigla}.xlsx");
-
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(ex.Message);
-        } 
+        GerarCronogramaExcel(
+            "CRONOGRAMA_COORDENADOR.xlsx",
+            "CRONOGRAMA_COORDENADOR",
+            item => item.obs_coordenador,
+            totais => totais.Where(x => sourceArray.Any(s => x.status.Contains(s))),
+            preencherTotaisAposItens: true);
     }
 
     private void OnCronogramaClienteClick(object sender, RoutedEventArgs e)
+    {
+        GerarCronogramaExcel(
+            "CRONOGRAMA_CLIENTE.xlsx",
+            "CRONOGRAMA_CLIENTE",
+            item => item.obs_cliente,
+            totais => totais.Where(x => !x.status.Contains("TOTAL")),
+            exibirTotais: false,
+            ocultarNumerosNoites: true,
+            ajustarAreaImpressaoAteItens: true);
+    }
+
+    private void GerarCronogramaExcel(
+        string modelo,
+        string prefixoArquivo,
+        Func<ViewCronogramaModel, string?> obterObservacao,
+        Func<IEnumerable<CronogramaTotalGeralDTO>, IEnumerable<CronogramaTotalGeralDTO>> filtrarTotais,
+        bool preencherTotaisAposItens = false,
+        bool exibirTotais = true,
+        bool ocultarNumerosNoites = false,
+        bool ajustarAreaImpressaoAteItens = false)
     {
         try
         {
             CronogramaViewModel vm = (CronogramaViewModel)DataContext;
             var aprovado = cmbAprovados.SelectedItem as ProducaoAprovadoModel;
-
-            using ExcelEngine excelEngine = new();
-            IApplication application = excelEngine.Excel;
-            application.DefaultVersion = ExcelVersion.Excel2016;
-
-            // Abre o arquivo modelo
-            FileStream inputStream = new(@$"{BaseSettings.CaminhoSistema}Modelos\CRONOGRAMA_CLIENTE.xlsx", FileMode.Open, FileAccess.Read);
-            IWorkbook workbook = application.Workbooks.Open(inputStream);
-            IWorksheet worksheet = workbook.Worksheets[0];
-            // Preenche células fixas
-            worksheet.Range["C1"].Text = @$"CRONOGRAMA DE MONTAGEM NATAL {BaseSettings.Database} {Environment.NewLine} {aprovado.nome} - {aprovado.sigla}";
-
-            char coluna = 'E';
-            int linhaInicial = 8; // Inserir a partir da linha 8
-            foreach (var item in vm.CronogramaTotalGerais.Where(x => !x.status.Contains("TOTAL")))
+            if (aprovado is null)
             {
-                var valores = new double?[]
-                {
-                    item.sn1, item.sn2, item.sn3, item.sn4, item.sn5, item.sn6, item.sn7, item.sn8,
-                    item.sn9, item.sn10, item.sn11, item.sn12, item.sn13, item.sn14, item.sn15, item.sn16
-                };
-
-                for (int i = 0; i < valores.Length; i++)
-                {
-                    var cell = worksheet.Range[$"{(char)(coluna + i)}{linhaInicial}"];
-                    if (valores[i].HasValue)
-                        cell.Number = valores[i].Value;
-                    else
-                        cell.Value = ""; // ou cell.Clear();
-                }
-
-                linhaInicial++;
+                MessageBox.Show("Selecione um aprovado.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
             }
 
-            linhaInicial = 7; // Inserir a partir da linha 7
+            var outputPath = SistemaPathResolver.GetImpressosPath($"{prefixoArquivo}-{aprovado.sigla}.xlsx");
+            using var workbook = new XLWorkbook(SistemaPathResolver.GetModeloPath(modelo));
+            var worksheet = workbook.Worksheet(1);
+
+            worksheet.Cell("C1").Value = @$"CRONOGRAMA DE MONTAGEM NATAL {BaseSettings.Database} {Environment.NewLine} {aprovado.nome} - {aprovado.sigla}";
+
+            const char coluna = 'E';
+            var totais = filtrarTotais(vm.CronogramaTotalGerais).ToList();
+
+            int linhaInicial = 8;
+            if (exibirTotais && !preencherTotaisAposItens)
+            {
+                foreach (var item in totais)
+                {
+                    PreencherValoresNoites(worksheet, linhaInicial, coluna, item.sn1, item.sn2, item.sn3, item.sn4, item.sn5, item.sn6, item.sn7, item.sn8, item.sn9, item.sn10, item.sn11, item.sn12, item.sn13, item.sn14, item.sn15, item.sn16);
+                    linhaInicial++;
+                }
+            }
+
+            linhaInicial = 7;
             foreach (var item in vm.ViewCronogramas)
             {
-                worksheet.Range[$"A{linhaInicial}"].Text = item.item;
-                worksheet.Range[$"B{linhaInicial}"].Text = item.localitem;
-                worksheet.Range[$"C{linhaInicial}"].Text = item.descricao;
-                worksheet.Range[$"D{linhaInicial}"].Number = Convert.ToDouble(item.qtd);
+                worksheet.Cell($"A{linhaInicial}").Value = item.item;
+                worksheet.Cell($"B{linhaInicial}").Value = item.localitem;
+                worksheet.Cell($"C{linhaInicial}").Value = item.descricao;
+                worksheet.Cell($"D{linhaInicial}").Value = Convert.ToDouble(item.qtd);
 
-                var valores = new double?[]
+                if (ocultarNumerosNoites)
                 {
-                    item.n1, item.n2, item.n3, item.n4, item.n5, item.n6, item.n7, item.n8,
-                    item.n9, item.n10, item.n11, item.n12, item.n13, item.n14, item.n15, item.n16
-                };
-
-                for (int i = 0; i < valores.Length; i++)
-                {
-                    var cell = worksheet.Range[$"{(char)(coluna + i)}{linhaInicial}"];
-                    if (valores[i].HasValue)
-                        cell.Number = valores[i].Value;
-                    else
-                        cell.Value = ""; // ou cell.Clear();
+                    PreencherMarcacoesNoites(worksheet, linhaInicial, coluna, item.n1, item.n2, item.n3, item.n4, item.n5, item.n6, item.n7, item.n8, item.n9, item.n10, item.n11, item.n12, item.n13, item.n14, item.n15, item.n16);
                 }
+                else
+                {
+                    PreencherValoresNoites(worksheet, linhaInicial, coluna, item.n1, item.n2, item.n3, item.n4, item.n5, item.n6, item.n7, item.n8, item.n9, item.n10, item.n11, item.n12, item.n13, item.n14, item.n15, item.n16);
+                }
+                worksheet.Cell("U" + linhaInicial).Value = obterObservacao(item);
 
-                worksheet.Range["U" + linhaInicial].Text = item.obs_cliente;
                 linhaInicial++;
-                worksheet.InsertRow(linhaInicial, 1, ExcelInsertOptions.FormatAsBefore);
+                worksheet.Row(linhaInicial).InsertRowsAbove(1);
             }
-            worksheet.DeleteRow(linhaInicial, 1);
+            worksheet.Row(linhaInicial).Delete();
 
-            linhaInicial = 2; // Inserir a partir da linha 2
+            var ultimaLinhaItens = linhaInicial - 1;
+
+            if (exibirTotais && preencherTotaisAposItens)
+            {
+                PreencherTotaisCronograma(worksheet, linhaInicial, totais);
+            }
+
+            linhaInicial = 2;
             foreach (var item in vm.NoitescronogPessoas.Where(x => x.qtd_pessoas > 0))
             {
-                worksheet.Range["V" + linhaInicial].Text = item.funcao;
-                worksheet.Range["W" + linhaInicial].Number = Convert.ToDouble(item.qtd_pessoas);
-
+                worksheet.Cell("V" + linhaInicial).Value = item.funcao;
+                worksheet.Cell("W" + linhaInicial).Value = Convert.ToDouble(item.qtd_pessoas);
                 linhaInicial++;
-                //worksheet.InsertRow(linhaInicial, 1, ExcelInsertOptions.FormatAsBefore);
             }
-            worksheet.UsedRange.AutofitRows();
-            // Salva como novo arquivo
-            FileStream outputStream = new(@$"{BaseSettings.CaminhoSistema}Impressos\CRONOGRAMA_CLIENTE-{aprovado.sigla}.xlsx", FileMode.Create, FileAccess.Write);
-            workbook.SaveAs(outputStream);
 
-            workbook.Close();
-            inputStream.Close();
-            outputStream.Close();
+            RemoverFormatacaoCondicionalNoites(worksheet);
 
-            Process.Start("explorer", @$"{BaseSettings.CaminhoSistema}Impressos\CRONOGRAMA_CLIENTE-{aprovado.sigla}.xlsx");
+            if (ajustarAreaImpressaoAteItens && ultimaLinhaItens >= 7)
+            {
+                worksheet.PageSetup.PrintAreas.Clear();
+                worksheet.PageSetup.PrintAreas.Add(1, 1, ultimaLinhaItens, 21);
+            }
 
+            if (!preencherTotaisAposItens && !ajustarAreaImpressaoAteItens)
+            {
+                worksheet.Rows().AdjustToContents();
+            }
+
+            workbook.SaveAs(outputPath);
+            SistemaPathResolver.OpenInExplorer(outputPath);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            Operacional.ErrorDialog.Show(ex, "Erro");
+        }
+    }
+
+    private static void RemoverFormatacaoCondicionalNoites(IXLWorksheet worksheet)
+    {
+        worksheet.ConditionalFormats.Remove(format =>
+            format.Ranges.Any(range =>
+                range.RangeAddress.FirstAddress.ColumnNumber <= 20 &&
+                range.RangeAddress.LastAddress.ColumnNumber >= 5));
+    }
+
+    private static void PreencherValoresNoites(IXLWorksheet worksheet, int linha, char colunaInicial, params double?[] valores)
+    {
+        for (int i = 0; i < valores.Length; i++)
+        {
+            var cell = worksheet.Cell($"{(char)(colunaInicial + i)}{linha}");
+            if (valores[i].HasValue)
+            {
+                cell.Value = valores[i].Value;
+                AplicarFundoNoite(cell, valores[i]);
+                continue;
+            }
+
+            cell.Value = string.Empty;
+            AplicarFundoNoite(cell, null);
+        }
+    }
+
+    private static void PreencherMarcacoesNoites(IXLWorksheet worksheet, int linha, char colunaInicial, params double?[] valores)
+    {
+        for (int i = 0; i < valores.Length; i++)
+        {
+            var cell = worksheet.Cell($"{(char)(colunaInicial + i)}{linha}");
+            cell.Value = string.Empty;
+            cell.Style.Fill.PatternType = XLFillPatternValues.Solid;
+            cell.Style.Fill.BackgroundColor = valores[i].HasValue
+                ? XLColor.FromArgb(217, 217, 217)
+                : XLColor.White;
+        }
+    }
+
+    private static void AplicarFundoNoite(IXLCell cell, double? valor)
+    {
+        cell.Style.Fill.PatternType = XLFillPatternValues.Solid;
+        cell.Style.Fill.BackgroundColor = valor switch
+        {
+            null => XLColor.White,
+            0 => XLColor.LightBlue,
+            _ => XLColor.FromArgb(91, 155, 213)
+        };
+    }
+
+    private static void PreencherTotaisCronograma(IXLWorksheet worksheet, int linhaInicial, IReadOnlyList<CronogramaTotalGeralDTO> totais)
+    {
+        const int totalColunaInicial = 5;
+        const int totalColunasNoite = 16;
+
+        for (int i = 0; i < totais.Count; i++)
+        {
+            var linha = linhaInicial + i;
+            var item = totais[i];
+            PreencherValoresNoites(worksheet, linha, 'E', item.sn1, item.sn2, item.sn3, item.sn4, item.sn5, item.sn6, item.sn7, item.sn8, item.sn9, item.sn10, item.sn11, item.sn12, item.sn13, item.sn14, item.sn15, item.sn16);
+            AplicarFundoBrancoNoites(worksheet, linha);
+        }
+
+        var linhaTotal = linhaInicial + totais.Count;
+        for (int coluna = totalColunaInicial; coluna < totalColunaInicial + totalColunasNoite; coluna++)
+        {
+            var letraColuna = XLHelper.GetColumnLetterFromNumber(coluna);
+            var cell = worksheet.Cell(linhaTotal, coluna);
+            cell.FormulaA1 = $"SUM({letraColuna}{linhaInicial}:{letraColuna}{linhaTotal - 1})";
+            cell.Style.Fill.PatternType = XLFillPatternValues.Solid;
+            cell.Style.Fill.BackgroundColor = XLColor.White;
+        }
+    }
+
+    private static void AplicarFundoBrancoNoites(IXLWorksheet worksheet, int linha)
+    {
+        for (int coluna = 5; coluna <= 20; coluna++)
+        {
+            var cell = worksheet.Cell(linha, coluna);
+            cell.Style.Fill.PatternType = XLFillPatternValues.Solid;
+            cell.Style.Fill.BackgroundColor = XLColor.White;
         }
     }
 
@@ -521,13 +530,11 @@ public partial class Cronograma : UserControl
 
 public partial class CronogramaViewModel : ObservableObject
 {
-    private Context _dbContext;
     private DataBaseSettings _dataBaseSettings;
 
     public CronogramaViewModel()
     {
         _dataBaseSettings = DataBaseSettings.Instance;
-        _dbContext = new Context();
         //LoadData();
         //NoitescronogPessoas = [];
     }
@@ -561,9 +568,12 @@ public partial class CronogramaViewModel : ObservableObject
 
     public async Task<ObservableCollection<ProducaoAprovadoModel>> GetAprovadosAsync()
     {
-        var result = await _dbContext.ProducaoAprovados
-            .OrderBy(f => f.sigla_serv)
-            .ToListAsync();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<ProducaoAprovadoModel>(
+            @"SELECT *
+              FROM producao.t_aprovados
+              ORDER BY sigla_serv;");
+
         return new ObservableCollection<ProducaoAprovadoModel>(result);
     }
 
@@ -585,63 +595,94 @@ public partial class CronogramaViewModel : ObservableObject
 
     public async Task<ObservableCollection<ViewCronogramaModel>> GetViewCronogramasSiglaAsync(string sigla)
     {
-        var result = await _dbContext.ViewCronogramas
-            .OrderBy(f => f.item)
-            .Where(f => f.sigla == sigla)
-            .ToListAsync();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<ViewCronogramaModel>(
+            @"SELECT *
+              FROM operacional.qry_cronograma
+              WHERE sigla = @sigla
+              ORDER BY item;",
+            new { sigla });
+
         return new ObservableCollection<ViewCronogramaModel>(result);
     }
 
     public async Task<ObservableCollection<ViewCronogramaModel>> GetViewCronogramasCompletoAsync(string sigla)
     {
-        var result = await _dbContext.ViewCronogramas
-            .OrderBy(f => f.item)
-            .Where(f => f.sigla_completa == sigla)
-            .ToListAsync();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<ViewCronogramaModel>(
+            @"SELECT *
+              FROM operacional.qry_cronograma
+              WHERE sigla_completa = @sigla
+              ORDER BY item;",
+            new { sigla });
+
         return new ObservableCollection<ViewCronogramaModel>(result);
     }
 
     public async Task<ObservableCollection<OperacionalNoitescronogPessoaFuncaoModel>> GetOperacionalNoitescronogPessoasAsync(string sigla)
     {
-        var result = await _dbContext.OperacionalNoitescronogPessoas
-            .OrderBy(f => f.funcao)
-            .Where(f => f.sigla == sigla && f.fase == "MONTAGEM" && !f.funcao.Contains("BRINQUEDO"))
-            .ToListAsync();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<OperacionalNoitescronogPessoaFuncaoModel>(
+            @"SELECT *
+              FROM operacional.tblnoitescronog_qtd_pessoa_funcao
+              WHERE sigla = @sigla
+                AND fase = 'MONTAGEM'
+                AND COALESCE(funcao, '') NOT ILIKE '%BRINQUEDO%'
+              ORDER BY funcao;",
+            new { sigla });
+
         return new ObservableCollection<OperacionalNoitescronogPessoaFuncaoModel>(result);
     }
 
     public async Task<ObservableCollection<OperacionalNoitescronogPessoaFuncaoModel>> GetOperacionalNoitescronogPessoasManutencaoAsync(string sigla)
     {
-        var result = await _dbContext.OperacionalNoitescronogPessoas
-            .OrderBy(f => f.funcao)
-            .Where(f => f.sigla == sigla && f.fase == "MANUTENÇÃO PROGRAMADA")
-            .ToListAsync();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<OperacionalNoitescronogPessoaFuncaoModel>(
+            @"SELECT *
+              FROM operacional.tblnoitescronog_qtd_pessoa_funcao
+              WHERE sigla = @sigla
+                AND fase = 'MANUTENÇÃO PROGRAMADA'
+              ORDER BY funcao;",
+            new { sigla });
+
         return new ObservableCollection<OperacionalNoitescronogPessoaFuncaoModel>(result);
     }
 
     public async Task<ObservableCollection<OperacionalNoitescronogPessoaFuncaoModel>> GetOperacionalNoitescronogPessoasManutencaoExtraAsync(string sigla)
     {
-        var result = await _dbContext.OperacionalNoitescronogPessoas
-            .OrderBy(f => f.funcao)
-            .Where(f => f.sigla == sigla && f.fase == "EXTRA")
-            .ToListAsync();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<OperacionalNoitescronogPessoaFuncaoModel>(
+            @"SELECT *
+              FROM operacional.tblnoitescronog_qtd_pessoa_funcao
+              WHERE sigla = @sigla
+                AND fase = 'EXTRA'
+              ORDER BY funcao;",
+            new { sigla });
+
         return new ObservableCollection<OperacionalNoitescronogPessoaFuncaoModel>(result);
     }
 
     public async Task<ObservableCollection<OperacionalNoitescronogPessoaFuncaoModel>> GetOperacionalNoitescronogPessoasDesmontagemAsync(string sigla)
     {
-        var result = await _dbContext.OperacionalNoitescronogPessoas
-            .OrderBy(f => f.funcao)
-            .Where(f => f.sigla == sigla && f.fase == "DESMONTAGEM")
-            .ToListAsync();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<OperacionalNoitescronogPessoaFuncaoModel>(
+            @"SELECT *
+              FROM operacional.tblnoitescronog_qtd_pessoa_funcao
+              WHERE sigla = @sigla
+                AND fase = 'DESMONTAGEM'
+              ORDER BY funcao;",
+            new { sigla });
+
         return new ObservableCollection<OperacionalNoitescronogPessoaFuncaoModel>(result);
     }
 
     public async Task<ObservableCollection<OperacionalFuncoesCronogramaModel>> GetFuncoesAsync()
     {
-        var funcoes = await _dbContext.OperacionalFuncoesCronogramas
-                .OrderBy(f => f.funcao)
-                .ToListAsync();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var funcoes = await connection.QueryAsync<OperacionalFuncoesCronogramaModel>(
+            @"SELECT *
+              FROM operacional.tblfuncoes_cronograma
+              ORDER BY funcao;");
 
         return new ObservableCollection<OperacionalFuncoesCronogramaModel>(funcoes);
     }
@@ -650,52 +691,47 @@ public partial class CronogramaViewModel : ObservableObject
     {
         try
         {
-            var funcoes = await _dbContext.OperacionalFuncoesCronogramas
-                .OrderBy(f => f.funcao)
-                .ToListAsync();
+            using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+            await connection.OpenAsync();
+            await using var transaction = await connection.BeginTransactionAsync();
 
-            var funcoesSigla = await _dbContext.OperacionalNoitescronogPessoas
-                .Where(f => f.sigla == sigla)
-                .OrderBy(f => f.funcao)
-                .ToListAsync();
+            var funcoes = (await connection.QueryAsync<OperacionalFuncoesCronogramaModel>(
+                @"SELECT *
+                  FROM operacional.tblfuncoes_cronograma
+                  ORDER BY funcao;",
+                transaction: transaction)).ToList();
+
+            var funcoesSigla = (await connection.QueryAsync<OperacionalNoitescronogPessoaFuncaoModel>(
+                @"SELECT *
+                  FROM operacional.tblnoitescronog_qtd_pessoa_funcao
+                  WHERE sigla = @sigla
+                  ORDER BY funcao;",
+                new { sigla },
+                transaction)).ToList();
 
             var funcoesFaltantes = funcoes
                 .Where(f => !funcoesSigla.Any(s => s.funcao == f.funcao))
                 .ToList();
 
-            var executionStrategy = _dbContext.Database.CreateExecutionStrategy();
-
-            await executionStrategy.ExecuteAsync(async () =>
+            try
             {
-                await using var transaction = await _dbContext.Database.BeginTransactionAsync();
-                try
+                foreach (var item in funcoesFaltantes)
                 {
-                    foreach (var item in funcoesFaltantes)
-                    {
-                        await _dbContext.OperacionalNoitescronogPessoas.AddAsync(new OperacionalNoitescronogPessoaFuncaoModel
-                        {
-                            sigla = sigla,
-                            fase = fase,
-                            funcao = item.funcao,
-                            qtd_noites = 0,
-                            qtd_pessoas = 0,
-                        });
-                    }
+                    await connection.ExecuteAsync(@"
+                        INSERT INTO operacional.tblnoitescronog_qtd_pessoa_funcao
+                        (sigla, fase, funcao, qtd_noites, qtd_pessoas)
+                        VALUES (@sigla, @fase, @funcao, 0, 0);",
+                        new { sigla, fase, item.funcao },
+                        transaction);
+                }
 
-                    await _dbContext.SaveChangesAsync();
-                    await transaction.CommitAsync();
-                }
-                catch (PostgresException)
-                {
-                    await transaction.RollbackAsync();
-                    throw;// new Exception($"Erro do banco: {pgEx.MessageText}\nLocal: {pgEx.Where}", pgEx);
-                }
-                catch (Exception)
-                {
-                    await transaction.RollbackAsync();
-                    throw;// new Exception($"Erro inesperado: {ex.Message}", ex);
-                }
-            });
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
 
             //return null; // sucesso
         }
@@ -743,14 +779,30 @@ public partial class CronogramaViewModel : ObservableObject
 
     public async Task<bool> AtualizarPessoasNoiteFuncao(OperacionalNoitescronogPessoaFuncaoModel model)
     {
-        using var db = new Context();
-        var modelExistente = await db.OperacionalNoitescronogPessoas.FindAsync(model.id);
-        if (modelExistente == null)
-            await db.OperacionalNoitescronogPessoas.AddAsync(model);
-        else
-            db.Entry(modelExistente).CurrentValues.SetValues(model);
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        if (model.id <= 0)
+        {
+            model.id = await connection.ExecuteScalarAsync<long>(@"
+                INSERT INTO operacional.tblnoitescronog_qtd_pessoa_funcao
+                (sigla, fase, funcao, qtd_pessoas, qtd_noites, equipe)
+                VALUES (@sigla, @fase, @funcao, @qtd_pessoas, @qtd_noites, @equipe)
+                RETURNING id;",
+                model);
 
-        await db.SaveChangesAsync();
+            return true;
+        }
+
+        await connection.ExecuteAsync(@"
+            UPDATE operacional.tblnoitescronog_qtd_pessoa_funcao
+            SET sigla = @sigla,
+                fase = @fase,
+                funcao = @funcao,
+                qtd_pessoas = @qtd_pessoas,
+                qtd_noites = @qtd_noites,
+                equipe = @equipe
+            WHERE id = @id;",
+            model);
+
         return true;
     }
 
@@ -758,7 +810,6 @@ public partial class CronogramaViewModel : ObservableObject
 
     public async Task<bool> AtualizarPessoasNoiteCronograma(ViewCronogramaModel model)
     {
-        _dbContext = new Context();
         var noiteCronog = new OperacionalNoiteCronogModel
         {
             codfecha = model.codfecha,
@@ -783,14 +834,37 @@ public partial class CronogramaViewModel : ObservableObject
             n16 = model.n16,
             extra = string.Empty
         };
-        var modelExistente = await _dbContext.OperacionalNoiteCronogs.FindAsync(model.codfecha);
-        
-        if (modelExistente == null)
-            _dbContext.OperacionalNoiteCronogs.Add(noiteCronog);
-        else
-            _dbContext.Entry(modelExistente).CurrentValues.SetValues(noiteCronog);
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        await connection.ExecuteAsync(@"
+            INSERT INTO operacional.tblnoitescronog
+            (codfecha, sigla, obs_coordenador, obs_cliente, n1, n2, n3, n4,
+             n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16, extra)
+            VALUES
+            (@codfecha, @sigla, @obs_coordenador, @obs_cliente, @n1, @n2, @n3, @n4,
+             @n5, @n6, @n7, @n8, @n9, @n10, @n11, @n12, @n13, @n14, @n15, @n16, @extra)
+            ON CONFLICT (codfecha) DO UPDATE SET
+                sigla = EXCLUDED.sigla,
+                obs_coordenador = EXCLUDED.obs_coordenador,
+                obs_cliente = EXCLUDED.obs_cliente,
+                n1 = EXCLUDED.n1,
+                n2 = EXCLUDED.n2,
+                n3 = EXCLUDED.n3,
+                n4 = EXCLUDED.n4,
+                n5 = EXCLUDED.n5,
+                n6 = EXCLUDED.n6,
+                n7 = EXCLUDED.n7,
+                n8 = EXCLUDED.n8,
+                n9 = EXCLUDED.n9,
+                n10 = EXCLUDED.n10,
+                n11 = EXCLUDED.n11,
+                n12 = EXCLUDED.n12,
+                n13 = EXCLUDED.n13,
+                n14 = EXCLUDED.n14,
+                n15 = EXCLUDED.n15,
+                n16 = EXCLUDED.n16,
+                extra = EXCLUDED.extra;",
+            noiteCronog);
 
-        await _dbContext.SaveChangesAsync();
         return true;
     }
 

@@ -1,8 +1,6 @@
-﻿using BibliotecasSIG;
+using BibliotecasSIG;
 using Operacional.DataBase;
 using Operacional.Localization;
-using System.Collections.Specialized;
-using System.Configuration;
 using System.Diagnostics;
 using System.Globalization;
 using System.Net.Http;
@@ -14,38 +12,25 @@ using Telerik.Windows.Controls;
 
 namespace Operacional
 {
-    /// <summary>
-    /// Interaction logic for App.xaml
-    /// </summary>
     public partial class App : Application
     {
-        private const string UPDATE_URL = "http://192.168.0.49/downloads/operacional/version.json";
-        private readonly string CURRENT_VERSION = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+        private readonly DataBaseSettings BaseSettings = DataBaseSettings.Instance;
+        private readonly string CURRENT_VERSION = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0.0";
+
+        public string CurrentVersion => CURRENT_VERSION;
 
         public App()
         {
-            Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("MTU4NUAzMjM3MkUzMTJFMzluT08wbzRnYm4zUlFDOVRzWVpYbUtuSEl0aUhTZmNMYjQxekhrV0NVRnlzPQ==");
-
-            var appSettings = ConfigurationManager.GetSection("appSettings") as NameValueCollection;
-
-            DataBaseSettings BaseSettings = DataBaseSettings.Instance;
-            if (appSettings[0].Length > 0)
-                BaseSettings.AppSetting = appSettings;
-
-            BaseSettings.Database = DateTime.Now.Year.ToString();
-            BaseSettings.Host = "192.168.0.23";
-            BaseSettings.Username = BaseSettings.AppSetting != null ? BaseSettings.AppSetting[0] : Environment.UserName;
-            BaseSettings.Password = "123mudar";
-            BaseSettings.ConnectionString = $"Host={BaseSettings.Host};Database={BaseSettings.Database};Username={BaseSettings.Username};Password={BaseSettings.Password}";
-
-            LocalizationManager.Manager = new LocalizationManager()
+            BaseSettings.LoadFromConfiguration();
+            DapperTypeHandlers.Register();
+            StyleManager.ApplicationTheme = new Office2016Theme();
+            LocalizationManager.Manager = new LocalizationManager
             {
                 ResourceManager = GridViewResources.ResourceManager
             };
 
-            // Obtém a versão da aplicação
-            //Version versao = Assembly.GetExecutingAssembly().GetName().Version;
-            //MessageBox.Show($"Versão: {versao}");
+            DispatcherUnhandledException += OnDispatcherUnhandledException;
+            AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
         }
 
         protected override async void OnStartup(StartupEventArgs e)
@@ -58,77 +43,69 @@ namespace Operacional
 
             FrameworkElement.LanguageProperty.OverrideMetadata(
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(
-                    XmlLanguage.GetLanguage(culture.IetfLanguageTag)));
+                new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(culture.IetfLanguageTag)));
 
-
-            // Verificação de atualização em segundo plano
             await CheckForUpdatesAsync();
-
         }
 
-        private async Task CheckForUpdatesAsync()
+        public async Task CheckForUpdatesAsync(bool showUpToDate = false)
         {
+            if (string.IsNullOrWhiteSpace(BaseSettings.UpdateInfoUrl))
+                return;
+
             try
             {
-                var updateChecker = new UpdateChecker(UPDATE_URL, CURRENT_VERSION);
+                var updateChecker = new UpdateChecker(BaseSettings.UpdateInfoUrl, CURRENT_VERSION);
                 var updateInfo = await updateChecker.CheckForUpdatesAsync();
 
-                var updateInfoJson = JsonSerializer.Serialize<UpdateInfo>(updateInfo);
-
-                if (updateInfo != null)
+                if (updateInfo == null)
                 {
-                    // Pergunta ao usuário se deseja atualizar
-                    var result = MessageBox.Show(
-                        $"Nova versão disponível!\n\n" +
-                        $"Versão atual: {CURRENT_VERSION}\n" +
-                        $"Nova versão: {updateInfo.updateVersion}\n\n" +
-                        "Changelog:\n" +
-                        string.Join("\n", updateInfo.changelog) +
-                        "\n\nDeseja baixar a atualização?",
-                        "Atualização Disponível",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Information
-                    );
-
-                    if (result == MessageBoxResult.Yes)
-                    {
-
-                        var options = new JsonSerializerOptions { WriteIndented = true };
-                        string jsonString = JsonSerializer.Serialize(updateInfo, options);
-
-                        //Process.Start("Update.exe", @$"{updateInfoJson}, Operacional.exe");
-
-                        string jsonData = JsonSerializer.Serialize(updateInfo); // Garante que o JSON está bem formatado
-                        string appName = "Operacional.exe";
-
-                        string arguments = $"\"{jsonData.Replace("\"", "\\\"")}\" \"{appName}\"";
-                        Process.Start("Update.exe", arguments);
-                        this.Shutdown();
-
-                    }
+                    if (showUpToDate)
+                        MessageBox.Show($"O sistema ja esta atualizado.\n\nVersao atual: {CURRENT_VERSION}", "Atualizacao do sistema", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
                 }
+
+                var result = MessageBox.Show(
+                    $"Nova versao disponivel!\n\n" +
+                    $"Versao atual: {CURRENT_VERSION}\n" +
+                    $"Nova versao: {updateInfo.updateVersion}\n\n" +
+                    "Changelog:\n" +
+                    string.Join("\n", updateInfo.changelog) +
+                    "\n\nDeseja baixar a atualizacao?",
+                    "Atualizacao Disponivel",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Information);
+
+                if (result != MessageBoxResult.Yes)
+                    return;
+
+                string jsonData = JsonSerializer.Serialize(updateInfo);
+                string arguments = $"\"{jsonData.Replace("\"", "\\\"")}\" \"Operacional.exe\"";
+                Process.Start("Update.exe", arguments);
+                Shutdown();
             }
             catch (HttpRequestException ex)
             {
-                // Log do erro ou tratamento de exceção
-                MessageBox.Show(
-                    $"Erro ao verificar atualizações: {ex.Message}",
-                    "Erro",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error
-                );
+                ErrorDialog.Show(ex, "Erro ao verificar atualizacoes");
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Erro ao verificar atualizações: {ex.Message}",
-                    "Erro",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error
-                );
+                ErrorDialog.Show(ex, "Erro ao verificar atualizacoes");
+            }
+        }
+
+        private void OnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+        {
+            ErrorDialog.Show(e.Exception, "Erro inesperado");
+            e.Handled = true;
+        }
+
+        private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            if (e.ExceptionObject is Exception ex)
+            {
+                ErrorDialog.Show(ex, "Erro critico", MessageBoxImage.Stop);
             }
         }
     }
-
 }

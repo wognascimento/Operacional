@@ -252,14 +252,14 @@ public partial class CustoViewModel : ObservableObject
 
     public async Task SalvarCustoAsync(CustoModel item)
     {
-        if (item.State == EntityState.Unchanged)
+        if (item.State == CustoModel.EntityState.Unchanged)
             return; // 🔴 NÃO salva dados carregados
 
         using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
 
         string sql;
 
-        if (item.State == EntityState.Added) //if (item.codcusto == 0)
+        if (item.State == CustoModel.EntityState.Added) //if (item.codcusto == 0)
         {
             item.cadastro_por = _dataBaseSettings.Username;
             item.cadastro_data = DateTime.Now;
@@ -274,7 +274,7 @@ public partial class CustoViewModel : ObservableObject
 
             item.codcusto = await connection.ExecuteScalarAsync<int>(sql, item);
         }
-        else if (item.State == EntityState.Modified)
+        else if (item.State == CustoModel.EntityState.Modified)
         {
             item.alterado_por = _dataBaseSettings.Username;
             item.alterado_data = DateTime.Now;

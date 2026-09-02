@@ -1,5 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.EntityFrameworkCore;
+using Dapper;
+using CommunityToolkit.Mvvm.ComponentModel;
 using Npgsql;
 using Operacional.DataBase;
 using Operacional.DataBase.Models;
@@ -41,7 +41,7 @@ public partial class CargaMontagem : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
         }
     }
@@ -87,7 +87,7 @@ public partial class CargaMontagem : UserControl
             catch (Exception ex)
             {
                 // Tratar erro e possivelmente reverter alterações
-                MessageBox.Show($"Erro ao salvar: {ex.Message}");
+                Operacional.ErrorDialog.Show(ex, "Erro ao salvar");
                 //e.EditAction = GridViewEditAction.Cancel; // Cancela a edição
             }
         }
@@ -129,7 +129,7 @@ public partial class CargaMontagem : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
         }
     }
@@ -137,29 +137,69 @@ public partial class CargaMontagem : UserControl
 
 public partial class CargaMontagemViewModel : ObservableObject
 {
+    private readonly DataBaseSettings _dataBaseSettings = DataBaseSettings.Instance;
+
     [ObservableProperty]
     private ObservableCollection<QryfrmtranspDetalheModel> cargasMontagem;
 
     public async Task GetCargasMontagemAsync()
     {
-        using var _db = new Context();
-        var result = await _db.QryCargasMontagem
-            .OrderBy(f => f.data)
-            .ThenBy(f => f.siglaserv)
-            .ToListAsync();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<QryfrmtranspDetalheModel>(
+            @"SELECT *
+              FROM operacional.qryfrmtransp_detalhe
+              ORDER BY data, siglaserv;");
+
         CargasMontagem = new ObservableCollection<QryfrmtranspDetalheModel>(result);
     }
 
     public async Task GravarAsync(tbl_cargas_montagem model)
     {
-        using var db = new Context();
-        var modelExistente = await db.cargasmontagens.FindAsync(model.id);
-        if (modelExistente == null)
-            await db.cargasmontagens.AddAsync(model);
-        else
-            db.Entry(modelExistente).CurrentValues.SetValues(model);
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
 
-        await db.SaveChangesAsync();
+        if (model.id <= 0)
+        {
+            model.id = await connection.ExecuteScalarAsync<long>(@"
+                INSERT INTO operacional.tbl_cargas_montagem
+                (siglaserv, data, num_caminhao, m3_contratado, obscarga,
+                 trasnportadora, veiculo_programado, data_chegada, obs_saida,
+                 local_carga, valor_frete_contratado_caminhao, noite_montagem,
+                 obs_externas, obs_frete_contratado)
+                VALUES
+                (@siglaserv, @data, @num_caminhao, @m3_contratado, @obscarga,
+                 @trasnportadora, @veiculo_programado, @data_chegada, @obs_saida,
+                 @local_carga, @valor_frete_contratado_caminhao, @noite_montagem,
+                 @obs_externas, @obs_frete_contratado)
+                RETURNING id;",
+                model);
 
+            return;
+        }
+
+        var linhas = await connection.ExecuteAsync(@"
+            UPDATE operacional.tbl_cargas_montagem
+            SET
+                siglaserv = @siglaserv,
+                data = @data,
+                num_caminhao = @num_caminhao,
+                m3_contratado = @m3_contratado,
+                obscarga = @obscarga,
+                trasnportadora = @trasnportadora,
+                veiculo_programado = @veiculo_programado,
+                data_chegada = @data_chegada,
+                obs_saida = @obs_saida,
+                local_carga = @local_carga,
+                valor_frete_contratado_caminhao = @valor_frete_contratado_caminhao,
+                noite_montagem = @noite_montagem,
+                obs_externas = @obs_externas,
+                obs_frete_contratado = @obs_frete_contratado
+            WHERE id = @id;",
+            model);
+
+        if (linhas == 0)
+        {
+            model.id = 0;
+            await GravarAsync(model);
+        }
     }
 }

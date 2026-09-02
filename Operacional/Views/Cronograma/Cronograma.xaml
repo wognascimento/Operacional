@@ -144,8 +144,8 @@
                     <TextBlock Text="14/09/2024"/>
                 </StackPanel>
                 -->
-                <Button Content="Coordenador" Margin="10,0,0,0" Click="OnCronogramaCoordenadorClick" Width="75"/>
-                <Button Content="Cliente" Margin="4,0,0,0" Click="OnCronogramaClienteClick" Width="75"/>
+                <telerik:RadButton Content="Coordenador" Margin="10,0,0,0" Click="OnCronogramaCoordenadorClick" Width="85"/>
+                <telerik:RadButton Content="Cliente" Margin="4,0,0,0" Click="OnCronogramaClienteClick" Width="75"/>
                 <!--<Button Content="Valor Montagem" Margin="4,0,0,0"/>-->
             </StackPanel>
 

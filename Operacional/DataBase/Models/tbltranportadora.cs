@@ -1,13 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.EntityFrameworkCore;
 
 namespace Operacional.DataBase.Models;
 
 [Table("tbltranportadoras", Schema = "operacional")]
-[Index("nometransportadora", Name = "tbltranportadoras_nometransportadora_key", IsUnique = true)]
 public partial class tbltranportadora
 {
     [Key]

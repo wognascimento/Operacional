@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Dapper;
+using Npgsql;
+using Operacional.DataBase;
 using Operacional.DataBase.Models;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -32,7 +34,7 @@ namespace Operacional.Views.Despesa
             }
             catch (DbUpdateException ex)
             {
-                MessageBox.Show(ex.InnerException.Message);
+                Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
             }
         }
@@ -64,7 +66,7 @@ namespace Operacional.Views.Despesa
             catch (DbUpdateException ex)
             {
                 e.IsValid = false;
-                MessageBox.Show($"Erro: {ex.InnerException?.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
             }
         }
 
@@ -90,13 +92,15 @@ namespace Operacional.Views.Despesa
             catch (DbUpdateException ex)
             {
                 e.IsValid = false;
-                MessageBox.Show($"Erro: {ex.InnerException?.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
             }
         }
     }
 
     public partial class CadastroFuncionarioViewModel : INotifyPropertyChanged
     {
+        private readonly DataBaseSettings _dataBaseSettings = DataBaseSettings.Instance;
+
         public event PropertyChangedEventHandler PropertyChanged;
         public void RaisePropertyChanged(string propName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
         protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -139,12 +143,34 @@ namespace Operacional.Views.Despesa
         {
             try
             {
-                using Context context = new();
+                using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+                var funcionariosComBancos = (await connection.QueryAsync<OperacionalTDespFuncionarioModel>(
+                    @"SELECT *
+                      FROM operacional.t_desp_funcionario
+                      ORDER BY nome_func;")).ToList();
 
-                // Supondo que seu DbContext se chame "SeuDbContext"
-                var funcionariosComBancos = await context.DespFuncionarios
-                    .Include(f => f.DadosBancarios)
-                    .ToListAsync();
+                var dadosBancarios = (await connection.QueryAsync<OperacionalTblDespDadoBancarioModel>(
+                    @"SELECT *
+                      FROM operacional.tbl_desp_dados_bancarios
+                      ORDER BY cod_func, banco, agencia;")).ToList();
+
+                var bancosPorFuncionario = dadosBancarios
+                    .Where(d => d.cod_func is not null)
+                    .GroupBy(d => d.cod_func)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+                foreach (var funcionario in funcionariosComBancos)
+                {
+                    if (funcionario.cod_func is not null &&
+                        bancosPorFuncionario.TryGetValue(funcionario.cod_func, out var bancos))
+                    {
+                        funcionario.DadosBancarios = new ObservableCollection<OperacionalTblDespDadoBancarioModel>(bancos);
+                    }
+                    else
+                    {
+                        funcionario.DadosBancarios = [];
+                    }
+                }
 
                 return [..funcionariosComBancos];
             }
@@ -162,14 +188,44 @@ namespace Operacional.Views.Despesa
         {
             try
             {
-                using Context context = new();
-                var funcionarioExistente = await context.DespFuncionarios.FindAsync(funcionario.cod_func);
-                if (funcionarioExistente == null)
-                    context.DespFuncionarios.Add(funcionario);
-                else
-                    context.Entry(funcionarioExistente).CurrentValues.SetValues(funcionario);
+                using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
 
-                await context.SaveChangesAsync();
+                if (funcionario.cod_func is null or <= 0)
+                {
+                    funcionario.cod_func = await connection.ExecuteScalarAsync<long>(@"
+                        INSERT INTO operacional.t_desp_funcionario
+                        (nome_func, telefone_func, celular_func, cidade_func, estado_func,
+                         observacao, cpf, empresa, tipo_financeiro, cnpj_razao_social)
+                        VALUES
+                        (@nome_func, @telefone_func, @celular_func, @cidade_func, @estado_func,
+                         @observacao, @cpf, @empresa, @tipo_financeiro, @cnpj_razao_social)
+                        RETURNING cod_func;",
+                        funcionario);
+
+                    return true;
+                }
+
+                var linhas = await connection.ExecuteAsync(@"
+                    UPDATE operacional.t_desp_funcionario
+                    SET
+                        nome_func = @nome_func,
+                        telefone_func = @telefone_func,
+                        celular_func = @celular_func,
+                        cidade_func = @cidade_func,
+                        estado_func = @estado_func,
+                        observacao = @observacao,
+                        cpf = @cpf,
+                        empresa = @empresa,
+                        tipo_financeiro = @tipo_financeiro,
+                        cnpj_razao_social = @cnpj_razao_social
+                    WHERE cod_func = @cod_func;",
+                    funcionario);
+
+                if (linhas == 0)
+                {
+                    funcionario.cod_func = null;
+                    await AdcionarFuncionario(funcionario);
+                }
 
                 return true;
             }
@@ -187,14 +243,43 @@ namespace Operacional.Views.Despesa
         {
             try
             {
-                using Context context = new();
-                var dadosBancarioExistente = await context.DespDadoBancarios.FindAsync(dadosBancario.cod_func);
-                if (dadosBancarioExistente == null)
-                    context.DespDadoBancarios.Add(dadosBancario);
-                else
-                    context.Entry(dadosBancarioExistente).CurrentValues.SetValues(dadosBancario);
+                using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
 
-                await context.SaveChangesAsync();
+                if (dadosBancario.cod_linha_dados_bancarios is null or <= 0)
+                {
+                    dadosBancario.cod_linha_dados_bancarios = await connection.ExecuteScalarAsync<long>(@"
+                        INSERT INTO operacional.tbl_desp_dados_bancarios
+                        (cod_func, titular_conta, banco, tipo_conta, agencia, numero_conta,
+                         digito_agencia, digito_conta, cpf_conta)
+                        VALUES
+                        (@cod_func, @titular_conta, @banco, @tipo_conta, @agencia, @numero_conta,
+                         @digito_agencia, @digito_conta, @cpf_conta)
+                        RETURNING cod_linha_dados_bancarios;",
+                        dadosBancario);
+
+                    return true;
+                }
+
+                var linhas = await connection.ExecuteAsync(@"
+                    UPDATE operacional.tbl_desp_dados_bancarios
+                    SET
+                        cod_func = @cod_func,
+                        titular_conta = @titular_conta,
+                        banco = @banco,
+                        tipo_conta = @tipo_conta,
+                        agencia = @agencia,
+                        numero_conta = @numero_conta,
+                        digito_agencia = @digito_agencia,
+                        digito_conta = @digito_conta,
+                        cpf_conta = @cpf_conta
+                    WHERE cod_linha_dados_bancarios = @cod_linha_dados_bancarios;",
+                    dadosBancario);
+
+                if (linhas == 0)
+                {
+                    dadosBancario.cod_linha_dados_bancarios = null;
+                    await AdcionarDadosBancarioFuncionario(dadosBancario);
+                }
 
                 return true;
             }
@@ -212,10 +297,12 @@ namespace Operacional.Views.Despesa
         {
             try
             {
-                using Context context = new();
-                var funcionariosComBancos = await context.HtFuncionarios
-                    .Where(f => f.data_demissao == null)
-                    .ToListAsync();
+                using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+                var funcionariosComBancos = await connection.QueryAsync<HtFuncionarioModel>(
+                    @"SELECT *
+                      FROM ht.view_ht_funcionarios
+                      WHERE data_demissao IS NULL
+                      ORDER BY nome_apelido;");
 
                 return [.. funcionariosComBancos];
             }
@@ -233,9 +320,11 @@ namespace Operacional.Views.Despesa
         {
             try
             {
-                using Context context = new();
-                var empresas = await context.ComprasEmpresas
-                    .ToListAsync();
+                using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+                var empresas = await connection.QueryAsync<ComprasEmpresaModel>(
+                    @"SELECT *
+                      FROM compras.tblempresa
+                      ORDER BY abreviacao;");
 
                 return [.. empresas];
             }

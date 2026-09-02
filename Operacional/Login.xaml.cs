@@ -1,17 +1,15 @@
-﻿using Operacional.DataBase;
+using Operacional.DataBase;
+using System;
 using System.Configuration;
 using System.DirectoryServices.AccountManagement;
 using System.Windows;
 using Telerik.Windows.Controls;
 
-namespace Producao
+namespace Operacional
 {
-    /// <summary>
-    /// Interação lógica para Login.xam
-    /// </summary>
     public partial class Login : RadWindow
     {
-        DataBaseSettings BaseSettings = DataBaseSettings.Instance;
+        private readonly DataBaseSettings BaseSettings = DataBaseSettings.Instance;
 
         public Login()
         {
@@ -21,36 +19,43 @@ namespace Producao
 
         private void OnSair(object sender, RoutedEventArgs e)
         {
-            this.DialogResult = false;
-            this.Close();
+            DialogResult = false;
+            Close();
         }
 
         private void OnLogar(object sender, RoutedEventArgs e)
         {
-            if (!string.IsNullOrWhiteSpace(txtLogin.Text) && !string.IsNullOrWhiteSpace(txtSenha.Password))
+            if (string.IsNullOrWhiteSpace(txtLogin.Text) || string.IsNullOrWhiteSpace(txtSenha.Password))
+                return;
+
+            try
             {
-                try
-                {
-                    // ContextType.Domain já usa seu domínio padrão ou especifique "cipodominio.com.br"
-                    using var ctx = new PrincipalContext(
-                           ContextType.Domain,
-                           "cipodominio.com.br");
-                    if (!ctx.ValidateCredentials(txtLogin.Text, txtSenha.Password))
-                        throw new Exception("Credenciais inválidas.");
+                using var ctx = new PrincipalContext(
+                    ContextType.Domain,
+                    "192.168.0.254",
+                    "cipodominio.com.br");
 
-                    // Atualiza config e fecha
-                    var config = ConfigurationManager.OpenExeConfiguration(@$"{BaseSettings.CaminhoSistema}Operacional.dll");
+                if (!ctx.ValidateCredentials(txtLogin.Text, txtSenha.Password))
+                    throw new Exception("Credenciais invalidas.");
+
+                var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+                if (config.AppSettings.Settings["Username"] == null)
+                    config.AppSettings.Settings.Add("Username", txtLogin.Text);
+                else
                     config.AppSettings.Settings["Username"].Value = txtLogin.Text;
-                    config.Save(ConfigurationSaveMode.Modified);
-                    ConfigurationManager.RefreshSection("appSettings");
 
-                    this.DialogResult = true;
-                    this.Close();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Falha na autenticação: {ex.Message}");
-                }
+                config.Save(ConfigurationSaveMode.Modified);
+                ConfigurationManager.RefreshSection("appSettings");
+
+                BaseSettings.Username = txtLogin.Text;
+                BaseSettings.RefreshConnectionString();
+
+                DialogResult = true;
+                Close();
+            }
+            catch (Exception ex)
+            {
+                Operacional.ErrorDialog.Show(ex, "Falha na autenticacao");
             }
         }
     }

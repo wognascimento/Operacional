@@ -1,5 +1,7 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.EntityFrameworkCore;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Dapper;
+using Npgsql;
+using Operacional.DataBase;
 using Operacional.DataBase.Models;
 using System.Collections.ObjectModel;
 using System.Windows;
@@ -67,6 +69,7 @@ public partial class AdicionarFuncoes : RadWindow
 
 public partial class AdicionarFuncoesViewModel : ObservableObject
 {
+    private readonly DataBaseSettings _dataBaseSettings = DataBaseSettings.Instance;
 
     [ObservableProperty]
     private ObservableCollection<OperacionalFuncoesCronogramaModel> funcoes;
@@ -76,35 +79,59 @@ public partial class AdicionarFuncoesViewModel : ObservableObject
 
     public async Task LoadFuncoesAsync()
     {
-        using var context = new Context();
-        Funcoes = new ObservableCollection<OperacionalFuncoesCronogramaModel>(
-            await context.OperacionalFuncoesCronogramas.ToListAsync());
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var funcoes = await connection.QueryAsync<OperacionalFuncoesCronogramaModel>(
+            @"SELECT *
+              FROM operacional.tblfuncoes_cronograma
+              ORDER BY funcao;");
+
+        Funcoes = new ObservableCollection<OperacionalFuncoesCronogramaModel>(funcoes);
     }   
 
     public async Task LoadManutencaoFuncoesAsync(long idProgramacao)
     {
-        using var context = new Context();
-        ManutencaoFuncoes = new ObservableCollection<OperacionalPessoasManutencaoModel>(
-            await context.OperacionalPessoasManutencoes
-                .Where(x => x.id_programacao == idProgramacao)
-                .OrderBy(x => x.funcao)
-                .ToListAsync());
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var funcoes = await connection.QueryAsync<OperacionalPessoasManutencaoModel>(
+            @"SELECT *
+              FROM operacional.tbl_pessoas_manutencao
+              WHERE id_programacao = @idProgramacao
+              ORDER BY funcao;",
+            new { idProgramacao });
+
+        ManutencaoFuncoes = new ObservableCollection<OperacionalPessoasManutencaoModel>(funcoes);
     }
 
     public async Task AddManutencaoFuncoesAsync(OperacionalPessoasManutencaoModel model)
     {
-        using var context = new Context();
-        var modelExistente = await context.OperacionalPessoasManutencoes.FindAsync(model.id);
-        if (modelExistente == null)
-        {
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
 
-            context.OperacionalPessoasManutencoes.Add(model);
+        if (model.id <= 0)
+        {
+            model.id = await connection.ExecuteScalarAsync<int>(@"
+                INSERT INTO operacional.tbl_pessoas_manutencao
+                (id_programacao, funcao, qtd)
+                VALUES (@id_programacao, @funcao, @qtd)
+                RETURNING id;",
+                model);
         }
         else
         {
-            context.Entry(modelExistente).CurrentValues.SetValues(model);
+            var linhas = await connection.ExecuteAsync(@"
+                UPDATE operacional.tbl_pessoas_manutencao
+                SET id_programacao = @id_programacao,
+                    funcao = @funcao,
+                    qtd = @qtd
+                WHERE id = @id;",
+                model);
+
+            if (linhas == 0)
+            {
+                model.id = 0;
+                await AddManutencaoFuncoesAsync(model);
+                return;
+            }
         }
-        await context.SaveChangesAsync();
+
         await LoadManutencaoFuncoesAsync(model.id_programacao);
     }
 

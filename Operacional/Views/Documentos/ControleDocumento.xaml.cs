@@ -1,5 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.EntityFrameworkCore;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Dapper;
 using Npgsql;
 using Operacional.DataBase;
 using Operacional.DataBase.Models;
@@ -41,7 +41,7 @@ public partial class ControleDocumento : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
         }
     }
@@ -67,7 +67,7 @@ public partial class ControleDocumento : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
         }
     }
@@ -109,7 +109,7 @@ public partial class ControleDocumento : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
         }
     }
@@ -117,6 +117,8 @@ public partial class ControleDocumento : UserControl
 
 public partial class ControleDocumentoViewModel : ObservableObject
 {
+    private readonly DataBaseSettings _dataBaseSettings = DataBaseSettings.Instance;
+
     [ObservableProperty]
     private ObservableCollection<string> siglas;
     [ObservableProperty]
@@ -124,12 +126,14 @@ public partial class ControleDocumentoViewModel : ObservableObject
 
     public async Task GetSiglasAsync()
     {
-        using var _db = new Context();
-        var result = await _db.ProducaoAprovados
-            .GroupBy(f => f.sigla)
-            .OrderBy(f => f.Key)
-            .Select(f => f.Key)
-            .ToListAsync();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<string>(
+            @"SELECT sigla
+              FROM producao.t_aprovados
+              WHERE sigla IS NOT NULL
+              GROUP BY sigla
+              ORDER BY sigla;");
+
         Siglas =  new ObservableCollection<string>(result);
     }
 
@@ -137,95 +141,64 @@ public partial class ControleDocumentoViewModel : ObservableObject
     {
         try
         {
-            using var _db = new Context();
-            var documentos = await _db.ControleDocumentos
-                .OrderBy(f => f.quando_enviar)
-                .ThenBy(f => f.item)
-                .ToListAsync();
+            using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+            await connection.OpenAsync();
+            await using var transaction = await connection.BeginTransactionAsync();
 
-            var documentosCliente = await _db.ControleDocumentoClientes
-                .Where(f => f.sigla == sigla)
-                .ToListAsync();
-
-            var documentosFaltantes = documentos
-                .Where(f => !documentosCliente.Any(s => f.id == s.id_documento))
-                .ToList();
-
-            var executionStrategy = _db.Database.CreateExecutionStrategy();
-
-            await executionStrategy.ExecuteAsync(async () =>
+            try
             {
-                await using var transaction = await _db.Database.BeginTransactionAsync();
-                try
-                {
-                    foreach (var item in documentosFaltantes)
-                    {
-                        await _db.ControleDocumentoClientes.AddAsync(new OperacionalControleDocumentoClienteModel
-                        {
-                            id_documento = item.id,
-                            sigla = sigla,
-                            direcionado_resp = false,
-                            em_analise = false,
-                            concluido = false,
-                            enviado = false,
-                            //direcionado_resp_em = null,
-                            //em_analise_em
-                            //concluido_em
-                            //enviado_em
+                await connection.ExecuteAsync(@"
+                    INSERT INTO operacional.tblcontrole_documento_cliente
+                    (id_documento, sigla, direcionado_resp, em_analise, concluido, enviado)
+                    SELECT doc.id, @sigla, false, false, false, false
+                    FROM operacional.tblcontrole_documento doc
+                    WHERE NOT EXISTS (
+                        SELECT 1
+                        FROM operacional.tblcontrole_documento_cliente cliente
+                        WHERE cliente.id_documento = doc.id
+                          AND cliente.sigla = @sigla
+                    );",
+                    new { sigla },
+                    transaction);
 
-                        });
-                    }
+                var resultado = await connection.QueryAsync<ControleDocumentoClienteDTO>(@"
+                    SELECT
+                        cliente.id,
+                        doc.item,
+                        doc.quando_enviar,
+                        doc.responsavel_liberacao,
+                        doc.email_responsavel_liberacao,
+                        doc.id AS id_documento,
+                        cliente.sigla,
+                        cliente.fecha,
+                        cliente.direcionado_resp,
+                        cliente.direcionado_resp_por,
+                        cliente.direcionado_resp_em,
+                        cliente.em_analise,
+                        cliente.em_analise_por,
+                        cliente.em_analise_em,
+                        cliente.concluido,
+                        cliente.concluido_por,
+                        cliente.concluido_em,
+                        cliente.enviado,
+                        cliente.enviado_por,
+                        cliente.enviado_em
+                    FROM operacional.tblcontrole_documento doc
+                    JOIN operacional.tblcontrole_documento_cliente cliente
+                      ON doc.id = cliente.id_documento
+                    WHERE cliente.sigla = @sigla
+                    ORDER BY doc.quando_enviar, doc.item;",
+                    new { sigla },
+                    transaction);
 
-                    await _db.SaveChangesAsync();
-                    await transaction.CommitAsync();
-
-                    var resultado = from doc in _db.ControleDocumentos
-                                    join cliente in _db.ControleDocumentoClientes
-                                    on doc.id equals cliente.id_documento
-                                    where cliente.sigla == sigla
-                                    orderby doc.quando_enviar, doc.item
-                                    select new ControleDocumentoClienteDTO
-                                    {
-                                        id = cliente.id,
-                                        item = doc.item,
-                                        quando_enviar = doc.quando_enviar,
-                                        responsavel_liberacao = doc.responsavel_liberacao,
-                                        email_responsavel_liberacao = doc.email_responsavel_liberacao,
-                                        id_documento = doc.id,
-                                        sigla = cliente.sigla,
-                                        fecha = cliente.fecha,
-                                        direcionado_resp = cliente.direcionado_resp,
-                                        direcionado_resp_por = cliente.direcionado_resp_por,
-                                        direcionado_resp_em = cliente.direcionado_resp_em,
-                                        em_analise = cliente.em_analise,
-                                        em_analise_por = cliente.em_analise_por,
-                                        em_analise_em = cliente.em_analise_em,
-                                        concluido  = cliente.concluido,
-                                        concluido_por = cliente.concluido_por,
-                                        concluido_em = cliente.concluido_em,
-                                        enviado = cliente.enviado,
-                                        enviado_por = cliente.enviado_por,
-                                        enviado_em = cliente.enviado_em
-                                    };
-
-                    ControleDocumentoClientes = new ObservableCollection<ControleDocumentoClienteDTO>(await resultado.ToListAsync()); 
-                }
-                catch (DbUpdateException ex) when (ex.InnerException is PostgresException)
-                {
-                    await transaction.RollbackAsync();
-                    throw;
-                }
-                catch (PostgresException)
-                {
-                    await transaction.RollbackAsync();
-                    throw;
-                }
-                catch (Exception)
-                {
-                    await transaction.RollbackAsync();
-                    throw;
-                }
-            });
+                await transaction.CommitAsync();
+                ControleDocumentoClientes = new ObservableCollection<ControleDocumentoClienteDTO>(resultado);
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
         catch (Exception)
         {
@@ -235,14 +208,51 @@ public partial class ControleDocumentoViewModel : ObservableObject
 
     public async Task GravarAsync(OperacionalControleDocumentoClienteModel model)
     {
-        using var db = new Context();
-        var modelExistente = await db.ControleDocumentoClientes.FindAsync(model.id);
-        if (modelExistente == null)
-            await db.ControleDocumentoClientes.AddAsync(model);
-        else
-            db.Entry(modelExistente).CurrentValues.SetValues(model);
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
 
-        await db.SaveChangesAsync();
+        if (model.id <= 0)
+        {
+            model.id = await connection.ExecuteScalarAsync<int>(@"
+                INSERT INTO operacional.tblcontrole_documento_cliente
+                (id_documento, sigla, fecha, direcionado_resp, direcionado_resp_por,
+                 direcionado_resp_em, em_analise, em_analise_por, em_analise_em,
+                 concluido, concluido_por, concluido_em, enviado, enviado_por, enviado_em)
+                VALUES
+                (@id_documento, @sigla, @fecha, @direcionado_resp, @direcionado_resp_por,
+                 @direcionado_resp_em, @em_analise, @em_analise_por, @em_analise_em,
+                 @concluido, @concluido_por, @concluido_em, @enviado, @enviado_por, @enviado_em)
+                RETURNING id;",
+                model);
+
+            return;
+        }
+
+        var linhas = await connection.ExecuteAsync(@"
+            UPDATE operacional.tblcontrole_documento_cliente
+            SET
+                id_documento = @id_documento,
+                sigla = @sigla,
+                fecha = @fecha,
+                direcionado_resp = @direcionado_resp,
+                direcionado_resp_por = @direcionado_resp_por,
+                direcionado_resp_em = @direcionado_resp_em,
+                em_analise = @em_analise,
+                em_analise_por = @em_analise_por,
+                em_analise_em = @em_analise_em,
+                concluido = @concluido,
+                concluido_por = @concluido_por,
+                concluido_em = @concluido_em,
+                enviado = @enviado,
+                enviado_por = @enviado_por,
+                enviado_em = @enviado_em
+            WHERE id = @id;",
+            model);
+
+        if (linhas == 0)
+        {
+            model.id = 0;
+            await GravarAsync(model);
+        }
 
     }
 }

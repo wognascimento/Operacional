@@ -1,275 +1,154 @@
-﻿<UserControl x:Class="Operacional.Views.Despesa.CadastroDespesa"
+<UserControl x:Class="Operacional.Views.Despesa.CadastroDespesa"
              x:Name="Root"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:Operacional.Views.Despesa" 
-             xmlns:sys="clr-namespace:System;assembly=mscorlib"
-             xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation" 
-             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
-             mc:Ignorable="d" 
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation"
+             mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="900" Loaded="UserControl_Loaded">
 
-   <Grid>
+    <Grid>
+        <telerik:RadGridView
+            x:Name="dGRelatorio"
+            AutoGenerateColumns="False"
+            ShowGroupPanel="False"
+            CanUserInsertRows="True"
+            NewRowPosition="Bottom"
+            GroupRenderMode="Flat"
+            CanUserDeleteRows="False"
+            ItemsSource="{Binding Relatorios}"
+            SelectedItem="{Binding Relatorio, Mode=TwoWay}"
+            RowValidating="dGRelatorio_RowValidating"
+            CellEditEnded="dGRelatorio_CellEditEnded">
 
-       <syncfusion:SfDataGrid  
-           x:Name="dGRelatorio"
-           AutoGenerateColumns="False"
-           AutoGenerateRelations="False"    
-           AllowResizingColumns="True"
-           ItemsSource="{Binding Relatorios}" 
-           SelectedItem="{Binding Relatorio}"
-           AddNewRowPosition="Bottom" 
-           AllowEditing="True" 
-           RowValidating="dGRelatorio_RowValidating" 
-           CurrentCellDropDownSelectionChanged="dGRelatorio_CurrentCellDropDownSelectionChanged" 
-           CurrentCellValueChanged="dGRelatorio_CurrentCellValueChanged">
+            <telerik:RadContextMenu.ContextMenu>
+                <telerik:RadContextMenu>
+                    <telerik:RadMenuItem Header="Imprimir" Click="OnImprimirRelatorioClick"/>
+                </telerik:RadContextMenu>
+            </telerik:RadContextMenu.ContextMenu>
 
-            <syncfusion:SfDataGrid.RecordContextMenu>
-                <ContextMenu Style="{x:Null}">
+            <telerik:RadGridView.Columns>
+                <telerik:GridViewDataColumn Header="ID RELATÓRIO" DataMemberBinding="{Binding cod_relatorio}" IsReadOnly="True"/>
 
-                    <MenuItem Command="{Binding Source={x:Static Member=local:CadastroDespesaContextMenuCommands.Imprimir}}"
-                              CommandParameter="{Binding}"
-                              Header="Imprimir"/>
+                <telerik:GridViewComboBoxColumn
+                    Header="FUNCIONÁRIO"
+                    UniqueName="codigo_funcionario"
+                    DataMemberBinding="{Binding codigo_funcionario}"
+                    ItemsSource="{Binding DataContext.Funcionarios, ElementName=Root}"
+                    DisplayMemberPath="nome_func"
+                    SelectedValueMemberPath="cod_func"
+                    Width="300"/>
 
-                </ContextMenu>
-            </syncfusion:SfDataGrid.RecordContextMenu>
+                <telerik:GridViewComboBoxColumn
+                    Header="RELATÓRIO"
+                    UniqueName="nome_relatorio"
+                    DataMemberBinding="{Binding nome_relatorio}"
+                    ItemsSource="{Binding DataContext.DespsRelatorio, ElementName=Root}"
+                    DisplayMemberPath="descricao_relatorio"
+                    SelectedValueMemberPath="descricao_relatorio"
+                    Width="180"/>
 
+                <telerik:GridViewDataColumn Header="LOCALIDADE" DataMemberBinding="{Binding localidade}" Width="160"/>
+                <telerik:GridViewDataColumn Header="DATA" DataMemberBinding="{Binding data}" DataFormatString="{}{0:dd/MM/yyyy}"/>
 
-            <syncfusion:SfDataGrid.Columns>
-               
-               <syncfusion:GridTextColumn 
-                   HeaderText="ID RELATÓRIO" 
-                   MappingName="cod_relatorio" 
-                   ColumnSizer="SizeToCells" />
-               
-               <syncfusion:GridComboBoxColumn  
-                   HeaderText="FUNCIONÁRIO"
-                   MappingName="codigo_funcionario"
-                   ColumnSizer="AutoLastColumnFill"
-                   IsEditable="True"
-                   DisplayMemberPath="nome_func"
-                   SelectedValuePath="cod_func"
-                   ItemsSource="{Binding Funcionarios}" 
-                   Width="300" />
-               
-               <syncfusion:GridComboBoxColumn  
-                   HeaderText="RELATÓRIO"
-                   MappingName="nome_relatorio"
-                   DisplayMemberPath="descricao_relatorio"
-                   SelectedValuePath="descricao_relatorio"
-                   ItemsSource="{Binding DespsRelatorio}" 
-                   Width="180" />
+                <telerik:GridViewComboBoxColumn
+                    Header="FINANCEIRO"
+                    DataMemberBinding="{Binding classif_financeiro}"
+                    ItemsSource="{Binding DataContext.ClassFinanceiro, ElementName=Root}"/>
 
-                <syncfusion:GridTextColumn 
-                    HeaderText="LOCALIDADE" 
-                    MappingName="localidade" TextTrimming="None" />
-
-                <syncfusion:GridDateTimeColumn 
-                    HeaderText="DATA" 
-                    ColumnSizer="SizeToCells"
-                    MappingName="data" />
-
-                <syncfusion:GridComboBoxColumn  
-                    HeaderText="FINANCEIRO"
-                    ColumnSizer="SizeToHeader"
-                    MappingName="classif_financeiro"
-                    ItemsSource="{Binding ClassFinanceiro}"/>
-
-
-                <syncfusion:GridComboBoxColumn  
-                    HeaderText="EMPRESA"
-                    MappingName="codigo_empresa"
-                    ColumnSizer="SizeToCells"
-                    IsEditable="True"
+                <telerik:GridViewComboBoxColumn
+                    Header="EMPRESA"
+                    DataMemberBinding="{Binding codigo_empresa}"
+                    ItemsSource="{Binding DataContext.Empresas, ElementName=Root}"
                     DisplayMemberPath="nome_empresa"
-                    SelectedValuePath="codigo_empresa"
-                    ItemsSource="{Binding Empresas}" 
-                    Width="380" />
+                    SelectedValueMemberPath="codigo_empresa"
+                    Width="380"/>
+            </telerik:RadGridView.Columns>
 
+            <telerik:RadGridView.ChildTableDefinitions>
+                <telerik:GridViewTableDefinition/>
+            </telerik:RadGridView.ChildTableDefinitions>
 
-            </syncfusion:SfDataGrid.Columns>
+            <telerik:RadGridView.HierarchyChildTemplate>
+                <DataTemplate>
+                    <TabControl Margin="8">
+                        <TabItem Header="Observação">
+                            <telerik:RadGridView
+                                AutoGenerateColumns="False"
+                                ShowGroupPanel="False"
+                                CanUserInsertRows="False"
+                                ItemsSource="{Binding RelatorioObservacao}"
+                                RowValidating="dGRelatorioObservacao_RowValidating">
+                                <telerik:RadGridView.Columns>
+                                    <telerik:GridViewDataColumn Header="OBSERVAÇÃO" DataMemberBinding="{Binding observacao}" Width="600" TextWrapping="Wrap"/>
+                                </telerik:RadGridView.Columns>
+                            </telerik:RadGridView>
+                        </TabItem>
 
-           <syncfusion:SfDataGrid.DetailsViewDefinition>
-               
-               <!--  FirstLevelNestedGrid is created here  -->
-               <syncfusion:GridViewDefinition RelationalColumn="RelatorioObservacao">
-                   <syncfusion:GridViewDefinition.DataGrid>
-                       <syncfusion:SfDataGrid  
-                           x:Name="dGRelatorioObservacao"
-                           AutoGenerateColumns="False"
-                           AutoGenerateRelations="False" 
-                           AllowEditing="True" 
-                           RowValidating="dGRelatorioObservacao_RowValidating">
-                            <syncfusion:SfDataGrid.Columns>
+                        <TabItem Header="Adiantamento">
+                            <telerik:RadGridView
+                                AutoGenerateColumns="False"
+                                ShowGroupPanel="False"
+                                CanUserInsertRows="False"
+                                ItemsSource="{Binding RelatorioAdiantamento}"
+                                RowValidating="dGRelatorioAdiantamento_RowValidating">
+                                <telerik:RadGridView.Columns>
+                                    <telerik:GridViewDataColumn Header="VALOR ADIANTAMENTO" DataMemberBinding="{Binding valor_adiantamento}" DataFormatString="{}{0:N2}"/>
+                                    <telerik:GridViewDataColumn Header="VALOR DO PESO" DataMemberBinding="{Binding valor_real_peso}" DataFormatString="{}{0:N2}"/>
+                                    <telerik:GridViewDataColumn Header="COTAÇÃO PESO" DataMemberBinding="{Binding valor_cotacao_peso}" DataFormatString="{}{0:N2}"/>
+                                    <telerik:GridViewDataColumn Header="VALOR PESO" DataMemberBinding="{Binding valor_peso_peso}" DataFormatString="{}{0:N2}"/>
+                                    <telerik:GridViewDataColumn Header="VALOR DO US$" DataMemberBinding="{Binding valor_real_dolar}" DataFormatString="{}{0:N2}"/>
+                                    <telerik:GridViewDataColumn Header="COTAÇÃO US$" DataMemberBinding="{Binding valor_cotacao_dolar}" DataFormatString="{}{0:N2}"/>
+                                    <telerik:GridViewDataColumn Header="VALOR US$" DataMemberBinding="{Binding valor_dolar_dolar}" DataFormatString="{}{0:N2}"/>
+                                    <telerik:GridViewDataColumn Header="TOTAL ADIANTAMENTO" DataMemberBinding="{Binding total_adiantamento}" DataFormatString="{}{0:N2}"/>
+                                    <telerik:GridViewDataColumn Header="DATA PAGAMENTO" DataMemberBinding="{Binding data_pagamento}" DataFormatString="{}{0:dd/MM/yyyy}"/>
+                                    <telerik:GridViewComboBoxColumn Header="FORMA PAGAMENTO" DataMemberBinding="{Binding forma_pagto}" ItemsSource="{Binding DataContext.FormaPagamento, ElementName=Root}"/>
+                                </telerik:RadGridView.Columns>
+                            </telerik:RadGridView>
+                        </TabItem>
 
-                                <syncfusion:GridTextColumn
-                                    HeaderText="OBSERVAÇÃO" 
-                                    MappingName="observacao" 
-                                    ColumnSizer="AutoWithLastColumnFill" 
-                                    TextWrapping="Wrap" />
+                        <TabItem Header="Detalhes">
+                            <telerik:RadGridView
+                                AutoGenerateColumns="False"
+                                ShowGroupPanel="False"
+                                CanUserInsertRows="True"
+                                NewRowPosition="Bottom"
+                                GroupRenderMode="Flat"
+                                ItemsSource="{Binding RelatorioDespesaDetalhesEditaveis}"
+                                RowValidating="dGRelatorioDetalhes_RowValidating">
+                                <telerik:RadGridView.Columns>
+                                    <telerik:GridViewDataColumn Header="DATA" DataMemberBinding="{Binding data}" DataFormatString="{}{0:dd/MM/yyyy}"/>
+                                    <telerik:GridViewComboBoxColumn Header="SIGLA" DataMemberBinding="{Binding sigla}" ItemsSource="{Binding DataContext.Clientes, ElementName=Root}" DisplayMemberPath="sigla" SelectedValueMemberPath="sigla"/>
+                                    <telerik:GridViewDataColumn Header="QTDE" DataMemberBinding="{Binding quantidade}" DataFormatString="{}{0:N2}"/>
+                                    <telerik:GridViewComboBoxColumn Header="ETAPA" DataMemberBinding="{Binding etapa}" ItemsSource="{Binding DataContext.Fases, ElementName=Root}"/>
 
-                            </syncfusion:SfDataGrid.Columns>
-                       </syncfusion:SfDataGrid>
-                   </syncfusion:GridViewDefinition.DataGrid>
-               </syncfusion:GridViewDefinition>
+                                    <telerik:GridViewDataColumn Header="CLASSIFICAÇÃO" DataMemberBinding="{Binding classificacao}">
+                                        <telerik:GridViewDataColumn.CellEditTemplate>
+                                            <DataTemplate>
+                                                <ComboBox ItemsSource="{Binding DataContext.TiposClassificacao, ElementName=Root}"
+                                                          SelectedItem="{Binding classificacao, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                            </DataTemplate>
+                                        </telerik:GridViewDataColumn.CellEditTemplate>
+                                    </telerik:GridViewDataColumn>
 
-               <!--  FirstLevelNestedGrid is created here  -->
-               <syncfusion:GridViewDefinition RelationalColumn="RelatorioAdiantamento">
-                   <syncfusion:GridViewDefinition.DataGrid>
-                       <syncfusion:SfDataGrid  
-                           x:Name="dGRelatorioAdiantamento"
-                           AutoGenerateColumns="False"
-                           AutoGenerateRelations="False" 
-                           AllowEditing="True" 
-                           RowValidating="dGRelatorioAdiantamento_RowValidating">
-                            <syncfusion:SfDataGrid.Columns>
+                                    <telerik:GridViewDataColumn Header="DESCRIÇÃO" DataMemberBinding="{Binding descricao}" Width="220">
+                                        <telerik:GridViewDataColumn.CellEditTemplate>
+                                            <DataTemplate>
+                                                <ComboBox ItemsSource="{Binding DescricoesDisponiveis}"
+                                                          SelectedItem="{Binding descricao, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                            </DataTemplate>
+                                        </telerik:GridViewDataColumn.CellEditTemplate>
+                                    </telerik:GridViewDataColumn>
 
-                                <syncfusion:GridCurrencyColumn
-                                    HeaderText="VALOR ADIANTAMENTO" 
-                                    MappingName="valor_adiantamento"/>
-
-                                <syncfusion:GridCurrencyColumn
-                                    HeaderText="VALOR DO PESO" 
-                                    MappingName="valor_real_peso"/>
-
-                                <syncfusion:GridCurrencyColumn
-                                    HeaderText="COTAÇÃO PESO" 
-                                    MappingName="valor_cotacao_peso"/>
-
-                                <syncfusion:GridCurrencyColumn
-                                    HeaderText="VALOR PESO" 
-                                    MappingName="valor_peso_peso"/>
-
-                                <syncfusion:GridCurrencyColumn
-                                    HeaderText="VALOR DO US$" 
-                                    MappingName="valor_real_dolar"/>
-
-                                <syncfusion:GridCurrencyColumn
-                                    HeaderText="COTAÇÃO US$" 
-                                    MappingName="valor_cotacao_dolar"/>
-
-                                <syncfusion:GridCurrencyColumn
-                                    HeaderText="VALOR US$" 
-                                    MappingName="valor_dolar_dolar"/>
-
-                                <syncfusion:GridCurrencyColumn
-                                    HeaderText="TOTAL ADIANTAMENTO" 
-                                    MappingName="total_adiantamento"/>
-
-                                <syncfusion:GridDateTimeColumn 
-                                    HeaderText="DATA PAGAMENTO" 
-                                    MappingName="data_pagamento" />
-
-                                <syncfusion:GridComboBoxColumn  
-                                    HeaderText="FORMA PAGAMENTO"
-                                    MappingName="forma_pagto"
-                                    ItemsSource="{Binding FormaPagamento}"/>   
-
-                            </syncfusion:SfDataGrid.Columns>
-                       </syncfusion:SfDataGrid>
-                   </syncfusion:GridViewDefinition.DataGrid>
-               </syncfusion:GridViewDefinition>
-
-
-               <!--  FirstLevelNestedGrid is created here  -->
-                <syncfusion:GridViewDefinition RelationalColumn="RelatorioDespesaDetalhesEditaveis">
-                   <syncfusion:GridViewDefinition.DataGrid>
-                       <syncfusion:SfDataGrid  
-                           x:Name="dGRelatorioDetalhes"
-                           AutoGenerateColumns="False"
-                           AutoGenerateRelations="False" 
-                           AddNewRowPosition="Bottom" 
-                           AllowEditing="True"
-                           RowValidating="dGRelatorioDetalhes_RowValidating" >
-                            <syncfusion:SfDataGrid.Columns>
-
-                                <syncfusion:GridDateTimeColumn 
-                                    HeaderText="DATA" 
-                                    MappingName="data" />
-
-                                <syncfusion:GridComboBoxColumn  
-                                   HeaderText="SIGLA"
-                                   MappingName="sigla"
-                                   ColumnSizer="Auto"
-                                   IsEditable="True"
-                                   DisplayMemberPath="sigla"
-                                   SelectedValuePath="sigla"
-                                   ItemsSource="{Binding Clientes}" />
-
-                                <syncfusion:GridNumericColumn 
-                                    HeaderText="QTDE" 
-                                    MappingName="quantidade" />
-
-                                <syncfusion:GridComboBoxColumn  
-                                   HeaderText="ETAPA"
-                                   MappingName="etapa"
-                                   ColumnSizer="Auto"
-                                   IsEditable="True"
-                                   ItemsSource="{Binding Fases}" />
-
-                                <!-- CLASSIFICAÇÃO -->
-                                <syncfusion:GridTemplateColumn 
-                                    HeaderText="CLASSIFICAÇÃO" 
-                                    MappingName="classificacao">
-                                    <syncfusion:GridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <TextBlock 
-                                                Text="{Binding classificacao}"
-                                                VerticalAlignment="Center"
-                                                TextWrapping="Wrap">
-           
-                                            </TextBlock>
-                                        </DataTemplate>
-                                    </syncfusion:GridTemplateColumn.CellTemplate>
-                                    <syncfusion:GridTemplateColumn.EditTemplate>
-                                        <DataTemplate>
-                                            <ComboBox 
-                                                ItemsSource="{Binding DataContext.TiposClassificacao, ElementName=Root}"
-                                                SelectedItem="{Binding classificacao, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                        </DataTemplate>
-                                    </syncfusion:GridTemplateColumn.EditTemplate>
-                                </syncfusion:GridTemplateColumn>
-                               
-                                <!-- DESCRIÇÃO -->
-                                <syncfusion:GridTemplateColumn 
-                                    HeaderText="DESCRIÇÃO" 
-                                    MappingName="descricao">
-                                    <syncfusion:GridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <TextBlock 
-                                                Text="{Binding descricao}" 
-                                                VerticalAlignment="Center"
-                                                TextWrapping="Wrap"/>
-                                        </DataTemplate>
-                                    </syncfusion:GridTemplateColumn.CellTemplate>
-                                    <syncfusion:GridTemplateColumn.EditTemplate>
-                                        <DataTemplate>
-                                            <ComboBox 
-                                                ItemsSource="{Binding DescricoesDisponiveis}"
-                                                SelectedItem="{Binding descricao, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                        </DataTemplate>
-                                    </syncfusion:GridTemplateColumn.EditTemplate>
-                                </syncfusion:GridTemplateColumn>
-                                
-                                <syncfusion:GridNumericColumn 
-                                    HeaderText="DOCUMENTO" 
-                                    MappingName="documento" />
-
-                                <syncfusion:GridCurrencyColumn
-                                    HeaderText="VALOR" 
-                                    MappingName="valor" />
-
-                            </syncfusion:SfDataGrid.Columns>
-                       </syncfusion:SfDataGrid>
-                   </syncfusion:GridViewDefinition.DataGrid>
-               </syncfusion:GridViewDefinition>
-
-           </syncfusion:SfDataGrid.DetailsViewDefinition>
-           
-       </syncfusion:SfDataGrid>
-       
-   </Grid>
-   
+                                    <telerik:GridViewDataColumn Header="DOCUMENTO" DataMemberBinding="{Binding documento}"/>
+                                    <telerik:GridViewDataColumn Header="VALOR" DataMemberBinding="{Binding valor}" DataFormatString="{}{0:N2}"/>
+                                </telerik:RadGridView.Columns>
+                            </telerik:RadGridView>
+                        </TabItem>
+                    </TabControl>
+                </DataTemplate>
+            </telerik:RadGridView.HierarchyChildTemplate>
+        </telerik:RadGridView>
+    </Grid>
 </UserControl>

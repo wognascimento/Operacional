@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Dapper;
+using Npgsql;
+using Operacional.DataBase;
 using Operacional.DataBase.Models;
 using Operacional.DataBase.Models.DTOs;
 using System.Collections.ObjectModel;
@@ -33,7 +35,7 @@ namespace Operacional.Views
             }
             catch (DbUpdateException ex)
             {
-                MessageBox.Show(ex.InnerException.Message);
+                Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
             }
         }
@@ -81,8 +83,8 @@ namespace Operacional.Views
             catch (DbUpdateException ex)
             {
                 e.IsValid = false;
-                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-                //MessageBox.Show(ex.InnerException.Message);
+                Operacional.ErrorDialog.Show(ex, "Erro");
+                //Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
             }
         }
 
@@ -129,14 +131,15 @@ namespace Operacional.Views
             catch (DbUpdateException ex)
             {
                 e.IsValid = false;
-                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-                //MessageBox.Show(ex.InnerException.Message);
+                Operacional.ErrorDialog.Show(ex, "Erro");
+                //Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
             }
         }
     }
 
     class TransporteMontagemViewModel : INotifyPropertyChanged
     {
+        private readonly DataBaseSettings _dataBaseSettings = DataBaseSettings.Instance;
 
         public event PropertyChangedEventHandler PropertyChanged;
         public void RaisePropertyChanged(string propName) => 
@@ -167,11 +170,9 @@ namespace Operacional.Views
         {
             try
             {
-                using Context context = new();
-                // Carrega a lista principal
-                var qryList = await context.qryfrmtransps.ToListAsync();
-                // Carrega a lista de cargas relacionadas
-                var cargasList = await context.cargasmontagens.ToListAsync();
+                using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+                var qryList = (await connection.QueryAsync<qryfrmtransp>("SELECT * FROM operacional.qryfrmtransp;")).ToList();
+                var cargasList = (await connection.QueryAsync<tbl_cargas_montagem>("SELECT * FROM operacional.tbl_cargas_montagem;")).ToList();
                 // Associa os dados manualmente
 
                 // Método auxiliar para mapear cargas
@@ -249,16 +250,17 @@ namespace Operacional.Views
         {
             try
             {
-                using Context context = new();
-                var transporteExistente = await context.transporteMontagens.FindAsync(transporteAtualizado.SiglaServ);
-                if (transporteExistente == null)
-                return false; // Registro não encontrado
-                // Atualiza apenas os campos que foram modificados
-                context.Entry(transporteExistente).CurrentValues.SetValues(transporteAtualizado);
-                // Salva as mudanças no banco de dados
-                await context.SaveChangesAsync();
+                using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+                var sql = @"
+                    UPDATE operacional.t_transportes_mont
+                    SET
+                        data_de_expedicao = @DataDeExpedicao,
+                        volume_da_carga = @VolumeDaCarga,
+                        numero_de_caminhoes = @NumeroDeCaminhoes,
+                        transportadora = @Transportadora
+                    WHERE siglaserv = @SiglaServ;";
 
-                return true;
+                return await connection.ExecuteAsync(sql, transporteAtualizado) > 0;
             }
             catch (DbUpdateException)
             {
@@ -274,12 +276,16 @@ namespace Operacional.Views
         {
             try
             {
-                using Context context = new();
-                // Obtém os caminhões já cadastrados
-                var caminhõesExistentes = await context.cargasmontagens
-                    .Where(c => c.siglaserv == siglaServ)
-                    .OrderBy(c => c.num_caminhao)
-                    .ToListAsync();
+                using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+                await connection.OpenAsync();
+                await using var transaction = await connection.BeginTransactionAsync();
+
+                var caminhõesExistentes = (await connection.QueryAsync<tbl_cargas_montagem>(
+                    @"SELECT * FROM operacional.tbl_cargas_montagem
+                      WHERE siglaserv = @siglaServ
+                      ORDER BY num_caminhao;",
+                    new { siglaServ },
+                    transaction)).ToList();
 
                 int caminhõesAtuais = caminhõesExistentes.Count;
 
@@ -295,18 +301,27 @@ namespace Operacional.Views
                             data = data.Value.AddDays(i-1),
                             placa_caminhao = null // Ou alguma lógica para definir a placa
                         };
-                        await context.cargasmontagens.AddAsync(novoCaminhao);
+
+                        await connection.ExecuteAsync(
+                            @"INSERT INTO operacional.tbl_cargas_montagem
+                              (siglaserv, num_caminhao, data, placa_caminhao)
+                              VALUES (@siglaserv, @num_caminhao, @data, @placa_caminhao);",
+                            novoCaminhao,
+                            transaction);
                     }
                 }
                 // **Se precisar remover caminhões excedentes**
                 else if (caminhõesAtuais > totalCaminhoes)
                 {
                     var caminhõesParaRemover = caminhõesExistentes.Skip(totalCaminhoes).ToList();
-                    context.cargasmontagens.RemoveRange(caminhõesParaRemover);
+                    await connection.ExecuteAsync(
+                        @"DELETE FROM operacional.tbl_cargas_montagem
+                          WHERE id = ANY(@ids);",
+                        new { ids = caminhõesParaRemover.Select(c => c.id).ToArray() },
+                        transaction);
                 }
 
-                // **Salvar as alterações no banco**
-                await context.SaveChangesAsync();
+                await transaction.CommitAsync();
             }
             catch (DbUpdateException)
             {
@@ -322,35 +337,18 @@ namespace Operacional.Views
         {
             try
             {
-                using Context context = new();
-                // Obtém os caminhões já cadastrados
-                var caminhoesExistentes = await context.cargasmontagens
-                    .Where(c => c.siglaserv == siglaServ)
-                    .OrderBy(c => c.num_caminhao)
-                    .Select(c => new QryCargaMontagemDTO
-                    {
-                        id = c.id,
-                        siglaserv = c.siglaserv,
-                        data = c.data,
-                        num_caminhao = c.num_caminhao,
-                        placa_caminhao = c.placa_caminhao,
-                        m3_contratado = c.m3_contratado,
-                        m3_utilizado = c.m3_utilizado,
-                        hora_saida = c.hora_saida,
-                        obs = c.obs,
-                        local_carga = c.local_carga,
-                        obscarga = c.obscarga,
-                        trasnportadora = c.trasnportadora,
-                        veiculo_programado = c.veiculo_programado,
-                        data_chegada = c.data_chegada,
-                        data_chegada_efetiva = c.data_chegada_efetiva,
-                        obs_saida = c.obs_saida,
-                        valor_frete_contratado_caminhao = c.valor_frete_contratado_caminhao,
-                        noite_montagem = c.noite_montagem,
-                        obs_externas = c.obs_externas,
-                        obs_frete_contratado = c.obs_frete_contratado,
-                    })
-                    .ToListAsync();
+                using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+                var caminhoesExistentes = await connection.QueryAsync<QryCargaMontagemDTO>(
+                    @"SELECT
+                        id, siglaserv, data, num_caminhao, placa_caminhao, m3_contratado,
+                        m3_utilizado, hora_saida, obs, local_carga, obscarga, trasnportadora,
+                        veiculo_programado, data_chegada, data_chegada_efetiva, obs_saida,
+                        valor_frete_contratado_caminhao, noite_montagem, obs_externas,
+                        obs_frete_contratado
+                      FROM operacional.tbl_cargas_montagem
+                      WHERE siglaserv = @siglaServ
+                      ORDER BY num_caminhao;",
+                    new { siglaServ });
                 return new ObservableCollection<QryCargaMontagemDTO>(caminhoesExistentes);
             }
             catch (DbUpdateException)
@@ -368,21 +366,76 @@ namespace Operacional.Views
         {
             try
             {
-                using Context context = new();
-                var cargaExistente = await context.cargasmontagens.FindAsync(cargaMontagem.id);
+                using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
 
-                if (cargaExistente == null)
+                if (cargaMontagem.id <= 0)
                 {
-                    // Registro não existe, então insere um novo
-                    await context.cargasmontagens.AddAsync(cargaMontagem);
+                    cargaMontagem.id = await connection.ExecuteScalarAsync<long>(@"
+                        INSERT INTO operacional.tbl_cargas_montagem
+                        (siglaserv, data, num_caminhao, placa_caminhao, m3_contratado, m3_utilizado,
+                         hora_saida, obs, local_carga, obscarga, trasnportadora, veiculo_programado,
+                         data_chegada, data_chegada_efetiva, obs_saida, valor_frete_contratado_caminhao,
+                         noite_montagem, obs_externas, obs_frete_contratado)
+                        VALUES
+                        (@siglaserv, @data, @num_caminhao, @placa_caminhao, @m3_contratado, @m3_utilizado,
+                         @hora_saida, @obs, @local_carga, @obscarga, @trasnportadora, @veiculo_programado,
+                         @data_chegada, @data_chegada_efetiva, @obs_saida, @valor_frete_contratado_caminhao,
+                         @noite_montagem, @obs_externas, @obs_frete_contratado)
+                        RETURNING id;",
+                        cargaMontagem);
+
+                    return true;
                 }
-                else
-                {
-                    // Atualiza apenas os valores modificados
-                    context.Entry(cargaExistente).CurrentValues.SetValues(cargaMontagem);
-                }
-                // Salva as mudanças no banco de dados
-                await context.SaveChangesAsync();
+
+                var linhas = await connection.ExecuteAsync(@"
+                    UPDATE operacional.tbl_cargas_montagem
+                    SET
+                        siglaserv = @siglaserv,
+                        data = @data,
+                        num_caminhao = @num_caminhao,
+                        placa_caminhao = @placa_caminhao,
+                        m3_contratado = @m3_contratado,
+                        m3_utilizado = @m3_utilizado,
+                        hora_saida = @hora_saida,
+                        obs = @obs,
+                        local_carga = @local_carga,
+                        obscarga = @obscarga,
+                        trasnportadora = @trasnportadora,
+                        veiculo_programado = @veiculo_programado,
+                        data_chegada = @data_chegada,
+                        data_chegada_efetiva = @data_chegada_efetiva,
+                        obs_saida = @obs_saida,
+                        valor_frete_contratado_caminhao = @valor_frete_contratado_caminhao,
+                        noite_montagem = @noite_montagem,
+                        obs_externas = @obs_externas,
+                        obs_frete_contratado = @obs_frete_contratado
+                    WHERE id = @id;",
+                    cargaMontagem);
+
+                if (linhas == 0)
+                    return await UpsertcargaMontagem(new tbl_cargas_montagem
+                    {
+                        siglaserv = cargaMontagem.siglaserv,
+                        data = cargaMontagem.data,
+                        num_caminhao = cargaMontagem.num_caminhao,
+                        placa_caminhao = cargaMontagem.placa_caminhao,
+                        m3_contratado = cargaMontagem.m3_contratado,
+                        m3_utilizado = cargaMontagem.m3_utilizado,
+                        hora_saida = cargaMontagem.hora_saida,
+                        obs = cargaMontagem.obs,
+                        local_carga = cargaMontagem.local_carga,
+                        obscarga = cargaMontagem.obscarga,
+                        trasnportadora = cargaMontagem.trasnportadora,
+                        veiculo_programado = cargaMontagem.veiculo_programado,
+                        data_chegada = cargaMontagem.data_chegada,
+                        data_chegada_efetiva = cargaMontagem.data_chegada_efetiva,
+                        obs_saida = cargaMontagem.obs_saida,
+                        valor_frete_contratado_caminhao = cargaMontagem.valor_frete_contratado_caminhao,
+                        noite_montagem = cargaMontagem.noite_montagem,
+                        obs_externas = cargaMontagem.obs_externas,
+                        obs_frete_contratado = cargaMontagem.obs_frete_contratado
+                    });
+
                 return true;
             }
             catch (DbUpdateException)

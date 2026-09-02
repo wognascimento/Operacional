@@ -1,6 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using Dapper;
-using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Operacional.DataBase;
 using Operacional.DataBase.Models;
@@ -93,8 +92,8 @@ public partial class TransporteDesmontagem : UserControl
         catch (DbUpdateException ex)
         {
             e.IsValid = false;
-            MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-            //MessageBox.Show(ex.InnerException.Message);
+            Operacional.ErrorDialog.Show(ex, "Erro");
+            //Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
         }
     }
 
@@ -137,12 +136,12 @@ public partial class TransporteDesmontagem : UserControl
         catch (DbUpdateException ex)
         {
             e.IsValid = false;
-            MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro");
         }
         catch (Exception ex)
         {
             e.IsValid = false;
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
         }
     }
 }

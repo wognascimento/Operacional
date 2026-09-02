@@ -1,6 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using Dapper;
-using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Operacional.DataBase;
 using Operacional.DataBase.Models;
@@ -10,6 +9,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Telerik.Windows.Controls;
+using Telerik.Windows.Controls.GridView;
 
 namespace Operacional.Views.EquipeExterna;
 
@@ -51,7 +51,7 @@ public partial class NotaPagamento : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
         }
     }
@@ -73,7 +73,7 @@ public partial class NotaPagamento : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
         }
     }
@@ -96,7 +96,7 @@ public partial class NotaPagamento : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
         }
     }
@@ -121,10 +121,26 @@ public partial class NotaPagamento : UserControl
         if (item == null)
             return;
 
+        if (item.envia_fluxo)
+        {
+            e.IsValid = false;
+            MessageBox.Show("Este lançamento já foi enviado para o fluxo e não pode ser alterado.", "Edição bloqueada", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
         // Suponha que "Nome" seja a propriedade da coluna que você quer validar
         if (string.IsNullOrWhiteSpace(item.tipo_detalhe))
         {
             e.IsValid = false; // Define a linha como inválida
+        }
+    }
+
+    private void Pagamentos_BeginningEdit(object sender, GridViewBeginningEditRoutedEventArgs e)
+    {
+        if (e.Row?.Item is RelatorioDetalheModel { envia_fluxo: true })
+        {
+            e.Cancel = true;
+            MessageBox.Show("Este lançamento já foi enviado para o fluxo e não pode ser alterado.", "Edição bloqueada", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 
@@ -135,6 +151,9 @@ public partial class NotaPagamento : UserControl
             NotaPagamentoViewModel vm = (NotaPagamentoViewModel)DataContext;
             if (e.Row.Item is RelatorioDetalheModel linha)
             {
+                if (linha.envia_fluxo)
+                    return;
+
                 var relatorio = cmbAprovado.SelectedItem as RelatorioPagamentoModel;
                 await vm.AtualizarPagamentoAsync(linha);
                 await vm.AtualizarSaldosRelatorioAsync(relatorio.cod_relatorio);
@@ -156,7 +175,7 @@ public partial class NotaPagamento : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
         }
     }
 
@@ -206,7 +225,7 @@ public partial class NotaPagamento : UserControl
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                    Operacional.ErrorDialog.Show(ex, "Erro inesperado");
                 }
             }
         }
@@ -248,75 +267,125 @@ public partial class NotaPagamentoViewModel : ObservableObject
 
     public  async Task<ObservableCollection<EquipeExternaEquipeDTO>> GetEquipesAsync()
     {
-        using var context = new Context();
-        var query = from equipe in context.Equipes
-                    join valores in context.EquipePrevisoes
-                    on equipe.id equals valores.id_equipe
-                    group valores by new { valores.id_equipe, equipe.equipe_e } into g
-                    orderby g.Key.equipe_e
-                    select new EquipeExternaEquipeDTO
-                    {
-                        id_equipe = g.Key.id_equipe,
-                        equipe_e = g.Key.equipe_e,
-                        //TotalValorAnoAtual = g.Sum(v => v.valor_ano_atual)
-                    };
-        return new ObservableCollection<EquipeExternaEquipeDTO>(await query.ToListAsync());
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<EquipeExternaEquipeDTO>(@"
+            SELECT valores.id_equipe, equipe.equipe_e
+            FROM equipe_externa.tblequipesext equipe
+            JOIN equipe_externa.tbl_valores_previsao_equipe valores
+              ON equipe.id = valores.id_equipe
+            GROUP BY valores.id_equipe, equipe.equipe_e
+            ORDER BY equipe.equipe_e;");
+
+        return new ObservableCollection<EquipeExternaEquipeDTO>(result);
     }
-    /*
-    public  async Task<ObservableCollection<string>> GetSiglasEquipeAsync(long id_equipe)
-    {
-        using var _db = new Context();
-        var result = _db.EquipePrevisoes
-            .Where(f => f.id_equipe == id_equipe)
-            .OrderBy(f => f.cliente)
-            .GroupBy(f => f.cliente)
-            .Select(g => g.Key);
-        return new ObservableCollection<string>(await result.ToListAsync());
-    }
-    */
     public  async Task<ObservableCollection<RelatorioPagamentoModel>> GetSiglasEquipeAsync(long id_equipe)
     {
-        using var _db = new Context();
-        var result = _db.RelatorioPagamentos
-            .Where(f => f.id_equipe == id_equipe && f.tipo == "SERVIÇOS")
-            .OrderBy(f => f.sigla);
-        return new ObservableCollection<RelatorioPagamentoModel>(await result.ToListAsync());
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<RelatorioPagamentoModel>(@"
+            SELECT *
+            FROM equipe_externa.tblrelatorio_pagamento
+            WHERE id_equipe = @id_equipe
+              AND tipo = 'SERVIÇOS'
+            ORDER BY sigla;",
+            new { id_equipe });
+
+        return new ObservableCollection<RelatorioPagamentoModel>(result);
     }
 
     public  async Task<ObservableCollection<RelatorioDetalheModel>> GetPagamentosEquipeBySiglaAsync(long codrelatorio)
     {
-        using var _db = new Context();
-        var result = await _db.RelatorioDetalhes.Where(f => f.codrelatorio == codrelatorio).OrderBy(f => f.descricao).ToListAsync();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<RelatorioDetalheModel>(@"
+            SELECT *
+            FROM equipe_externa.tbl_detalhes_relatorio
+            WHERE codrelatorio = @codrelatorio
+            ORDER BY descricao;",
+            new { codrelatorio });
+
         return new ObservableCollection<RelatorioDetalheModel>(result);
     }
 
     public  async Task<ObservableCollection<EquipeExternaDescricaoServicoModel>> GetDescricoesAsync()
     {
-        using var _db = new Context();
-
-
         ObservableCollection<string> descricoes = ["ADIANTAMENTO ALIMENTAÇÃO","ADIANTAMENTO TRANSPORTE","PAGAMENTO DE ALIMENTAÇÃO","PAGAMENTO DE TRANSPORTE","PAGAMENTO DE IMPRESSÃO","PAGAMENTO DE MATERIAL"];
-        var result = await _db.EquipeExternaDescricoes.Where(d => !descricoes.Contains(d.descricao)).OrderBy(f => f.descricao).ToListAsync();
-        //var result = await _db.EquipeExternaDescricoes.OrderBy(f => f.descricao).ToListAsync();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<EquipeExternaDescricaoServicoModel>(@"
+            SELECT *
+            FROM equipe_externa.tbl_descricao_servicos
+            WHERE descricao <> ALL(@descricoes)
+            ORDER BY descricao;",
+            new { descricoes = descricoes.ToArray() });
+
         return new ObservableCollection<EquipeExternaDescricaoServicoModel>(result);
     }
 
     public  async Task<ObservableCollection<ComprasEmpresaModel>> GetEmpresasAsync()
     {
-        using var _db = new Context();
-        var result = await _db.ComprasEmpresas.OrderBy(f => f.abreviacao).ToListAsync();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<ComprasEmpresaModel>(
+            @"SELECT *
+              FROM compras.tblempresa
+              ORDER BY abreviacao;");
+
         return new ObservableCollection<ComprasEmpresaModel>(result);
     }
 
     public async Task<bool> AtualizarPagamentoAsync(RelatorioDetalheModel model)
     {
-        using var _db = new Context();
-        var modelExistente = await _db.RelatorioDetalhes.FindAsync(model.cod_detalhe_relatorio);
-        if (modelExistente == null)
-            _db.RelatorioDetalhes.Add(model);
-        else
-            _db.Entry(modelExistente).CurrentValues.SetValues(model);
-        await _db.SaveChangesAsync();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+
+        if (model.cod_detalhe_relatorio is null or <= 0)
+        {
+            model.cod_detalhe_relatorio = await connection.ExecuteScalarAsync<long>(@"
+                INSERT INTO equipe_externa.tbl_detalhes_relatorio
+                (codrelatorio, tipo_detalhe, valor_detalhe, data, enviado_fin, descricao,
+                 data_pagto, numero_nf, empresa_nf, id_equipe, totvs, cod_servico_totvs,
+                 empresa_pagadora, aprovado_por, data_aprovado, exportado, cancelado,
+                 cliente, envia_fluxo, saldo, inserido_por, inserido_em, alterado_por,
+                 alterado_em, enviado_fluxo_por, enviado_fluxo_em)
+                VALUES
+                (@codrelatorio, @tipo_detalhe, @valor_detalhe, @data, @enviado_fin, @descricao,
+                 @data_pagto, @numero_nf, @empresa_nf, @id_equipe, @totvs, @cod_servico_totvs,
+                 @empresa_pagadora, @aprovado_por, @data_aprovado, @exportado, @cancelado,
+                 @cliente, @envia_fluxo, @saldo, @inserido_por, @inserido_em, @alterado_por,
+                 @alterado_em, @enviado_fluxo_por, @enviado_fluxo_em)
+                RETURNING cod_detalhe_relatorio;",
+                model);
+
+            return true;
+        }
+
+        await connection.ExecuteAsync(@"
+            UPDATE equipe_externa.tbl_detalhes_relatorio
+            SET codrelatorio = @codrelatorio,
+                tipo_detalhe = @tipo_detalhe,
+                valor_detalhe = @valor_detalhe,
+                data = @data,
+                enviado_fin = @enviado_fin,
+                descricao = @descricao,
+                data_pagto = @data_pagto,
+                numero_nf = @numero_nf,
+                empresa_nf = @empresa_nf,
+                id_equipe = @id_equipe,
+                totvs = @totvs,
+                cod_servico_totvs = @cod_servico_totvs,
+                empresa_pagadora = @empresa_pagadora,
+                aprovado_por = @aprovado_por,
+                data_aprovado = @data_aprovado,
+                exportado = @exportado,
+                cancelado = @cancelado,
+                cliente = @cliente,
+                envia_fluxo = @envia_fluxo,
+                saldo = @saldo,
+                inserido_por = @inserido_por,
+                inserido_em = @inserido_em,
+                alterado_por = @alterado_por,
+                alterado_em = @alterado_em,
+                enviado_fluxo_por = @enviado_fluxo_por,
+                enviado_fluxo_em = @enviado_fluxo_em
+            WHERE cod_detalhe_relatorio = @cod_detalhe_relatorio;",
+            model);
+
         return true;
     }
 
@@ -336,16 +405,19 @@ public partial class NotaPagamentoViewModel : ObservableObject
 
     public async Task AtualizarEnviadoFluxoAsync(List<RelatorioDetalheModel> itens)
     {
-        using var _db = new Context();
-        foreach (var item in itens)
-        {
-            var model = _db.RelatorioDetalhes.Find(item.cod_detalhe_relatorio);
-            item.envia_fluxo = true;
-            item.enviado_fluxo_em = DateTime.Now;
-            item.enviado_fluxo_por = _dataBaseSettings.Username;  
-            _db.Entry(model).CurrentValues.SetValues(item);
-        }  
-        await _db.SaveChangesAsync();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        await connection.ExecuteAsync(@"
+            UPDATE equipe_externa.tbl_detalhes_relatorio
+            SET envia_fluxo = true,
+                enviado_fluxo_em = @enviado_fluxo_em,
+                enviado_fluxo_por = @enviado_fluxo_por
+            WHERE cod_detalhe_relatorio = ANY(@ids);",
+            new
+            {
+                ids = itens.Select(i => i.cod_detalhe_relatorio).Where(id => id is not null).ToArray(),
+                enviado_fluxo_em = DateTime.Now,
+                enviado_fluxo_por = _dataBaseSettings.Username
+            });
     }
 
 

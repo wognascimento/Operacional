@@ -1,19 +1,17 @@
-﻿using Microsoft.EntityFrameworkCore;
+using ClosedXML.Excel;
+using Dapper;
+using Npgsql;
 using Operacional.DataBase;
-using Operacional.DataBase.Models;
-using Syncfusion.UI.Xaml.Grid;
-using Syncfusion.UI.Xaml.Grid.Helpers;
-using Syncfusion.UI.Xaml.Utility;
-using Syncfusion.XlsIO;
+using Operacional.Utils;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data.Common;
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Telerik.Windows.Controls;
 
 namespace Operacional.Views.Despesa
 {
@@ -33,7 +31,7 @@ namespace Operacional.Views.Despesa
             CadastroDespesaViewModel vm = (CadastroDespesaViewModel)DataContext;
             try
             {
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
+                Mouse.OverrideCursor = Cursors.Wait;
 
                 vm.BaseCustos = [.. await vm.GetBaseCustosAsync()];
                 vm.DescricoesPorTipo = await vm.GetDescricoesAsync();
@@ -97,72 +95,63 @@ namespace Operacional.Views.Despesa
                 vm.Clientes = await vm.GetClientesAsync();
                 vm.Empresas = await vm.GetEmpresasAsync();
                 vm.Fases = await vm.GetEtapasAsync();
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                Mouse.OverrideCursor = null;
             }
             catch (DbUpdateException ex)
             {
-                MessageBox.Show(ex.InnerException?.Message);
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
+                Mouse.OverrideCursor = null;
             }
         }
 
-        private async void dGRelatorio_CurrentCellDropDownSelectionChanged(object sender, CurrentCellDropDownSelectionChangedEventArgs e)
+        private async void dGRelatorio_CellEditEnded(object sender, GridViewCellEditEndedEventArgs e)
         {
             CadastroDespesaViewModel vm = (CadastroDespesaViewModel)DataContext;
-            var grid = ((SfDataGrid)sender);
-            var column = grid.Columns[grid.ResolveToGridVisibleColumnIndex(e.RowColumnIndex.ColumnIndex)];
-            var valueSelecionado = e.SelectedItem as OperacionalTDespFuncionarioModel;
-            var registro = grid.GetRecordAtRowIndex(e.RowColumnIndex.RowIndex) as OperacionalRelatorioDespesaModel;
+            var registro = e.Cell?.DataContext as OperacionalRelatorioDespesaModel;
 
             try
             {
-                using Context context = new();
-                if (column.MappingName == "codigo_funcionario")
+                if (e.Cell?.Column?.UniqueName == "codigo_funcionario" && registro is not null)
                 {
-                    var empresa = await context.ComprasEmpresas
-                        .Where(e => e.abreviacao == valueSelecionado.empresa)
-                        .Select(f => f.totvs)
-                        .FirstOrDefaultAsync();
+                    var valueSelecionado = vm.Funcionarios?.FirstOrDefault(f => f.cod_func == registro.codigo_funcionario);
+                    if (valueSelecionado is null)
+                        return;
 
-                    //grid.SelectionController.CurrentCellManager.BeginEdit();
-                    //grid.View.BeginInit();
-                    registro.codigo_empresa = empresa; //empresa != null ? empresa : 0;
-                    //grid.SelectionController.CurrentCellManager.EndEdit();
-                    //grid.View.EndInit();
-                    //grid.View.Refresh();
+                    await using var connection = new NpgsqlConnection(DataBaseSettings.Instance.ConnectionString);
+                    var empresa = await connection.QueryFirstOrDefaultAsync<int?>(
+                        @"SELECT totvs
+                          FROM compras.tblempresa
+                          WHERE abreviacao = @empresa
+                          LIMIT 1;",
+                        new { empresa = valueSelecionado.empresa });
 
+                    registro.codigo_empresa = empresa;
+                    dGRelatorio.Rebind();
                 }
-                else if (column.MappingName == "nome_funcionario")
-                {
-                }
-
             }
             catch (DbUpdateException ex)
             {
-                MessageBox.Show($"Erro: {ex.InnerException?.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
             }
 
         }
 
-        private void dGRelatorio_CurrentCellValueChanged(object sender, CurrentCellValueChangedEventArgs e)
-        {
-
-            CadastroDespesaViewModel vm = (CadastroDespesaViewModel)DataContext;
-            var grid = ((SfDataGrid)e.OriginalSender);
-
-            if (e.Column.MappingName == "nome_relatorio")
-            {
-                grid.View.Refresh();
-            }
-        }
-
-        private async void dGRelatorio_RowValidating(object sender, RowValidatingEventArgs e)
+        private async void dGRelatorio_RowValidating(object sender, GridViewRowValidatingEventArgs e)
         {
             CadastroDespesaViewModel vm = (CadastroDespesaViewModel)DataContext;
             try
             {
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
-                var relatorio = e.RowData as OperacionalRelatorioDespesaModel;
+                if (e.Row?.IsInEditMode != true)
+                    return;
+
+                Mouse.OverrideCursor = Cursors.Wait;
+                var relatorio = e.Row.Item as OperacionalRelatorioDespesaModel;
+                if (relatorio is null)
+                    return;
+
+                if (!ValidarRelatorio(relatorio, e))
+                    return;
+
                 relatorio.RelatorioObservacao = new ObservableCollection<OperacionalRelatorioObservacaoModel> {
                     new() 
                     {
@@ -179,108 +168,128 @@ namespace Operacional.Views.Despesa
                 bool sucesso = await vm.AdcionarRelatorio(relatorio);
                 if (sucesso == false)
                 {
-                    Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                    Mouse.OverrideCursor = null;
                     e.IsValid = false; // Impede que a linha seja confirmada
                     MessageBox.Show("Erro ao salvar no banco! Verifique os dados.", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
             catch (DbUpdateException ex)
             {
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-                MessageBox.Show($"Erro: {ex.InnerException?.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Mouse.OverrideCursor = null;
+                Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
                 e.IsValid = false; // Impede que a linha seja confirmada
             }
             catch (Exception ex)
             {
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Mouse.OverrideCursor = null;
+                Operacional.ErrorDialog.Show(ex, "Erro");
                 e.IsValid = false; // Impede que a linha seja confirmada
             }
             finally
             {
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                Mouse.OverrideCursor = null;
             }
         }
 
-        private async void dGRelatorioObservacao_RowValidating(object sender, Syncfusion.UI.Xaml.Grid.RowValidatingEventArgs e)
+        private async void dGRelatorioObservacao_RowValidating(object sender, GridViewRowValidatingEventArgs e)
         {
             CadastroDespesaViewModel vm = (CadastroDespesaViewModel)DataContext;
             try
             {
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
-                var relatorio = e.RowData as OperacionalRelatorioObservacaoModel;
+                if (e.Row?.IsInEditMode != true)
+                    return;
+
+                Mouse.OverrideCursor = Cursors.Wait;
+                var relatorio = e.Row.Item as OperacionalRelatorioObservacaoModel;
+                if (relatorio is null)
+                    return;
+
+                if (!ValidarObservacao(relatorio, e))
+                    return;
 
                 bool sucesso = await vm.AdcionarRelatorioObservacao(relatorio);
                 if (sucesso == false)
                 {
-                    Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                    Mouse.OverrideCursor = null;
                     e.IsValid = false; // Impede que a linha seja confirmada
                     MessageBox.Show("Erro ao salvar no banco! Verifique os dados.", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
             catch (DbUpdateException ex)
             {
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-                MessageBox.Show($"Erro: {ex.InnerException?.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Mouse.OverrideCursor = null;
+                Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
                 e.IsValid = false; // Impede que a linha seja confirmada
             }
             catch (Exception ex)
             {
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Mouse.OverrideCursor = null;
+                Operacional.ErrorDialog.Show(ex, "Erro");
                 e.IsValid = false; // Impede que a linha seja confirmada
             }
             finally
             {
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                Mouse.OverrideCursor = null;
             }
         }
 
-        private async void dGRelatorioAdiantamento_RowValidating(object sender, Syncfusion.UI.Xaml.Grid.RowValidatingEventArgs e)
+        private async void dGRelatorioAdiantamento_RowValidating(object sender, GridViewRowValidatingEventArgs e)
         {
             CadastroDespesaViewModel vm = (CadastroDespesaViewModel)DataContext;
             try
             {
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
-                var relatorio = e.RowData as OperacionalAdiantamentoModel;
+                if (e.Row?.IsInEditMode != true)
+                    return;
+
+                Mouse.OverrideCursor = Cursors.Wait;
+                var relatorio = e.Row.Item as OperacionalAdiantamentoModel;
+                if (relatorio is null)
+                    return;
+
+                if (!ValidarAdiantamento(relatorio, e))
+                    return;
 
                 bool sucesso = await vm.AdcionarRelatorioAdiantamento(relatorio);
                 if (sucesso == false)
                 {
-                    Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                    Mouse.OverrideCursor = null;
                     e.IsValid = false; // Impede que a linha seja confirmada
                     MessageBox.Show("Erro ao salvar no banco! Verifique os dados.", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
             catch (DbUpdateException ex)
             {
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-                MessageBox.Show($"Erro: {ex.InnerException?.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Mouse.OverrideCursor = null;
+                Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
                 e.IsValid = false; // Impede que a linha seja confirmada
             }
             catch (Exception ex)
             {
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Mouse.OverrideCursor = null;
+                Operacional.ErrorDialog.Show(ex, "Erro");
                 e.IsValid = false; // Impede que a linha seja confirmada
             }
             finally
             {
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                Mouse.OverrideCursor = null;
             }
         }
 
-        private async void dGRelatorioDetalhes_RowValidating(object sender, RowValidatingEventArgs e)
+        private async void dGRelatorioDetalhes_RowValidating(object sender, GridViewRowValidatingEventArgs e)
         {
             CadastroDespesaViewModel vm = (CadastroDespesaViewModel)DataContext;
-            var grid = ((SfDataGrid)sender);
-            var vModel = grid.DataContext;
             var pai = vm.Relatorio; //((RegistroDespesa)e.RowData).RelatorioPai; //{Operacional.DataBase.Models.OperacionalRelatorioDespesaModel}
             try
             {
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
+                if (e.Row?.IsInEditMode != true)
+                    return;
 
-                var registro = e.RowData as RegistroDespesa ?? throw new InvalidOperationException("Linha inválida, não é um RegistroDespesa.");
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                var registro = e.Row.Item as RegistroDespesa ?? throw new InvalidOperationException("Linha inválida, não é um RegistroDespesa.");
+                if (!ValidarDetalhe(registro, e))
+                    return;
+
                 var model = registro.ToModel(); // Aqui você converte para o model de banco
                 model.cod_relatorio = pai.cod_relatorio;
 
@@ -293,26 +302,118 @@ namespace Operacional.Views.Despesa
             }
             catch (DbUpdateException ex)
             {
-                File.WriteAllText("erro_log.txt", ex.ToString());
-                MessageBox.Show($"Erro: {ex.InnerException?.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.IO.File.WriteAllText("erro_log.txt", ex.ToString());
+                Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
                 e.IsValid = false;
             }
             catch (Exception ex)
             {
-                File.WriteAllText("erro_log.txt", ex.ToString());
-                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.IO.File.WriteAllText("erro_log.txt", ex.ToString());
+                Operacional.ErrorDialog.Show(ex, "Erro");
                 e.IsValid = false;
             }
             finally
             {
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                Mouse.OverrideCursor = null;
             }
+        }
+
+        private void OnImprimirRelatorioClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
+        {
+            if (dGRelatorio.SelectedItem is not OperacionalRelatorioDespesaModel record)
+            {
+                MessageBox.Show("Selecione um relatório para imprimir.", "Imprimir", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            CadastroDespesaRelatorioPrinter.Imprimir(record, (CadastroDespesaViewModel)DataContext);
+        }
+
+        private static bool ValidarRelatorio(OperacionalRelatorioDespesaModel relatorio, GridViewRowValidatingEventArgs e)
+        {
+            var campos = new List<string>();
+
+            AddIfMissing(campos, relatorio.codigo_funcionario, "Funcionário");
+            AddIfMissing(campos, relatorio.nome_relatorio, "Relatório");
+            AddIfMissing(campos, relatorio.localidade, "Localidade");
+            AddIfMissing(campos, relatorio.data, "Data");
+            AddIfMissing(campos, relatorio.classif_financeiro, "Financeiro");
+            AddIfMissing(campos, relatorio.codigo_empresa, "Empresa");
+
+            return ValidarCamposObrigatorios(campos, e);
+        }
+
+        private static bool ValidarObservacao(OperacionalRelatorioObservacaoModel observacao, GridViewRowValidatingEventArgs e)
+        {
+            var campos = new List<string>();
+            AddIfMissing(campos, observacao.observacao, "Observação");
+            return ValidarCamposObrigatorios(campos, e);
+        }
+
+        private static bool ValidarAdiantamento(OperacionalAdiantamentoModel adiantamento, GridViewRowValidatingEventArgs e)
+        {
+            var campos = new List<string>();
+
+            AddIfMissing(campos, adiantamento.valor_adiantamento, "Valor adiantamento");
+            AddIfMissing(campos, adiantamento.valor_real_peso, "Valor do peso");
+            AddIfMissing(campos, adiantamento.valor_cotacao_peso, "Cotação peso");
+            AddIfMissing(campos, adiantamento.valor_peso_peso, "Valor peso");
+            AddIfMissing(campos, adiantamento.valor_real_dolar, "Valor do US$");
+            AddIfMissing(campos, adiantamento.valor_cotacao_dolar, "Cotação US$");
+            AddIfMissing(campos, adiantamento.valor_dolar_dolar, "Valor US$");
+            AddIfMissing(campos, adiantamento.total_adiantamento, "Total adiantamento");
+            AddIfMissing(campos, adiantamento.data_pagamento, "Data pagamento");
+            AddIfMissing(campos, adiantamento.forma_pagto, "Forma pagamento");
+
+            return ValidarCamposObrigatorios(campos, e);
+        }
+
+        private static bool ValidarDetalhe(RegistroDespesa detalhe, GridViewRowValidatingEventArgs e)
+        {
+            var campos = new List<string>();
+
+            AddIfMissing(campos, detalhe.data, "Data");
+            AddIfMissing(campos, detalhe.sigla, "Sigla");
+            AddIfMissing(campos, detalhe.quantidade, "Qtde");
+            AddIfMissing(campos, detalhe.etapa, "Etapa");
+            AddIfMissing(campos, detalhe.classificacao, "Classificação");
+            AddIfMissing(campos, detalhe.descricao, "Descrição");
+            AddIfMissing(campos, detalhe.documento, "Documento");
+            AddIfMissing(campos, detalhe.valor, "Valor");
+
+            return ValidarCamposObrigatorios(campos, e);
+        }
+
+        private static void AddIfMissing(List<string> campos, object? valor, string nomeCampo)
+        {
+            if (valor is null)
+            {
+                campos.Add(nomeCampo);
+                return;
+            }
+
+            if (valor is string texto && string.IsNullOrWhiteSpace(texto))
+                campos.Add(nomeCampo);
+        }
+
+        private static bool ValidarCamposObrigatorios(List<string> campos, GridViewRowValidatingEventArgs e)
+        {
+            if (campos.Count == 0)
+                return true;
+
+            var mensagem = "Preencha os campos obrigatórios:\n\n- " + string.Join("\n- ", campos);
+            e.IsValid = false;
+            Application.Current.Dispatcher.BeginInvoke(() =>
+                MessageBox.Show(mensagem, "Campos obrigatórios", MessageBoxButton.OK, MessageBoxImage.Warning));
+            return false;
         }
 
     }
 
     public partial class CadastroDespesaViewModel : INotifyPropertyChanged
     {
+        private static readonly DataBaseSettings BaseSettings = DataBaseSettings.Instance;
+
         public event PropertyChangedEventHandler PropertyChanged;
         public void RaisePropertyChanged(string propName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
         protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -445,11 +546,19 @@ namespace Operacional.Views.Despesa
         {
             try
             {
-                using Context context = new();
-                var funcionariosComBancos = await context.DespFuncionarios
-                    .Include(f => f.DadosBancarios)
-                    .OrderBy(f => f.nome_func)
-                    .ToListAsync();
+                await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+                var funcionariosComBancos = (await connection.QueryAsync<OperacionalTDespFuncionarioModel>(
+                    @"SELECT *
+                      FROM operacional.t_desp_funcionario
+                      ORDER BY nome_func;")).ToList();
+
+                var dadosBancarios = (await connection.QueryAsync<OperacionalTblDespDadoBancarioModel>(
+                    @"SELECT *
+                      FROM operacional.tbl_desp_dados_bancarios;")).ToLookup(b => b.cod_func);
+
+                foreach (var funcionario in funcionariosComBancos)
+                    funcionario.DadosBancarios = dadosBancarios[funcionario.cod_func].ToList();
+
                 return [.. funcionariosComBancos];
             }
             catch (DbUpdateException)
@@ -466,12 +575,30 @@ namespace Operacional.Views.Despesa
         {
             try
             {
-                using Context context = new();
-                var relatorios = await context.RelatorioDespesas
-                    .Include(r => r.RelatorioAdiantamento)
-                    .Include(r => r.RelatorioObservacao)
-                    .Include(r => r.RelatorioDespesaDetalhes)
-                    .ToListAsync();
+                await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+                var relatorios = (await connection.QueryAsync<OperacionalRelatorioDespesaModel>(
+                    @"SELECT *
+                      FROM operacional.t_relatorio_despesas
+                      ORDER BY cod_relatorio;")).ToList();
+
+                var adiantamentos = (await connection.QueryAsync<OperacionalAdiantamentoModel>(
+                    @"SELECT *
+                      FROM operacional.t_adiantamento;")).ToLookup(a => a.cod_relatorio);
+                var observacoes = (await connection.QueryAsync<OperacionalRelatorioObservacaoModel>(
+                    @"SELECT *
+                      FROM operacional.t_relatorio_observacao;")).ToLookup(o => o.cod_relatorio);
+                var detalhes = (await connection.QueryAsync<OperacionalRelatorioDespesasDetalheModel>(
+                    @"SELECT *
+                      FROM operacional.t_relatorio_despesas_detalhe
+                      ORDER BY cod_linha_detalhe;")).ToLookup(d => d.cod_relatorio);
+
+                foreach (var relatorio in relatorios)
+                {
+                    relatorio.RelatorioAdiantamento = adiantamentos[relatorio.cod_relatorio].ToList();
+                    relatorio.RelatorioObservacao = observacoes[relatorio.cod_relatorio].ToList();
+                    relatorio.RelatorioDespesaDetalhes = detalhes[relatorio.cod_relatorio].ToList();
+                }
+
                 return [.. relatorios];
             }
             catch (DbUpdateException)
@@ -486,10 +613,13 @@ namespace Operacional.Views.Despesa
 
         public async Task<ObservableCollection<OperacionalDespRelatorioModel>> GetTiposRelatorioAsync()
         {
-            using Context context = new();
             try
             {
-                var retorno = await context.DespRelatorios.AsNoTracking().ToListAsync();
+                await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+                var retorno = await connection.QueryAsync<OperacionalDespRelatorioModel>(
+                    @"SELECT *
+                      FROM operacional.t_desp_relatorios
+                      ORDER BY descricao_relatorio;");
                 return [.. retorno];
             }
             catch (DbException ex)  // Para erros de banco de dados
@@ -504,10 +634,13 @@ namespace Operacional.Views.Despesa
 
         public async Task<ObservableCollection<ComercialClienteModel>> GetClientesAsync()
         {
-            using Context context = new();
             try
             {
-                var retorno = await context.ComercialClientes.OrderBy(c => c.sigla).AsNoTracking().ToListAsync();
+                await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+                var retorno = await connection.QueryAsync<ComercialClienteModel>(
+                    @"SELECT *
+                      FROM comercial.clientes
+                      ORDER BY sigla;");
                 return [.. retorno];
             }
             catch (DbException ex)  // Para erros de banco de dados
@@ -522,10 +655,13 @@ namespace Operacional.Views.Despesa
 
         public async Task<List<OperacionalBaseCustoModel>> GetBaseCustosAsync()
         {
-            using Context context = new();
             try
             {
-                return await context.OperacionalBaseCustos.AsNoTracking().ToListAsync();
+                await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+                return (await connection.QueryAsync<OperacionalBaseCustoModel>(
+                    @"SELECT *
+                      FROM operacional.tblbasecustos
+                      ORDER BY tipo, descr;")).ToList();
             }
             catch (Exception ex)
             {
@@ -535,10 +671,13 @@ namespace Operacional.Views.Despesa
 
         public async Task<ObservableCollection<string>> GetEtapasAsync()
         {
-            using Context context = new();
             try
             {
-                var retorno = await context.OperacionalFases.AsNoTracking().Select(e => e.fase).ToListAsync();
+                await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+                var retorno = await connection.QueryAsync<string>(
+                    @"SELECT fase
+                      FROM operacional.tblfases
+                      ORDER BY fase;");
                 return [.. retorno];
             }
             catch (DbException ex)  // Para erros de banco de dados
@@ -553,10 +692,13 @@ namespace Operacional.Views.Despesa
 
         public async Task<Dictionary<string, List<string>>> GetDescricoesAsync()
         {
-            using Context context = new();
             try
             {
-                var retorno = await context.OperacionalBaseCustos.AsNoTracking().ToListAsync();
+                await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+                var retorno = await connection.QueryAsync<OperacionalBaseCustoModel>(
+                    @"SELECT *
+                      FROM operacional.tblbasecustos
+                      ORDER BY tipo, descr;");
                 var descricoesPorTipo = retorno
                     .GroupBy(x => x.tipo)
                     .ToDictionary(g => g.Key, g => g.Select(x => x.descr)
@@ -576,10 +718,13 @@ namespace Operacional.Views.Despesa
 
         public async Task<ObservableCollection<OperacionalEmpresaModel>> GetEmpresasAsync()
         {
-            using Context context = new();
             try
             {
-                var retorno = await context.OperacionalEmpresas.AsNoTracking().ToListAsync();
+                await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+                var retorno = await connection.QueryAsync<OperacionalEmpresaModel>(
+                    @"SELECT *
+                      FROM operacional.t_empresas
+                      ORDER BY nome_empresa;");
                 return [.. retorno];
             }
             catch (DbException ex)  // Para erros de banco de dados
@@ -596,14 +741,28 @@ namespace Operacional.Views.Despesa
         {
             try
             {
-                using Context context = new();
-                var relatorioExistente = await context.RelatorioDespesas.FindAsync(relatorio.cod_relatorio);
-                if (relatorioExistente == null)
-                    context.RelatorioDespesas.Add(relatorio);
-                else
-                    context.Entry(relatorioExistente).CurrentValues.SetValues(relatorio);
+                await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+                const string sql = @"
+                    INSERT INTO operacional.t_relatorio_despesas
+                    (cod_relatorio, data, codigo_funcionario, nome_funcionario, nome_relatorio, localidade,
+                     codigo_empresa, emitido_por, emitido_data, cod_conta_corrente, finalizado, classif_financeiro)
+                    VALUES
+                    (@cod_relatorio, @data, @codigo_funcionario, @nome_funcionario, @nome_relatorio, @localidade,
+                     @codigo_empresa, @emitido_por, @emitido_data, @cod_conta_corrente, @finalizado, @classif_financeiro)
+                    ON CONFLICT (cod_relatorio) DO UPDATE SET
+                        data = EXCLUDED.data,
+                        codigo_funcionario = EXCLUDED.codigo_funcionario,
+                        nome_funcionario = EXCLUDED.nome_funcionario,
+                        nome_relatorio = EXCLUDED.nome_relatorio,
+                        localidade = EXCLUDED.localidade,
+                        codigo_empresa = EXCLUDED.codigo_empresa,
+                        emitido_por = EXCLUDED.emitido_por,
+                        emitido_data = EXCLUDED.emitido_data,
+                        cod_conta_corrente = EXCLUDED.cod_conta_corrente,
+                        finalizado = EXCLUDED.finalizado,
+                        classif_financeiro = EXCLUDED.classif_financeiro;";
 
-                await context.SaveChangesAsync();
+                await connection.ExecuteAsync(sql, relatorio);
 
                 return true;
             }
@@ -621,14 +780,14 @@ namespace Operacional.Views.Despesa
         {
             try
             {
-                using Context context = new();
-                var relatorioExistente = await context.RelatorioDespesaObservacoes.FindAsync(relatorio.cod_relatorio);
-                if (relatorioExistente == null)
-                    context.RelatorioDespesaObservacoes.Add(relatorio);
-                else
-                    context.Entry(relatorioExistente).CurrentValues.SetValues(relatorio);
-
-                await context.SaveChangesAsync();
+                await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+                await connection.ExecuteAsync(@"
+                    INSERT INTO operacional.t_relatorio_observacao
+                    (cod_relatorio, observacao)
+                    VALUES (@cod_relatorio, @observacao)
+                    ON CONFLICT (cod_relatorio) DO UPDATE SET
+                        observacao = EXCLUDED.observacao;",
+                    relatorio);
 
                 return true;
             }
@@ -646,14 +805,42 @@ namespace Operacional.Views.Despesa
         {
             try
             {
-                using Context context = new();
-                var relatorioExistente = await context.RelatorioDespesaAdiantamentos.FindAsync(relatorio.cod_relatorio);
-                if (relatorioExistente == null)
-                    context.RelatorioDespesaAdiantamentos.Add(relatorio);
-                else
-                    context.Entry(relatorioExistente).CurrentValues.SetValues(relatorio);
+                await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+                const string sql = @"
+                    INSERT INTO operacional.t_adiantamento
+                    (cod_relatorio, valor_adiantamento, valor_real_peso, valor_cotacao_peso, valor_peso_peso,
+                     valor_real_dolar, valor_cotacao_dolar, valor_dolar_dolar, total_adiantamento, total_despesas,
+                     saldo_final, emitido_por, emitido_data, alterado_por, alterado_data, aprovado_por,
+                     data_aprovacao, data_pagamento, forma_pagto, pagto_realizado_por, data_pagto_realizado, aprovacao)
+                    VALUES
+                    (@cod_relatorio, @valor_adiantamento, @valor_real_peso, @valor_cotacao_peso, @valor_peso_peso,
+                     @valor_real_dolar, @valor_cotacao_dolar, @valor_dolar_dolar, @total_adiantamento, @total_despesas,
+                     @saldo_final, @emitido_por, @emitido_data, @alterado_por, @alterado_data, @aprovado_por,
+                     @data_aprovacao, @data_pagamento, @forma_pagto, @pagto_realizado_por, @data_pagto_realizado, @aprovacao)
+                    ON CONFLICT (cod_relatorio) DO UPDATE SET
+                        valor_adiantamento = EXCLUDED.valor_adiantamento,
+                        valor_real_peso = EXCLUDED.valor_real_peso,
+                        valor_cotacao_peso = EXCLUDED.valor_cotacao_peso,
+                        valor_peso_peso = EXCLUDED.valor_peso_peso,
+                        valor_real_dolar = EXCLUDED.valor_real_dolar,
+                        valor_cotacao_dolar = EXCLUDED.valor_cotacao_dolar,
+                        valor_dolar_dolar = EXCLUDED.valor_dolar_dolar,
+                        total_adiantamento = EXCLUDED.total_adiantamento,
+                        total_despesas = EXCLUDED.total_despesas,
+                        saldo_final = EXCLUDED.saldo_final,
+                        emitido_por = EXCLUDED.emitido_por,
+                        emitido_data = EXCLUDED.emitido_data,
+                        alterado_por = EXCLUDED.alterado_por,
+                        alterado_data = EXCLUDED.alterado_data,
+                        aprovado_por = EXCLUDED.aprovado_por,
+                        data_aprovacao = EXCLUDED.data_aprovacao,
+                        data_pagamento = EXCLUDED.data_pagamento,
+                        forma_pagto = EXCLUDED.forma_pagto,
+                        pagto_realizado_por = EXCLUDED.pagto_realizado_por,
+                        data_pagto_realizado = EXCLUDED.data_pagto_realizado,
+                        aprovacao = EXCLUDED.aprovacao;";
 
-                await context.SaveChangesAsync();
+                await connection.ExecuteAsync(sql, relatorio);
 
                 return true;
             }
@@ -671,21 +858,34 @@ namespace Operacional.Views.Despesa
         {
             try
             {
-                using var context = new Context();
+                await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+                const string sql = @"
+                    INSERT INTO operacional.t_relatorio_despesas_detalhe
+                    (cod_linha_detalhe, cod_relatorio, data, sigla, quantidade, etapa, classificacao,
+                     descricao, valor, codigo_empresa, cod_relatorio_empresa, emitido_por, emitido_data,
+                     alterado_por, alterado_data, documento)
+                    VALUES
+                    (@cod_linha_detalhe, @cod_relatorio, @data, @sigla, @quantidade, @etapa, @classificacao,
+                     @descricao, @valor, @codigo_empresa, @cod_relatorio_empresa, @emitido_por, @emitido_data,
+                     @alterado_por, @alterado_data, @documento)
+                    ON CONFLICT (cod_linha_detalhe) DO UPDATE SET
+                        cod_relatorio = EXCLUDED.cod_relatorio,
+                        data = EXCLUDED.data,
+                        sigla = EXCLUDED.sigla,
+                        quantidade = EXCLUDED.quantidade,
+                        etapa = EXCLUDED.etapa,
+                        classificacao = EXCLUDED.classificacao,
+                        descricao = EXCLUDED.descricao,
+                        valor = EXCLUDED.valor,
+                        codigo_empresa = EXCLUDED.codigo_empresa,
+                        cod_relatorio_empresa = EXCLUDED.cod_relatorio_empresa,
+                        emitido_por = EXCLUDED.emitido_por,
+                        emitido_data = EXCLUDED.emitido_data,
+                        alterado_por = EXCLUDED.alterado_por,
+                        alterado_data = EXCLUDED.alterado_data,
+                        documento = EXCLUDED.documento;";
 
-                // Busca o objeto existente pela chave primária
-                var relatorioExistente = await context.RelatorioDespesasDetalhes.FindAsync(relatorio.cod_linha_detalhe);
-
-                if (relatorioExistente == null)
-                {
-                    context.RelatorioDespesasDetalhes.Add(relatorio);
-                }
-                else
-                {
-                    context.Entry(relatorioExistente).CurrentValues.SetValues(relatorio);
-                }
-
-                await context.SaveChangesAsync();
+                await connection.ExecuteAsync(sql, relatorio);
                 return true;
             }
             catch (DbUpdateException ex)
@@ -822,25 +1022,12 @@ namespace Operacional.Views.Despesa
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
-    public static class CadastroDespesaContextMenuCommands
+    public static class CadastroDespesaRelatorioPrinter
     {
         private static readonly DataBaseSettings BaseSettings = DataBaseSettings.Instance;
-        static BaseCommand? imprimir;
-        public static BaseCommand Imprimir
-        {
-            get
-            {
-                imprimir ??= new BaseCommand(OnImprimirClicked);
-                return imprimir;
-            }
-        }
 
-        private async static void OnImprimirClicked(object obj)
+        public static void Imprimir(OperacionalRelatorioDespesaModel record, CadastroDespesaViewModel vm)
         {
-            var record = ((GridRecordContextMenuInfo)obj).Record as OperacionalRelatorioDespesaModel;
-            var grid = ((GridRecordContextMenuInfo)obj).DataGrid;
-            //var item = grid.SelectedItem as OperacionalRelatorioDespesaModel;
-            CadastroDespesaViewModel vm = (CadastroDespesaViewModel)grid.DataContext;
             var nomeEmpresa = vm.Empresas.FirstOrDefault(e => e.codigo_empresa == record.codigo_empresa)?.nome_empresa;
             var nomeFuncionario = vm.Funcionarios.FirstOrDefault(e => e.cod_func == record.codigo_funcionario)?.nome_func;
             var valorReembolso = record.RelatorioDespesaDetalhesEditaveis.Where(x => x.classificacao == "FINANCEIRO" && x.descricao == "REEMBOLSO").Sum(x => x.valor);
@@ -848,70 +1035,63 @@ namespace Operacional.Views.Despesa
 
             try
             {
-                //701 Cipolatti Artes - Instalação e Montagem de Bens Móveis Ltda - Epp
+                var outputPath = ResolveOutputPath(record.cod_relatorio);
+                var modeloPath = ResolveModeloPath("MODELO-RELATORIO-DESPESA.xlsx");
 
-                using (ExcelEngine excelEngine = new())
+                using var workbook = new XLWorkbook(modeloPath);
+                var worksheet = workbook.Worksheet(1);
+
+                worksheet.Cell("A3").Value = record.cod_relatorio;
+                worksheet.Cell("A4").Value = @$"{record.codigo_empresa} {nomeEmpresa}";
+                worksheet.Cell("C5").Value = record.data;
+                worksheet.Cell("C6").Value = nomeFuncionario;
+                worksheet.Cell("C7").Value = record.nome_relatorio;
+                worksheet.Cell("C8").Value = record.localidade;
+
+                worksheet.Range("total_adiantamento").FirstCell().Value = Convert.ToDouble(record.RelatorioAdiantamento.FirstOrDefault()?.total_adiantamento ?? 0);
+                worksheet.Range("valor_adiantamento").FirstCell().Value = Convert.ToDouble(record.RelatorioAdiantamento.FirstOrDefault()?.valor_adiantamento ?? 0);
+                worksheet.Range("valor_reembolso").FirstCell().Value = Convert.ToDouble(valorReembolso ?? 0);
+                worksheet.Range("valor_acerto").FirstCell().Value = Convert.ToDouble(valorAcerto ?? 0);
+
+                int linhaInicial = 11;
+
+                foreach (var item in record.RelatorioDespesaDetalhesEditaveis.Where(r => r.valor is not null && r.valor != 0))
                 {
-                    IApplication application = excelEngine.Excel;
-                    application.DefaultVersion = ExcelVersion.Excel2016;
+                    worksheet.Cell("A" + linhaInicial).Value = item.data;
+                    worksheet.Cell("B" + linhaInicial).Value = item.sigla;
+                    worksheet.Cell("C" + linhaInicial).Value = Convert.ToDouble(item.quantidade);
+                    worksheet.Cell("D" + linhaInicial).Value = item.etapa;
+                    worksheet.Range("E" + linhaInicial + ":F" + linhaInicial).Merge();
+                    worksheet.Cell("E" + linhaInicial).Value = item.classificacao;
+                    worksheet.Range("G" + linhaInicial + ":H" + linhaInicial).Merge();
+                    worksheet.Cell("G" + linhaInicial).Value = item.descricao;
+                    worksheet.Cell("I" + linhaInicial).Value = item.documento;
+                    worksheet.Cell("J" + linhaInicial).Value = Convert.ToDouble(item.valor);
 
-                    // Abre o arquivo modelo
-                    FileStream inputStream = new(@$"{BaseSettings.CaminhoSistema}Modelos\MODELO-RELATORIO-DESPESA.xlsx", FileMode.Open, FileAccess.Read);
-                    IWorkbook workbook = application.Workbooks.Open(inputStream);
-                    IWorksheet worksheet = workbook.Worksheets[0];
-                    // Preenche células fixas
-                    worksheet.Range["A3"].Number = record.cod_relatorio;
-                    worksheet.Range["A4"].Text = @$"{record.codigo_empresa} {nomeEmpresa}";
-                    worksheet.Range["C5"].DateTime = record.data.Value;
-                    worksheet.Range["C6"].Text = nomeFuncionario;
-                    worksheet.Range["C7"].Text = record.nome_relatorio;
-                    worksheet.Range["C8"].Text = record.localidade;
-                    
-
-                    // Campos de valores calculados
-                    worksheet.Range["total_adiantamento"].Number = Convert.ToDouble(record.RelatorioAdiantamento.FirstOrDefault().total_adiantamento);
-                    worksheet.Range["valor_adiantamento"].Number = Convert.ToDouble(record.RelatorioAdiantamento.FirstOrDefault().valor_adiantamento);
-                    worksheet.Range["valor_reembolso"].Number = Convert.ToDouble(valorReembolso);
-                    worksheet.Range["valor_acerto"].Number = Convert.ToDouble(valorAcerto);
-
-                    int linhaInicial = 11; // Inserir a partir da linha 11
-
-                    foreach (var item in record.RelatorioDespesaDetalhesEditaveis.Where(r => r.valor is not null && r.valor != 0))
-                    {
-                        worksheet.Range["A" + linhaInicial].DateTime = item.data.Value;
-                        worksheet.Range["B" + linhaInicial].Text = item.sigla;
-                        worksheet.Range["C" + linhaInicial].Number = Convert.ToDouble(item.quantidade);
-                        worksheet.Range["D" + linhaInicial].Text = item.etapa;
-                        // Mescla E e F, insere valor
-                        worksheet.Range["E" + linhaInicial + ":F" + linhaInicial].Merge();
-                        worksheet.Range["E" + linhaInicial].Text = item.classificacao;
-                        // Mescla H e I, insere valor
-                        worksheet.Range["G" + linhaInicial + ":H" + linhaInicial].Merge();
-                        worksheet.Range["G" + linhaInicial].Text = item.descricao;
-                        worksheet.Range["I" + linhaInicial].Text = item.documento;
-                        worksheet.Range["J" + linhaInicial].Number = Convert.ToDouble(item.valor);
-                        linhaInicial++;
-                        worksheet.InsertRow(linhaInicial, 1, ExcelInsertOptions.FormatAsBefore);
-                    }
-                    linhaInicial+=3;
-                    worksheet.Range[@$"A{linhaInicial}"].Text = record.RelatorioObservacao.FirstOrDefault().observacao;
-                    // Salva como novo arquivo
-                    FileStream outputStream = new(@$"{BaseSettings.CaminhoSistema}Impressos\RELATORIO-DESPESA-{record.cod_relatorio}.xlsx", FileMode.Create, FileAccess.Write);
-                    workbook.SaveAs(outputStream);
-
-                    workbook.Close();
-                    inputStream.Close();
-                    outputStream.Close();
-
-                    Process.Start("explorer", @$"{BaseSettings.CaminhoSistema}Impressos\RELATORIO-DESPESA-{record.cod_relatorio}.xlsx");
+                    linhaInicial++;
+                    worksheet.Row(linhaInicial).InsertRowsAbove(1);
                 }
 
-                Console.WriteLine("Arquivo gerado com sucesso!");
+                linhaInicial += 3;
+                worksheet.Cell($"A{linhaInicial}").Value = record.RelatorioObservacao.FirstOrDefault()?.observacao;
+
+                workbook.SaveAs(outputPath);
+                Process.Start("explorer", outputPath);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                Operacional.ErrorDialog.Show(ex, "Erro");
             }
+        }
+
+        private static string ResolveOutputPath(long codRelatorio)
+        {
+            return SistemaPathResolver.GetImpressosPath($"RELATORIO-DESPESA-{codRelatorio}.xlsx");
+        }
+
+        private static string ResolveModeloPath(string fileName)
+        {
+            return SistemaPathResolver.GetModeloPath(fileName);
         }
     }
 }

@@ -1,4 +1,3 @@
-﻿using Microsoft.EntityFrameworkCore;
 using Operacional.DataBase.Models.DTOs;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;

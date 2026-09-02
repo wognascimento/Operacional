@@ -3,8 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:Operacional" 
-        xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+        xmlns:local="clr-namespace:Operacional"
+        xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation"
         mc:Ignorable="d"
         Title="SISTEMA INTEGRADO DE GERENCIAMENTO - OPERACIONAL"
         WindowState="Maximized"
@@ -17,97 +17,96 @@
             <RowDefinition/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <syncfusion:MenuAdv 
+        <telerik:RadMenu
             Grid.Row="0" 
             ScrollViewer.HorizontalScrollBarVisibility="Visible" 
-            PopUpAnimationType="Slide" 
             VerticalAlignment="Center" 
             VerticalContentAlignment="Center">
 
-            <syncfusion:MenuItemAdv Header="Transportes">
-                <syncfusion:MenuItemAdv Header="Transportadora" Click="OnCadastroTransportadoraClick"/>
-                <syncfusion:MenuItemAdv Header="Transporte Montagem" Click="OnTransporteMontagemClick"/>
-                <syncfusion:MenuItemAdv Header="Transporte Desmontagem" Click="OnTransporteDesmontagemClick"/>
-                <syncfusion:MenuItemAdv Header="Cargas Montagem" Click="OnCargaMontagemClick"/>
-                <syncfusion:MenuItemAdv Header="Cargas Desmontagem" Click="OnCargaDesmontagemClick"/>
-                <syncfusion:MenuItemAdv Header="Data Efetiva" Click="OnDataEfetivaClick"/>
-                <syncfusion:MenuItemAdv Header="Consultas">
-                    <syncfusion:MenuItemAdv Header="Data Montagem" Click="OnDataMontagemClick"/>
-                    <syncfusion:MenuItemAdv Header="Carga Montagem" Click="OnQryCargaMontgemClick"/>
-                    <syncfusion:MenuItemAdv Header="Carga Desmontagem" Click="OnQryCargaDesmontagemClick"/>
-                </syncfusion:MenuItemAdv>
-            </syncfusion:MenuItemAdv>
+            <telerik:RadMenuItem Header="Transportes">
+                <telerik:RadMenuItem Header="Transportadora" Click="OnCadastroTransportadoraClick"/>
+                <telerik:RadMenuItem Header="Transporte Montagem" Click="OnTransporteMontagemClick"/>
+                <telerik:RadMenuItem Header="Transporte Desmontagem" Click="OnTransporteDesmontagemClick"/>
+                <telerik:RadMenuItem Header="Cargas Montagem" Click="OnCargaMontagemClick"/>
+                <telerik:RadMenuItem Header="Cargas Desmontagem" Click="OnCargaDesmontagemClick"/>
+                <telerik:RadMenuItem Header="Data Efetiva" Click="OnDataEfetivaClick"/>
+                <telerik:RadMenuItem Header="Consultas">
+                    <telerik:RadMenuItem Header="Data Montagem" Click="OnDataMontagemClick"/>
+                    <telerik:RadMenuItem Header="Carga Montagem" Click="OnQryCargaMontgemClick"/>
+                    <telerik:RadMenuItem Header="Carga Desmontagem" Click="OnQryCargaDesmontagemClick"/>
+                </telerik:RadMenuItem>
+            </telerik:RadMenuItem>
 
-            <syncfusion:MenuItemAdv Header="Despesas">
-                <syncfusion:MenuItemAdv Header="Cadastros">
-                    <syncfusion:MenuItemAdv Header="Relatórios" Click="OnOpenTiposRelatoriosClick"/>
-                    <syncfusion:MenuItemAdv Header="Funcionários" Click="OnOpenCadastroFuncionarioClick"/>
-                    <syncfusion:MenuItemAdv Header="Custos" Click="OnOpenCustosClick"/>
-                </syncfusion:MenuItemAdv>
+            <telerik:RadMenuItem Header="Despesas">
+                <telerik:RadMenuItem Header="Cadastros">
+                    <telerik:RadMenuItem Header="Relatórios" Click="OnOpenTiposRelatoriosClick"/>
+                    <telerik:RadMenuItem Header="Funcionários" Click="OnOpenCadastroFuncionarioClick"/>
+                    <telerik:RadMenuItem Header="Custos" Click="OnOpenCustosClick"/>
+                </telerik:RadMenuItem>
                 
-                <syncfusion:MenuItemAdv Header="Lançamento">
-                    <syncfusion:MenuItemAdv Header="Novo" Click="OnOpenCadastroDespesaClick"/>
-                </syncfusion:MenuItemAdv>
+                <telerik:RadMenuItem Header="Lançamento">
+                    <telerik:RadMenuItem Header="Novo" Click="OnOpenCadastroDespesaClick"/>
+                </telerik:RadMenuItem>
 
-                <syncfusion:MenuItemAdv Header="Consultas">
-                    <syncfusion:MenuItemAdv Header="Detalhes Relatório"/>
-                </syncfusion:MenuItemAdv>
-            </syncfusion:MenuItemAdv>
+                <telerik:RadMenuItem Header="Consultas">
+                    <telerik:RadMenuItem Header="Detalhes Relatório"/>
+                </telerik:RadMenuItem>
+            </telerik:RadMenuItem>
 
-            <syncfusion:MenuItemAdv Header="Cronograma">
-                <syncfusion:MenuItemAdv Header="Montagem" Click="OnCronogramaClick"/>
-                <syncfusion:MenuItemAdv Header="Consultas">
-                    <syncfusion:MenuItemAdv Header="Funções Cronograma" Click="OnFuncoesCronogramaClick" />
+            <telerik:RadMenuItem Header="Cronograma">
+                <telerik:RadMenuItem Header="Montagem" Click="OnCronogramaClick"/>
+                <telerik:RadMenuItem Header="Consultas">
+                    <telerik:RadMenuItem Header="Funções Cronograma" Click="OnFuncoesCronogramaClick" />
 
-                </syncfusion:MenuItemAdv>
-            </syncfusion:MenuItemAdv>
+                </telerik:RadMenuItem>
+            </telerik:RadMenuItem>
 
-            <syncfusion:MenuItemAdv Header="Equipe Externa">
-                <syncfusion:MenuItemAdv Header="Cadastro de Equipe" Click="OnOpenCadastroEquipesClick"/>
-                <syncfusion:MenuItemAdv Header="Cadastro de Orçamento" Click="OnOpenCadastroOrcamentoClick"/>
-                <syncfusion:MenuItemAdv Header="Cadastro de Usuário" Click="OnOpenUsuarioClick"/>
-                <syncfusion:MenuItemAdv Header="Notas Pagamento">
-                    <syncfusion:MenuItemAdv Header="Lançamento" Click="OnOpenNotasPagamentoClick"/>
-                    <syncfusion:MenuItemAdv Header="Consulta Resumo" Click="OnOpenNotasPagamentoConsultaClick"/>
+            <telerik:RadMenuItem Header="Equipe Externa">
+                <telerik:RadMenuItem Header="Cadastro de Equipe" Click="OnOpenCadastroEquipesClick"/>
+                <telerik:RadMenuItem Header="Cadastro de Orçamento" Click="OnOpenCadastroOrcamentoClick"/>
+                <telerik:RadMenuItem Header="Cadastro de Usuário" Click="OnOpenUsuarioClick"/>
+                <telerik:RadMenuItem Header="Notas Pagamento">
+                    <telerik:RadMenuItem Header="Lançamento" Click="OnOpenNotasPagamentoClick"/>
+                    <telerik:RadMenuItem Header="Consulta Resumo" Click="OnOpenNotasPagamentoConsultaClick"/>
 
-                </syncfusion:MenuItemAdv>
-                <syncfusion:MenuItemAdv Header="Notas Despesas" Click="OnOpenNotasDespesasClick"/>
-                <syncfusion:MenuItemAdv Header="Contatos" Click="OnContatoClick"/>
-                <syncfusion:MenuItemAdv Header="Relatório Noturno Diário" Click="OnRelatorioNoturnoDiarioClick"/>
-                <syncfusion:MenuItemAdv Header="Relatório Diário WEB" Click="OnRelatorioDiarioWebClick"/>
-                <syncfusion:MenuItemAdv Header="Consultas">
-                    <syncfusion:MenuItemAdv Header="Previsão Valores Cronograma" Click="OnRelatorioPrevisaoValoresClick" />
-                    <syncfusion:MenuItemAdv Header="Comparação Previsão Realizado" Click="OnComparacaoPrevisaoRealizadoClick" />
-                </syncfusion:MenuItemAdv>
-            </syncfusion:MenuItemAdv>
+                </telerik:RadMenuItem>
+                <telerik:RadMenuItem Header="Notas Despesas" Click="OnOpenNotasDespesasClick"/>
+                <telerik:RadMenuItem Header="Contatos" Click="OnContatoClick"/>
+                <telerik:RadMenuItem Header="Relatório Noturno Diário" Click="OnRelatorioNoturnoDiarioClick"/>
+                <telerik:RadMenuItem Header="Relatório Diário WEB" Click="OnRelatorioDiarioWebClick"/>
+                <telerik:RadMenuItem Header="Consultas">
+                    <telerik:RadMenuItem Header="Previsão Valores Cronograma" Click="OnRelatorioPrevisaoValoresClick" />
+                    <telerik:RadMenuItem Header="Comparação Previsão Realizado" Click="OnComparacaoPrevisaoRealizadoClick" />
+                </telerik:RadMenuItem>
+            </telerik:RadMenuItem>
 
-            <syncfusion:MenuItemAdv Header="Manutenção">
-                <syncfusion:MenuItemAdv Header="Programação" Click="OnOpenProgramacaoClick"/>
-                <syncfusion:MenuItemAdv Header="Contatos"/>
-                <syncfusion:MenuItemAdv Header="Atendentes"/>
-                <syncfusion:MenuItemAdv Header="Plantão"/>
-                <syncfusion:MenuItemAdv Header="Criticidade"/>
-                <syncfusion:MenuItemAdv Header="Consultas">
-                    <syncfusion:MenuItemAdv Header="Geral" Click="OnOpenConsultaGeralClick"/>
-                </syncfusion:MenuItemAdv>
-            </syncfusion:MenuItemAdv>
+            <telerik:RadMenuItem Header="Manutenção">
+                <telerik:RadMenuItem Header="Programação" Click="OnOpenProgramacaoClick"/>
+                <telerik:RadMenuItem Header="Contatos"/>
+                <telerik:RadMenuItem Header="Atendentes"/>
+                <telerik:RadMenuItem Header="Plantão"/>
+                <telerik:RadMenuItem Header="Criticidade"/>
+                <telerik:RadMenuItem Header="Consultas">
+                    <telerik:RadMenuItem Header="Geral" Click="OnOpenConsultaGeralClick"/>
+                </telerik:RadMenuItem>
+            </telerik:RadMenuItem>
 
-            <syncfusion:MenuItemAdv Header="Documentos">
-                <syncfusion:MenuItemAdv Header="Controle" Click="OnOpenControleDocumentoClick"/>
-                <syncfusion:MenuItemAdv Header="Consultas">
-                    <syncfusion:MenuItemAdv Header="Preenchidos" Click="OnControleDocumentoPreenchidosClick"/>
-                </syncfusion:MenuItemAdv>
-            </syncfusion:MenuItemAdv>
+            <telerik:RadMenuItem Header="Documentos">
+                <telerik:RadMenuItem Header="Controle" Click="OnOpenControleDocumentoClick"/>
+                <telerik:RadMenuItem Header="Consultas">
+                    <telerik:RadMenuItem Header="Preenchidos" Click="OnControleDocumentoPreenchidosClick"/>
+                </telerik:RadMenuItem>
+            </telerik:RadMenuItem>
 
-        </syncfusion:MenuAdv>
+        </telerik:RadMenu>
 
-        <syncfusion:DocumentContainer 
-            Name="_mdi" 
-            Grid.Row="1" 
-            EnableAutoScroll="True"
-            Mode="TDI"
-            CloseButtonClick="_mdi_CloseButtonClick"
-            CloseAllTabs="_mdi_CloseAllTabs"/>
+        <telerik:RadDocking Grid.Row="1" x:Name="radDocking" HasDocumentHost="True">
+            <telerik:RadDocking.DocumentHost>
+                <telerik:RadSplitContainer>
+                    <telerik:RadPaneGroup x:Name="documentGroup"/>
+                </telerik:RadSplitContainer>
+            </telerik:RadDocking.DocumentHost>
+        </telerik:RadDocking>
 
         <StatusBar Grid.Row="2">
             <ItemsControl.ItemsPanel>
@@ -130,7 +129,7 @@
                 <TextBlock x:Name="txtUsername"/>
             </StatusBarItem>
             <StatusBarItem Grid.Column="2">
-                <syncfusion:SfLinearProgressBar x:Name="PbLoading" Height="20" Progress="80" Width="100" IsIndeterminate="True" Visibility="Hidden"/>
+                <telerik:RadProgressBar x:Name="PbLoading" Height="20" Value="80" Width="100" IsIndeterminate="True" Visibility="Hidden"/>
             </StatusBarItem>
             <StatusBarItem Grid.Column="3">
                 <Image Source="/icones/configuracao-de-dados-windows-metro-16.png" Width="16" Height="16" MouseDown="Image_MouseDown"/>

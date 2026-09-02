@@ -1,6 +1,8 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.EntityFrameworkCore;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Dapper;
 using Microsoft.Win32;
+using Npgsql;
+using Operacional.DataBase;
 using Operacional.DataBase.Models;
 using Operacional.DataBase.Models.DTOs;
 using System.Collections.ObjectModel;
@@ -116,6 +118,7 @@ public partial class AdicionarSolicitacao : RadWindow
 
 public partial class AdicionarSolicitacaoViewModel : ObservableObject
 {
+    private readonly DataBaseSettings _dataBaseSettings = DataBaseSettings.Instance;
 
     [ObservableProperty]
     private ObservableCollection<OperacionalSolicitacaoManutencaoModel> manutencaoSolicitacao;
@@ -131,15 +134,22 @@ public partial class AdicionarSolicitacaoViewModel : ObservableObject
 
     public async Task LoadManutencaoSolicitacaoAsync(long idProgramacao)
     {
-        using var context = new Context();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var solicitacoes = (await connection.QueryAsync<OperacionalSolicitacaoManutencaoModel>(
+            @"SELECT *
+              FROM operacional.tbl_solicitacao_manutencao
+              WHERE id_programacao = @idProgramacao
+              ORDER BY id;",
+            new { idProgramacao })).ToList();
 
-        var solicitacoes = await context.OperacionalSolicitacaoManutencoes
-            .Where(x => x.id_programacao == idProgramacao)
-            .ToListAsync();
-
-        var fotos = await context.OperacionalSolicitacaoManutencaoFotos
-            .Where(x => solicitacoes.Select(s => s.id).Contains(x.id_solicitacao))
-            .ToListAsync();
+        var fotos = solicitacoes.Count == 0
+            ? []
+            : (await connection.QueryAsync<OperacionalSolicitacaoManutencaoFotoModel>(
+                @"SELECT *
+                  FROM operacional.tbl_solicitacao_manutencao_foto
+                  WHERE id_solicitacao = ANY(@ids)
+                  ORDER BY id;",
+                new { ids = solicitacoes.Select(s => s.id).ToArray() })).ToList();
 
         // Mapeia entidades para DTOs
         Solicitacoes = new ObservableCollection<SolicitacaoManutencaoDTO>(
@@ -163,7 +173,7 @@ public partial class AdicionarSolicitacaoViewModel : ObservableObject
 
     public async Task AddManutencaoSolicitacaoAsync(SolicitacaoManutencaoDTO modelDTO)
     {
-        using var context = new Context();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
         var model = new OperacionalSolicitacaoManutencaoModel
         {
             id = modelDTO.Id,
@@ -172,34 +182,71 @@ public partial class AdicionarSolicitacaoViewModel : ObservableObject
             tipo = modelDTO.Tipo,
             solicitacao = modelDTO.Solicitacao
         };
-        var modelExistente = await context.OperacionalSolicitacaoManutencoes.FindAsync(modelDTO.Id);
-        if (modelExistente == null)
-        {
 
-            context.OperacionalSolicitacaoManutencoes.Add(model);
+        if (model.id <= 0)
+        {
+            model.id = await connection.ExecuteScalarAsync<int>(@"
+                INSERT INTO operacional.tbl_solicitacao_manutencao
+                (id_programacao, item, tipo, solicitacao)
+                VALUES (@id_programacao, @item, @tipo, @solicitacao)
+                RETURNING id;",
+                model);
+
+            modelDTO.Id = model.id;
         }
         else
         {
-            context.Entry(modelExistente).CurrentValues.SetValues(model);
+            var linhas = await connection.ExecuteAsync(@"
+                UPDATE operacional.tbl_solicitacao_manutencao
+                SET id_programacao = @id_programacao,
+                    item = @item,
+                    tipo = @tipo,
+                    solicitacao = @solicitacao
+                WHERE id = @id;",
+                model);
+
+            if (linhas == 0)
+            {
+                modelDTO.Id = 0;
+                await AddManutencaoSolicitacaoAsync(modelDTO);
+                return;
+            }
         }
-        await context.SaveChangesAsync();
+
         await LoadManutencaoSolicitacaoAsync(modelDTO.IdProgramacao);
     }
 
     public async Task AddManutencaoSolicitacaoFotoAsync(SolicitacaoManutencaoFotoDTO modelDTO, int IdProgramacao)
     {
-        using var context = new Context();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
         var model = new OperacionalSolicitacaoManutencaoFotoModel { id_solicitacao = modelDTO.IdSolicitacao, caminho_imagem = modelDTO.CaminhoImagem };
-        var modelExistente = await context.OperacionalSolicitacaoManutencaoFotos.FindAsync(modelDTO.Id);
-        if (modelExistente == null)
+        if (modelDTO.Id <= 0)
         {
-            context.OperacionalSolicitacaoManutencaoFotos.Add(model);
+            modelDTO.Id = await connection.ExecuteScalarAsync<int>(@"
+                INSERT INTO operacional.tbl_solicitacao_manutencao_foto
+                (id_solicitacao, caminho_imagem)
+                VALUES (@id_solicitacao, @caminho_imagem)
+                RETURNING id;",
+                model);
         }
         else
         {
-            context.Entry(modelExistente).CurrentValues.SetValues(model);
+            model.id = modelDTO.Id;
+            var linhas = await connection.ExecuteAsync(@"
+                UPDATE operacional.tbl_solicitacao_manutencao_foto
+                SET id_solicitacao = @id_solicitacao,
+                    caminho_imagem = @caminho_imagem
+                WHERE id = @id;",
+                model);
+
+            if (linhas == 0)
+            {
+                modelDTO.Id = 0;
+                await AddManutencaoSolicitacaoFotoAsync(modelDTO, IdProgramacao);
+                return;
+            }
         }
-        await context.SaveChangesAsync();
+
         await LoadManutencaoSolicitacaoAsync(IdProgramacao);
     }
 

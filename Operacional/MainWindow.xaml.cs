@@ -1,11 +1,7 @@
-﻿using ClosedXML.Excel;
+using ClosedXML.Excel;
 using Dapper;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Win32;
 using Npgsql;
 using Operacional.DataBase;
-using Operacional.DataBase.Models;
-using Operacional.DataBase.Models.DTOs;
 using Operacional.Views;
 using Operacional.Views.Cronograma;
 using Operacional.Views.Despesa;
@@ -14,19 +10,12 @@ using Operacional.Views.EquipeExterna;
 using Operacional.Views.EquipeExterna.Consultas;
 using Operacional.Views.Manutencao;
 using Operacional.Views.Transporte;
-using Producao;
-using Syncfusion.SfSkinManager;
-using Syncfusion.Windows.Tools.Controls;
-using Syncfusion.XlsIO;
+using Operacional.Utils;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
-using System.Configuration;
 using System.Diagnostics;
-using System.Drawing;
 using System.Windows;
 using System.Windows.Input;
 using Telerik.Windows.Controls;
-using SizeMode = Syncfusion.SfSkinManager.SizeMode;
 
 namespace Operacional
 {
@@ -40,26 +29,6 @@ namespace Operacional
         public MainWindow()
         {
             InitializeComponent();
-
-            StyleManager.ApplicationTheme = new Office2016Theme();
-
-            VisualStyles visualStyle = VisualStyles.Default;
-            Enum.TryParse("Metro", out visualStyle);
-            if (visualStyle != VisualStyles.Default)
-            {
-                SfSkinManager.ApplyStylesOnApplication = true;
-                SfSkinManager.SetVisualStyle(this, visualStyle);
-                SfSkinManager.ApplyStylesOnApplication = false;
-            }
-
-            SizeMode sizeMode = SizeMode.Default;
-            Enum.TryParse("Default", out sizeMode);
-            if (sizeMode != SizeMode.Default)
-            {
-                SfSkinManager.ApplyStylesOnApplication = true;
-                SfSkinManager.SetSizeMode(this, sizeMode);
-                SfSkinManager.ApplyStylesOnApplication = false;
-            }
 
             //var appSettings = ConfigurationManager.GetSection("appSettings") as NameValueCollection;
             //if (appSettings[0].Length > 0)
@@ -77,14 +46,12 @@ namespace Operacional
 
             try
             {
-                var appSettings = ConfigurationManager.GetSection("appSettings") as NameValueCollection;
-                BaseSettings.Username = appSettings[0];
-                BaseSettings.ConnectionString = $"Host={BaseSettings.Host};Database={BaseSettings.Database};Username={BaseSettings.Username};Password={BaseSettings.Password}";
+                BaseSettings.LoadFromConfiguration();
                 txtUsername.Text = BaseSettings.Username;
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                Operacional.ErrorDialog.Show(ex, "Erro");
             }
         }
 
@@ -99,23 +66,12 @@ namespace Operacional
                     if (e.PromptResult != null)
                     {
                         BaseSettings.Database = e.PromptResult;
-                        BaseSettings.ConnectionString = $"Host={BaseSettings.Host};Database={BaseSettings.Database};Username={BaseSettings.Username};Password={BaseSettings.Password}";
+                        BaseSettings.RefreshConnectionString();
                         txtDataBase.Text = BaseSettings.Database;
-                        _mdi.Items.Clear();
+                        documentGroup.Items.Clear();
                     }
                 }
             });
-        }
-
-        private void _mdi_CloseAllTabs(object sender, CloseTabEventArgs e)
-        {
-            _mdi.Items.Clear();
-        }
-
-        private void _mdi_CloseButtonClick(object sender, CloseButtonEventArgs e)
-        {
-            var tab = (DocumentContainer)sender;
-            _mdi.Items.Remove(tab.ActiveDocument);
         }
 
         public void adicionarFilho(object filho, string title, string name)
@@ -123,21 +79,29 @@ namespace Operacional
             var doc = ExistDocumentInDocumentContainer(name);
             if (doc == null)
             {
-                doc = (FrameworkElement?)filho;
-                DocumentContainer.SetHeader(doc, title);
-                doc.Name = name.ToLower();
-                _mdi.Items.Add(doc);
+                var content = (FrameworkElement?)filho;
+                content.Name = name.ToLower();
+
+                var pane = new RadPane
+                {
+                    Header = title,
+                    Name = name.ToLower(),
+                    Content = content,
+                    CanFloat = false
+                };
+
+                documentGroup.Items.Add(pane);
+                pane.IsSelected = true;
             }
             else
             {
-                //_mdi.RestoreDocument(doc as UIElement);
-                _mdi.ActiveDocument = doc;
+                doc.IsSelected = true;
             }
         }
 
-        private FrameworkElement ExistDocumentInDocumentContainer(string name_)
+        private RadPane ExistDocumentInDocumentContainer(string name_)
         {
-            foreach (FrameworkElement element in _mdi.Items)
+            foreach (RadPane element in documentGroup.Items)
             {
                 if (name_.ToLower() == element.Name)
                 {
@@ -185,48 +149,33 @@ namespace Operacional
             {
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
 
-                using Context context = new();
-                var retorno = await context.QryCargasMontagem.AsNoTracking().ToListAsync();
+                using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+                var retorno = (await connection.QueryAsync<QryfrmtranspDetalheModel>(
+                    @"SELECT *
+                      FROM operacional.qryfrmtransp_detalhe
+                      ORDER BY data, siglaserv;")).ToList();
                 
 
-                using ExcelEngine excelEngine = new();
-                IApplication application = excelEngine.Excel;
-
-                application.DefaultVersion = ExcelVersion.Xlsx;
-
-                //Create a workbook
-                IWorkbook workbook = application.Workbooks.Create(1);
-                IWorksheet worksheet = workbook.Worksheets[0];
-                //worksheet.IsGridLinesVisible = false;
-                worksheet.ImportData(retorno, 1, 1, true);
-
-
-                // Obter o intervalo da coluna "Data" e "data_de_expedicao"
-                int rowCount = retorno.Count;
-                // Colunas que devem mudar de cor quando A2 <> B2
-                string[] columnsToFormat = { "A", "B", "C" };
-
-                foreach (string col in columnsToFormat)
+                var path = SistemaPathResolver.GetImpressosPath("QUERY_CARGAS_MONTAGEM.xlsx");
+                using (var workbook = new XLWorkbook())
                 {
-                    string range = $"{col}2:{col}{rowCount + 1}"; // Exemplo: "A2:A6"
+                    var worksheet = workbook.Worksheets.Add("QUERY CARGAS MONTAGEM");
+                    worksheet.Cell(1, 1).InsertTable(retorno);
+                    worksheet.Columns().AdjustToContents();
 
-                    // Criar a formatação condicional para cada coluna
-                    IConditionalFormats conditionalFormats = worksheet.Range[range].ConditionalFormats;
-                    IConditionalFormat condition = conditionalFormats.AddCondition();
+                    var rowCount = retorno.Count + 1;
+                    for (var row = 2; row <= rowCount; row++)
+                    {
+                        if (worksheet.Cell(row, 1).GetString() != worksheet.Cell(row, 2).GetString())
+                        {
+                            worksheet.Range(row, 1, row, 3).Style.Fill.BackgroundColor = XLColor.Yellow;
+                        }
+                    }
 
-                    // Definir o tipo como Fórmula
-                    condition.FormatType = ExcelCFType.Formula;
-                    condition.FirstFormula = $"=$A2<>$B2";  // Baseando-se na diferença entre A2 e B2
-
-                    // Definir a cor de fundo quando a condição for verdadeira
-                    condition.BackColorRGB = Color.Yellow;
+                    workbook.SaveAs(path);
                 }
 
-                workbook.SaveAs(@$"{BaseSettings.CaminhoSistema}Impressos\QUERY_CARGAS_MONTAGEM.xlsx");
-                Process.Start(new ProcessStartInfo(@$"{BaseSettings.CaminhoSistema}Impressos\QUERY_CARGAS_MONTAGEM.xlsx")
-                {
-                    UseShellExecute = true
-                });
+                SistemaPathResolver.OpenFile(path);
 
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
 
@@ -234,12 +183,12 @@ namespace Operacional
             catch (DbUpdateException ex)
             {
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Operacional.ErrorDialog.Show(ex, "Erro");
             }
             catch (Exception ex)  // Para qualquer outro erro
             {
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Operacional.ErrorDialog.Show(ex, "Erro");
             }
         }
 
@@ -286,23 +235,15 @@ namespace Operacional
 
                 await connection.CloseAsync();
 
-                using ExcelEngine excelEngine = new();
-                IApplication application = excelEngine.Excel;
-                application.DefaultVersion = ExcelVersion.Excel2016;
-
-                // Create a workbook
-                IWorkbook workbook = application.Workbooks.Create(1);
-                IWorksheet worksheet = workbook.Worksheets[0];
-
-                // Import the DataTable
-                worksheet.ImportDataTable(dataTable, true, 1, 1);
-
-                workbook.SaveAs(@$"{BaseSettings.CaminhoSistema}Impressos\DATAS-MONTAGEM.xlsx");
-
-                Process.Start(new ProcessStartInfo(@$"{BaseSettings.CaminhoSistema}Impressos\DATAS-MONTAGEM.xlsx")
+                var path = SistemaPathResolver.GetImpressosPath("DATAS-MONTAGEM.xlsx");
+                using (var workbook = new XLWorkbook())
                 {
-                    UseShellExecute = true
-                });
+                    var worksheet = workbook.Worksheets.Add(dataTable, "DATAS MONTAGEM");
+                    worksheet.Columns().AdjustToContents();
+                    workbook.SaveAs(path);
+                }
+
+                SistemaPathResolver.OpenFile(path);
 
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
 
@@ -310,12 +251,12 @@ namespace Operacional
             catch (DbUpdateException ex)
             {
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Operacional.ErrorDialog.Show(ex, "Erro");
             }
             catch (Exception ex)  // Para qualquer outro erro
             {
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Operacional.ErrorDialog.Show(ex, "Erro");
             }
         }
 
@@ -323,30 +264,21 @@ namespace Operacional
         {
             try
             {
-                //using Context context = new();
-                //var retorno = await context.QryCargasDesmontagem.AsNoTracking().ToListAsync();
-
                 using var conn = new NpgsqlConnection(BaseSettings.ConnectionString);
                 var sql = @"SELECT * FROM operacional.qrytranspdesmont_detalhes ORDER BY data_chegada_shopping, sigla_serv";
                 var lista = (await conn.QueryAsync<TranspDesmontDetalheModel>(sql)).ToList();
                 var retorno = new ObservableCollection<TranspDesmontDetalheModel>(lista);
 
-                using ExcelEngine excelEngine = new();
-                IApplication application = excelEngine.Excel;
-
-                application.DefaultVersion = ExcelVersion.Xlsx;
-
-                //Create a workbook
-                IWorkbook workbook = application.Workbooks.Create(1);
-                IWorksheet worksheet = workbook.Worksheets[0];
-                //worksheet.IsGridLinesVisible = false;
-                worksheet.ImportData(retorno, 1, 1, true);
-
-                workbook.SaveAs(@$"{BaseSettings.CaminhoSistema}Impressos\QUERY_CARGAS_DESMONTAGEM.xlsx");
-                Process.Start(new ProcessStartInfo(@$"{BaseSettings.CaminhoSistema}Impressos\QUERY_CARGAS_DESMONTAGEM.xlsx")
+                var path = SistemaPathResolver.GetImpressosPath("QUERY_CARGAS_DESMONTAGEM.xlsx");
+                using (var workbook = new XLWorkbook())
                 {
-                    UseShellExecute = true
-                });
+                    var worksheet = workbook.Worksheets.Add("QUERY CARGAS DESMONTAGEM");
+                    worksheet.Cell(1, 1).InsertTable(retorno);
+                    worksheet.Columns().AdjustToContents();
+                    workbook.SaveAs(path);
+                }
+
+                SistemaPathResolver.OpenFile(path);
 
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
 
@@ -354,12 +286,12 @@ namespace Operacional
             catch (DbUpdateException ex)
             {
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Operacional.ErrorDialog.Show(ex, "Erro");
             }
             catch (Exception ex)  // Para qualquer outro erro
             {
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Operacional.ErrorDialog.Show(ex, "Erro");
             }
         }
 
@@ -392,30 +324,23 @@ namespace Operacional
         {
             try
             {
-                using Context context = new();
-                var retorno = await context.OperacionalNoitescronogPessoas
-                    .Where(p => p.qtd_pessoas>0)
-                    .OrderBy(p => p.sigla)
-                    .ThenBy(p => p.fase)
-                    .ThenBy(p => p.funcao)
-                    .AsNoTracking().ToListAsync();
+                using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+                var retorno = (await connection.QueryAsync<OperacionalNoitescronogPessoaFuncaoModel>(
+                    @"SELECT *
+                      FROM operacional.tblnoitescronog_qtd_pessoa_funcao
+                      WHERE qtd_pessoas > 0
+                      ORDER BY sigla, fase, funcao;")).ToList();
 
-                using ExcelEngine excelEngine = new();
-                IApplication application = excelEngine.Excel;
-
-                application.DefaultVersion = ExcelVersion.Xlsx;
-
-                //Create a workbook
-                IWorkbook workbook = application.Workbooks.Create(1);
-                IWorksheet worksheet = workbook.Worksheets[0];
-                //worksheet.IsGridLinesVisible = false;
-                worksheet.ImportData(retorno, 1, 1, true);
-
-                workbook.SaveAs(@$"{BaseSettings.CaminhoSistema}Impressos\QUERY_FUNCOES_CRONOGRAMA.xlsx");
-                Process.Start(new ProcessStartInfo(@$"{BaseSettings.CaminhoSistema}Impressos\QUERY_FUNCOES_CRONOGRAMA.xlsx")
+                var path = SistemaPathResolver.GetImpressosPath("QUERY_FUNCOES_CRONOGRAMA.xlsx");
+                using (var workbook = new XLWorkbook())
                 {
-                    UseShellExecute = true
-                });
+                    var worksheet = workbook.Worksheets.Add("FUNCOES CRONOGRAMA");
+                    worksheet.Cell(1, 1).InsertTable(retorno);
+                    worksheet.Columns().AdjustToContents();
+                    workbook.SaveAs(path);
+                }
+
+                SistemaPathResolver.OpenFile(path);
 
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
 
@@ -423,12 +348,12 @@ namespace Operacional
             catch (DbUpdateException ex)
             {
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Operacional.ErrorDialog.Show(ex, "Erro");
             }
             catch (Exception ex)  // Para qualquer outro erro
             {
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Operacional.ErrorDialog.Show(ex, "Erro");
             }
         }
 
@@ -502,7 +427,7 @@ namespace Operacional
             catch (Exception ex)
             {
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-                MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Operacional.ErrorDialog.Show(ex, "Erro inesperado");
             }
             */
         }
@@ -584,7 +509,7 @@ namespace Operacional
                 });
                 */
 
-                var path = @$"{BaseSettings.CaminhoSistema}Impressos\CONSULTA-GERAL-MANUTENCAO.xlsx";
+                var path = SistemaPathResolver.GetImpressosPath("CONSULTA-GERAL-MANUTENCAO.xlsx");
 
                 // Salva em background (ClosedXML é síncrono)
                 await Task.Run(() =>
@@ -605,7 +530,7 @@ namespace Operacional
                 });
 
                 // abrir
-                Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+                SistemaPathResolver.OpenFile(path);
 
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
 
@@ -613,12 +538,12 @@ namespace Operacional
             catch (DbUpdateException ex)
             {
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Operacional.ErrorDialog.Show(ex, "Erro");
             }
             catch (Exception ex)  // Para qualquer outro erro
             {
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Operacional.ErrorDialog.Show(ex, "Erro");
             }
         }
 
@@ -679,7 +604,7 @@ namespace Operacional
 
                 await connection.CloseAsync();
 
-                var path = @$"{BaseSettings.CaminhoSistema}Impressos\CONTROLE-DOCUMENTOS.xlsx";
+                var path = SistemaPathResolver.GetImpressosPath("CONTROLE-DOCUMENTOS.xlsx");
 
                 // Salva em background (ClosedXML é síncrono)
                 await Task.Run(() =>
@@ -700,7 +625,7 @@ namespace Operacional
                 });
 
                 // abrir
-                Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+                SistemaPathResolver.OpenFile(path);
 
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
 
@@ -708,12 +633,12 @@ namespace Operacional
             catch (DbUpdateException ex)
             {
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Operacional.ErrorDialog.Show(ex, "Erro");
             }
             catch (Exception ex)  // Para qualquer outro erro
             {
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                Operacional.ErrorDialog.Show(ex, "Erro");
             }
         }
 

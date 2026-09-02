@@ -1,6 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using Dapper;
-using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Operacional.DataBase;
 using Operacional.DataBase.Models;
@@ -40,7 +39,7 @@ public partial class CargaDesmontagem : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
         }
     }
@@ -93,7 +92,7 @@ public partial class CargaDesmontagem : UserControl
             catch (Exception ex)
             {
                 // Tratar erro e possivelmente reverter alterações
-                MessageBox.Show($"Erro ao salvar: {ex.Message}");
+                Operacional.ErrorDialog.Show(ex, "Erro ao salvar");
                 //e.EditAction = GridViewEditAction.Cancel; // Cancela a edição
             }
         }

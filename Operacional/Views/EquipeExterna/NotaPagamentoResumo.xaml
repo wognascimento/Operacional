@@ -41,6 +41,8 @@
                 <telerik:GridViewDataColumn Header="DATA PAGAMENTO" DataMemberBinding="{Binding data_pagto}" DataFormatString="{} {0:dd/MM/yyyy}" IsFilterable="False"  />
                 <telerik:GridViewDataColumn Header="SALDO" DataMemberBinding="{Binding saldo}" DataFormatString="{}{0:C2}"/>
                 <telerik:GridViewDataColumn Header="EMPRESA PAGADORA" DataMemberBinding="{Binding empresa_pagadora}"/>
+                <telerik:GridViewCheckBoxColumn Header="ENVIADO" DataMemberBinding="{Binding enviado_fluxo}" IsReadOnly="True" IsFilterable="False"/>
+                <telerik:GridViewDataColumn Header="LINHA FLUXO" DataMemberBinding="{Binding linha_fluxo}" IsReadOnly="True" IsFilterable="False"/>
                 
             </telerik:RadGridView.Columns>
         </telerik:RadGridView>

@@ -1,5 +1,7 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.EntityFrameworkCore;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Dapper;
+using Npgsql;
+using Operacional.DataBase;
 using Operacional.DataBase.Models;
 using Operacional.Views.Despesa;
 using System;
@@ -43,7 +45,7 @@ public partial class Contato : UserControl
         catch (Exception ex)
         {
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-            MessageBox.Show(ex.Message, "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro");
         }
     }
 
@@ -75,32 +77,59 @@ public partial class Contato : UserControl
         catch (Exception ex)  // Para qualquer outro erro
         {
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-            MessageBox.Show(ex.Message, "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro");
         }
     }
 }
 
 public partial class ContatoViewModel : ObservableObject
 {
+    private readonly DataBaseSettings _dataBaseSettings = DataBaseSettings.Instance;
+
     [ObservableProperty]
     private ObservableCollection<EquipeExternaContatoModel> contatos;
 
     public async Task LoadContatos()
     {
-        using Context context = new();
-        var contatosList = await Task.Run(() => context.EquipeExternaContatos.ToList());
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var contatosList = await connection.QueryAsync<EquipeExternaContatoModel>(
+            @"SELECT *
+              FROM equipe_externa.tbl_contatos
+              ORDER BY nome;");
+
         Contatos = new ObservableCollection<EquipeExternaContatoModel>(contatosList);
     }
 
     public async Task AdcionarContato(EquipeExternaContatoModel model)
     {
-        using Context context = new();
-        var modelExistente = await context.EquipeExternaContatos.FindAsync(model.cod_linha);
-        if (modelExistente == null)
-            context.EquipeExternaContatos.Add(model);
-        else
-            context.Entry(modelExistente).CurrentValues.SetValues(model);
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
 
-        await context.SaveChangesAsync();
+        if (model.cod_linha is null or <= 0)
+        {
+            model.cod_linha = await connection.ExecuteScalarAsync<long>(@"
+                INSERT INTO equipe_externa.tbl_contatos
+                (nome, funcao, tel_1, tel_2, e_mail)
+                VALUES (@nome, @funcao, @tel_1, @tel_2, @e_mail)
+                RETURNING cod_linha;",
+                model);
+
+            return;
+        }
+
+        var linhas = await connection.ExecuteAsync(@"
+            UPDATE equipe_externa.tbl_contatos
+            SET nome = @nome,
+                funcao = @funcao,
+                tel_1 = @tel_1,
+                tel_2 = @tel_2,
+                e_mail = @e_mail
+            WHERE cod_linha = @cod_linha;",
+            model);
+
+        if (linhas == 0)
+        {
+            model.cod_linha = null;
+            await AdcionarContato(model);
+        }
     }
 }

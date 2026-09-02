@@ -1,5 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Dapper;
 using Npgsql;
+using Operacional.DataBase;
 using Operacional.DataBase.Models;
 using Operacional.DataBase.Models.DTOs;
 using System.Collections.ObjectModel;
@@ -34,12 +35,12 @@ namespace Operacional.Views.Transporte
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show(ex.Message);
+                Operacional.ErrorDialog.Show(ex, "Erro");
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                Operacional.ErrorDialog.Show(ex, "Erro");
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
             }
         }
@@ -85,14 +86,15 @@ namespace Operacional.Views.Transporte
             catch (DbUpdateException ex)
             {
                 e.IsValid = false;
-                MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-                //MessageBox.Show(ex.InnerException.Message);
+                Operacional.ErrorDialog.Show(ex, "Erro");
+                //Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
             }
         }
     }
 
     class DataEfetivaViewModel : INotifyPropertyChanged
     {
+        private readonly DataBaseSettings _dataBaseSettings = DataBaseSettings.Instance;
         public event PropertyChangedEventHandler PropertyChanged;
         public void RaisePropertyChanged(string propName) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
@@ -113,9 +115,8 @@ namespace Operacional.Views.Transporte
         {
             try
             {
-                using Context db = new();
-
-                await db.Database.ExecuteSqlRawAsync(@"
+                using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+                await connection.ExecuteAsync(@"
                     INSERT INTO operacional.t_data_efetiva (siglaserv, data_inicio_montagem, prazotransportecliente)
                     SELECT c.siglaserv, '2025-12-25', 0
                     FROM operacional.t_transportes_mont c
@@ -136,10 +137,11 @@ namespace Operacional.Views.Transporte
 
         public async Task<ObservableCollection<QryDataEfetivaModel>> GetDataEfetivaAsync()
         {
-            using Context context = new();
             try
             {
-                var retorno = await context.QryDatasEfetiva.AsNoTracking().ToListAsync();
+                using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+                var retorno = await connection.QueryAsync<QryDataEfetivaModel>(
+                    "SELECT * FROM operacional.qry_data_efetiva;");
                 return new ObservableCollection<QryDataEfetivaModel>(retorno);
             }
             catch (DbException ex)  // Para erros de banco de dados
@@ -156,16 +158,26 @@ namespace Operacional.Views.Transporte
         {
             try
             {
-                using Context context = new();
-                var dataEfetivaExistente = await context.DatasEfetiva.FindAsync(dataEfetiva.siglaserv);
-                if (dataEfetivaExistente == null)
-                    return false; // Registro não encontrado
-                // Atualiza apenas os campos que foram modificados
-                context.Entry(dataEfetivaExistente).CurrentValues.SetValues(dataEfetiva);
-                // Salva as mudanças no banco de dados
-                await context.SaveChangesAsync();
+                using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+                var sql = @"
+                    UPDATE operacional.t_data_efetiva
+                    SET
+                        data_inicio_montagem = @data_inicio_montagem,
+                        data_termino_montagem = @data_termino_montagem,
+                        data_inauguracao = @data_inauguracao,
+                        data_inicio_desmontagem = @data_inicio_desmontagem,
+                        data_final_desmontagem = @data_final_desmontagem,
+                        data_libera_area_desmontagem = @data_libera_area_desmontagem,
+                        prazotransportecliente = @prazotransportecliente,
+                        data_informada_cliente = @data_informada_cliente,
+                        obs_data_inicio_montagem = @obs_data_inicio_montagem,
+                        obs_data_termino_montagem = @obs_data_termino_montagem,
+                        obs_desmontagem = @obs_desmontagem,
+                        data_combinada_mo_inicio = @data_combinada_mo_inicio,
+                        data_combinada_mo_fim = @data_combinada_mo_fim
+                    WHERE siglaserv = @siglaserv;";
 
-                return true;
+                return await connection.ExecuteAsync(sql, dataEfetiva) > 0;
             }
             catch (DbUpdateException)
             {

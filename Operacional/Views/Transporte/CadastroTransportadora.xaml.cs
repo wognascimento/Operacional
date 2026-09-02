@@ -1,6 +1,7 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.EntityFrameworkCore;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Dapper;
 using Npgsql;
+using Operacional.DataBase;
 using Operacional.DataBase.Models;
 using System.Collections.ObjectModel;
 using System.Windows;
@@ -37,7 +38,7 @@ public partial class CadastroTransportadora : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
         }
     }
@@ -59,7 +60,7 @@ public partial class CadastroTransportadora : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
         }
     }
@@ -67,28 +68,67 @@ public partial class CadastroTransportadora : UserControl
 
 public partial class CadastroTransportadoraViewModel : ObservableObject
 {
+    private readonly DataBaseSettings _dataBaseSettings = DataBaseSettings.Instance;
+
     [ObservableProperty]
     private ObservableCollection<TranportadoraModel> transportadoras;
 
     public async Task<ObservableCollection<TranportadoraModel>> GetTransportadorasAsync()
     {
-        using var _db = new Context();
-        var result = await _db.Tranportadoras
-            .OrderBy(f => f.nometransportadora)
-            .ToListAsync();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<TranportadoraModel>(
+            @"SELECT *
+              FROM operacional.tbltranportadoras
+              ORDER BY nometransportadora;");
+
         return new ObservableCollection<TranportadoraModel>(result);
     }
 
     public async Task<bool> AddTransportadoraAsync(TranportadoraModel model)
     {
-        using var db = new Context();
-        var modelExistente = await db.Tranportadoras.FindAsync(model.codtransportadora);
-        if (modelExistente == null)
-            await db.Tranportadoras.AddAsync(model);
-        else
-            db.Entry(modelExistente).CurrentValues.SetValues(model);
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
 
-        await db.SaveChangesAsync();
+        if (model.codtransportadora is null or <= 0)
+        {
+            model.codtransportadora = await connection.ExecuteScalarAsync<long>(@"
+                INSERT INTO operacional.tbltranportadoras
+                (nometransportadora, cep, endereco, bairro, cidade, uf, ie, ccm,
+                 cnpj, ddd, fone_1, fone_2, contato, id_nextel)
+                VALUES
+                (@nometransportadora, @cep, @endereco, @bairro, @cidade, @uf, @ie, @ccm,
+                 @cnpj, @ddd, @fone_1, @fone_2, @contato, @id_nextel)
+                RETURNING codtransportadora;",
+                model);
+
+            return true;
+        }
+
+        var linhas = await connection.ExecuteAsync(@"
+            UPDATE operacional.tbltranportadoras
+            SET
+                nometransportadora = @nometransportadora,
+                cep = @cep,
+                endereco = @endereco,
+                bairro = @bairro,
+                cidade = @cidade,
+                uf = @uf,
+                ie = @ie,
+                ccm = @ccm,
+                cnpj = @cnpj,
+                ddd = @ddd,
+                fone_1 = @fone_1,
+                fone_2 = @fone_2,
+                contato = @contato,
+                id_nextel = @id_nextel
+            WHERE codtransportadora = @codtransportadora;",
+            model);
+
+        if (linhas == 0)
+        {
+            model.codtransportadora = null;
+            await AddTransportadoraAsync(model);
+        }
+
         return true;
     }
 }

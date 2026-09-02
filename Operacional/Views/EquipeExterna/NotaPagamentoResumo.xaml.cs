@@ -1,6 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using Dapper;
-using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Operacional.DataBase;
 using Operacional.DataBase.Models;
@@ -50,7 +49,7 @@ public partial class NotaPagamentoResumo : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
         }
     }
@@ -64,6 +63,12 @@ public partial class NotaPagamentoResumo : UserControl
             NotaPagamentoResumoViewModel vm = (NotaPagamentoResumoViewModel)DataContext;
             var selectedItem = radResumo.CurrentCellInfo.Item;
             var dataObject = selectedItem as RelatorioResumoDTO;
+            if (dataObject is null)
+            {
+                MessageBox.Show("Selecione um lançamento para enviar ao fluxo.", "Enviar Fluxo", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
             var equipe = await vm.GetEquipeAsync(dataObject.equipe);
 
             var d = dataObject.data_pagto;
@@ -94,15 +99,23 @@ public partial class NotaPagamentoResumo : UserControl
                 Cnpj = equipe.cgc
             };
 
-            var linha = await vm.GetLinhaFluxoAsync(fluxo.NumeroDocumento, fluxo.DataPagamento, fluxo.Conta, fluxo.Cnpj);
-            if (!string.IsNullOrEmpty(linha))
+            var linha = await vm.GetLinhaFluxoAsync(fluxo.NumeroDocumento, fluxo.DataPagamento, fluxo.Cnpj);
+            if (linha.HasValue)
             {
-                MessageBox.Show($"Lançamento já existe no financeiro (linha_fluxo: {linha}).", "Atenção", MessageBoxButton.OK, MessageBoxImage.Warning);
+                await vm.MarcarResumoEnviadoFluxoAsync(dataObject);
+                dataObject.linha_fluxo = linha.Value;
+                radResumo.Rebind();
+
+                MessageBox.Show($"Lançamento já existe no financeiro (linha_fluxo: {linha}). A origem foi marcada como enviada.", "Atenção", MessageBoxButton.OK, MessageBoxImage.Warning);
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
                 return;
             }
 
             int idGerado = await vm.InsertFluxoAsync(fluxo);
+            await vm.MarcarResumoEnviadoFluxoAsync(dataObject);
+            dataObject.linha_fluxo = idGerado;
+            radResumo.Rebind();
+
             MessageBox.Show($"Lançamento inserido com sucesso! Id: {idGerado}", "Sucesso", MessageBoxButton.OK, MessageBoxImage.Information);
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
         }
@@ -113,7 +126,7 @@ public partial class NotaPagamentoResumo : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
         }
 
@@ -129,113 +142,125 @@ public partial class NotaPagamentoResumoViewModel : ObservableObject
 
     public async Task<ObservableCollection<RelatorioResumoDTO>> GetPagamentosEquipeResumoAsync(long id_equipe)
     {
-        using var _db = new Context();
+        const string sql = @"
+            SELECT
+                empresa_nf AS equipe,
+                numero_nf,
+                data,
+                data_pagto,
+                empresa_pagadora,
+                SUM(valor_detalhe) AS valor_detalhe,
+                SUM(saldo) AS saldo,
+                MAX(fluxo.linha_fluxo) AS linha_fluxo
+            FROM equipe_externa.tbl_detalhes_relatorio detalhe
+            LEFT JOIN equipe_externa.tblequipesext equipe
+                ON equipe.equipe_e = detalhe.empresa_nf
+            LEFT JOIN financeiro.fluxo fluxo
+                ON fluxo.data_pagamento = detalhe.data_pagto
+               AND fluxo.cnpj = equipe.cgc
+               AND fluxo.numero_documento = detalhe.numero_nf
+            WHERE detalhe.id_equipe = @id_equipe
+            GROUP BY empresa_nf, numero_nf, data, data_pagto, empresa_pagadora
+            ORDER BY empresa_nf, numero_nf;";
 
-        var result = await _db.RelatorioDetalhes
-            .Where(f => f.id_equipe == id_equipe)
-            .GroupBy(f => new 
-            {
-                f.empresa_nf,
-                //f.tipo_detalhe,
-                //f.descricao,
-                f.numero_nf,
-                f.data,
-                f.data_pagto,
-                f.empresa_pagadora
-            })
-            .Select(g => new RelatorioResumoDTO
-            {
-                equipe = g.Key.empresa_nf,
-                //tipo_detalhe = g.Key.tipo_detalhe,
-                //descricao = g.Key.descricao,
-                numero_nf = g.Key.numero_nf,
-                data = (DateTime)g.Key.data,
-                data_pagto = (DateTime)g.Key.data_pagto,
-                empresa_pagadora = g.Key.empresa_pagadora,
-                valor_detalhe = g.Sum(x => x.valor_detalhe),
-                saldo = g.Sum(x => x.saldo)
-                // Se quiser manter outros campos (ex.: codrelatorio), pode usar g.Select(x => x.campo).FirstOrDefault()
-            })
-            .OrderBy(r => r.equipe)
-            .ThenBy(r => r.numero_nf)
-            .ToListAsync();
+        await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<RelatorioResumoDTO>(sql, new { id_equipe });
 
         return new ObservableCollection<RelatorioResumoDTO>(result);
     }
 
     public async Task<ObservableCollection<RelatorioResumoDTO>> GetPagamentosEquipeResumoAsync()
     {
-        using var _db = new Context();
+        const string sql = @"
+            SELECT
+                empresa_nf AS equipe,
+                numero_nf,
+                data,
+                data_pagto,
+                empresa_pagadora,
+                SUM(valor_detalhe) AS valor_detalhe,
+                SUM(saldo) AS saldo,
+                MAX(fluxo.linha_fluxo) AS linha_fluxo
+            FROM equipe_externa.tbl_detalhes_relatorio detalhe
+            LEFT JOIN equipe_externa.tblequipesext equipe
+                ON equipe.equipe_e = detalhe.empresa_nf
+            LEFT JOIN financeiro.fluxo fluxo
+                ON fluxo.data_pagamento = detalhe.data_pagto
+               AND fluxo.cnpj = equipe.cgc
+               AND fluxo.numero_documento = detalhe.numero_nf
+            GROUP BY empresa_nf, numero_nf, data, data_pagto, empresa_pagadora
+            ORDER BY empresa_nf, numero_nf;";
 
-        var result = await _db.RelatorioDetalhes
-            .GroupBy(f => new
-            {
-                f.empresa_nf,
-                //f.tipo_detalhe,
-                //f.descricao,
-                f.numero_nf,
-                f.data,
-                f.data_pagto,
-                f.empresa_pagadora
-            })
-            .Select(g => new RelatorioResumoDTO
-            {
-                equipe = g.Key.empresa_nf,
-                //tipo_detalhe = g.Key.tipo_detalhe,
-                //descricao = g.Key.descricao,
-                numero_nf = g.Key.numero_nf,
-                data = (DateTime)g.Key.data,
-                data_pagto = (DateTime)g.Key.data_pagto,
-                empresa_pagadora = g.Key.empresa_pagadora,
-                valor_detalhe = g.Sum(x => x.valor_detalhe),
-                saldo = g.Sum(x => x.saldo)
-                // Se quiser manter outros campos (ex.: codrelatorio), pode usar g.Select(x => x.campo).FirstOrDefault()
-            })
-            .OrderBy(r => r.equipe)
-            .ThenBy(r => r.numero_nf)
-            .ToListAsync();
+        await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<RelatorioResumoDTO>(sql);
 
         return new ObservableCollection<RelatorioResumoDTO>(result);
     }
 
     public async Task<string> GetContaAsync(string empresa_pagadora)
     {
-        using var _db = new Context();
-        var conta = await _db.ComprasEmpresas
-            .Where(e => e.abreviacao == empresa_pagadora)
-            .Select(e => e.conta)
-            .FirstOrDefaultAsync();
-        return conta;
+        await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+        return await connection.QueryFirstOrDefaultAsync<string>(
+            @"SELECT conta
+              FROM compras.tblempresa
+              WHERE abreviacao = @empresa_pagadora
+              LIMIT 1;",
+            new { empresa_pagadora });
     }
 
     public async Task<EquipeExternaEquipeModel> GetEquipeAsync(string equipe)
     {
-        using var _db = new Context();
-        var razaosocial = await _db.Equipes
-            .FirstOrDefaultAsync(e => e.equipe_e == equipe);
-        return razaosocial;
+        await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+        return await connection.QueryFirstOrDefaultAsync<EquipeExternaEquipeModel>(
+            @"SELECT *
+              FROM equipe_externa.tblequipesext
+              WHERE equipe_e = @equipe
+              LIMIT 1;",
+            new { equipe });
     }
 
-    public async Task<string?> GetLinhaFluxoAsync(string numeroDocumento, DateTime dataPagamento, string conta, string cnpj, CancellationToken ct = default)
+    public async Task<int?> GetLinhaFluxoAsync(string numeroDocumento, DateTime dataPagamento, string cnpj, CancellationToken ct = default)
     {
         const string sql = @"
             SELECT linha_fluxo
             FROM financeiro.fluxo
             WHERE numero_documento = @NumeroDocumento
               AND data_pagamento = @DataPagamento
-              AND conta = @Conta
               AND cnpj = @Cnpj
             LIMIT 1;
         ";
 
         await using var conn = new NpgsqlConnection(BaseSettings.ConnectionString);
         await conn.OpenAsync(ct);
-        return await conn.QueryFirstOrDefaultAsync<string>(sql, new
+        return await conn.QueryFirstOrDefaultAsync<int?>(sql, new
         {
             NumeroDocumento = numeroDocumento,
-            DataPagamento = dataPagamento,   // se você quer comparar com hora também
-            Conta = conta,
+            DataPagamento = dataPagamento.Date,
             Cnpj = cnpj
+        });
+    }
+
+    public async Task MarcarResumoEnviadoFluxoAsync(RelatorioResumoDTO resumo, CancellationToken ct = default)
+    {
+        const string sql = @"
+            UPDATE equipe_externa.tbl_detalhes_relatorio
+            SET envia_fluxo = true,
+                enviado_fluxo_em = @enviado_fluxo_em,
+                enviado_fluxo_por = @enviado_fluxo_por
+            WHERE empresa_nf = @equipe
+              AND numero_nf = @numero_nf
+              AND data_pagto = @data_pagto
+              AND empresa_pagadora = @empresa_pagadora;";
+
+        await using var conn = new NpgsqlConnection(BaseSettings.ConnectionString);
+        await conn.ExecuteAsync(sql, new
+        {
+            resumo.equipe,
+            resumo.numero_nf,
+            data_pagto = resumo.data_pagto.Date,
+            resumo.empresa_pagadora,
+            enviado_fluxo_em = DateTime.Now,
+            enviado_fluxo_por = BaseSettings.Username
         });
     }
 

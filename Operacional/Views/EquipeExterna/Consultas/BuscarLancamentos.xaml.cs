@@ -1,4 +1,3 @@
-﻿using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Operacional.DataBase.Models.DTOs.Api;
 using System.Windows;
@@ -40,7 +39,7 @@ public partial class BuscarLancamentos : RadWindow
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
         }
     }
 
@@ -63,7 +62,7 @@ public partial class BuscarLancamentos : RadWindow
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
         }
         
     }
@@ -89,7 +88,7 @@ public partial class BuscarLancamentos : RadWindow
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
         }
         
     }

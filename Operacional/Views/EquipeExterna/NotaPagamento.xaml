@@ -63,6 +63,7 @@
             NewRowPosition="Bottom"
             ItemsSource="{Binding RelatorioDetalhes}"
             AddingNewDataItem="RadGridView_AddingNewDataItem"
+            BeginningEdit="Pagamentos_BeginningEdit"
             RowValidating="Pagamentos_RowValidating" 
             RowValidated="RadGridView_RowValidated" >
             <telerik:RadGridView.Columns>

@@ -1,5 +1,7 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.EntityFrameworkCore;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Dapper;
+using Npgsql;
+using Operacional.DataBase;
 using Operacional.DataBase.Models;
 using Operacional.Views.Cronograma;
 using System;
@@ -47,7 +49,7 @@ public partial class RelatorioNoturnoDiario : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro");
         }
     }
 
@@ -100,7 +102,7 @@ public partial class RelatorioNoturnoDiario : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro");
         }
     }
 
@@ -108,6 +110,8 @@ public partial class RelatorioNoturnoDiario : UserControl
 
 public partial class RelatorioNoturnoDiarioViewModel : ObservableObject
 {
+    private readonly DataBaseSettings _dataBaseSettings = DataBaseSettings.Instance;
+
     [ObservableProperty]
     private ObservableCollection<ProducaoAprovadoModel> aprovados;
 
@@ -126,41 +130,77 @@ public partial class RelatorioNoturnoDiarioViewModel : ObservableObject
 
     public async Task LoadAprovados()
     {
-        using Context context = new();
-        var list = await context.ProducaoAprovados
-            .OrderBy(x => x.nome)
-            .ToListAsync();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var list = await connection.QueryAsync<ProducaoAprovadoModel>(
+            @"SELECT *
+              FROM producao.t_aprovados
+              ORDER BY nome;");
+
         Aprovados = new ObservableCollection<ProducaoAprovadoModel>(list);
     }
 
     public async Task LoadRelatorios()
     {
-        using Context context = new();
-        var list = await context.OperacionalRelatorioNoturnos
-            .OrderByDescending(x => x.data)
-            .ThenBy(x => x.sigla)
-            .ToListAsync();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var list = await connection.QueryAsync<OperacionalRelatorioNoturnoModel>(
+            @"SELECT *
+              FROM operacional.tbl_relatorio_noturno
+              ORDER BY data DESC, sigla;");
+
         Relatorios = new ObservableCollection<OperacionalRelatorioNoturnoModel>(list);
     }
 
     public async Task LoadDeptos()
     {
-        using Context context = new();
-        var list = await context.OperacionalRelatorioNoturnoDptos
-            .OrderBy(x => x.depto)
-            .ToListAsync();
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+        var list = await connection.QueryAsync<OperacionalRelatorioNoturnoDeptoModel>(
+            @"SELECT *
+              FROM operacional.tbl_relatorio_noturno_depto
+              ORDER BY depto;");
+
         Deptos = new ObservableCollection<OperacionalRelatorioNoturnoDeptoModel>(list);
     }
 
     public async Task AtualizarRelatorioAsync(OperacionalRelatorioNoturnoModel model)
     {
-        using var db = new Context();
-        var modelExistente = await db.OperacionalRelatorioNoturnos.FindAsync(model.cod_relatorio_noturno);
-        if (modelExistente == null)
-            await db.OperacionalRelatorioNoturnos.AddAsync(model);
-        else
-            db.Entry(modelExistente).CurrentValues.SetValues(model);
+        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
 
-        await db.SaveChangesAsync();
+        if (model.cod_relatorio_noturno is null or <= 0)
+        {
+            model.cod_relatorio_noturno = await connection.ExecuteScalarAsync<long>(@"
+                INSERT INTO operacional.tbl_relatorio_noturno
+                (sigla, data, depto, detalhe, classificacao_detalhe, noite,
+                 coordenador, grau_de_urgencia, retorno_informacao, inserido_por, inserido_em)
+                VALUES
+                (@sigla, @data, @depto, @detalhe, @classificacao_detalhe, @noite,
+                 @coordenador, @grau_de_urgencia, @retorno_informacao, @inserido_por, @inserido_em)
+                RETURNING cod_relatorio_noturno;",
+                model);
+
+            return;
+        }
+
+        var linhas = await connection.ExecuteAsync(@"
+            UPDATE operacional.tbl_relatorio_noturno
+            SET
+                sigla = @sigla,
+                data = @data,
+                depto = @depto,
+                detalhe = @detalhe,
+                classificacao_detalhe = @classificacao_detalhe,
+                noite = @noite,
+                coordenador = @coordenador,
+                grau_de_urgencia = @grau_de_urgencia,
+                retorno_informacao = @retorno_informacao,
+                inserido_por = @inserido_por,
+                inserido_em = @inserido_em
+            WHERE cod_relatorio_noturno = @cod_relatorio_noturno;",
+            model);
+
+        if (linhas == 0)
+        {
+            model.cod_relatorio_noturno = null;
+            await AtualizarRelatorioAsync(model);
+        }
     }
 }

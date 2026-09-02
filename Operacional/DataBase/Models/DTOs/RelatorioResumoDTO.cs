@@ -11,4 +11,6 @@ public class RelatorioResumoDTO
     public DateTime data { get; set; }
     public DateTime data_pagto { get; set; }
     public string? empresa_pagadora { get; set; }
+    public int? linha_fluxo { get; set; }
+    public bool enviado_fluxo => linha_fluxo.HasValue;
 }

@@ -2,12 +2,15 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows7.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>icones\logo.ico</ApplicationIcon>
-    <AssemblyVersion>1.0.0.43</AssemblyVersion>
+    <Version>2.0.0.0</Version>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <FileVersion>2.0.0.0</FileVersion>
+    <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -55,15 +58,14 @@
 
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.105.0" />
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-    <PackageReference Include="Dapper" Version="2.1.66" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Dapper" Version="2.1.79" />
     <PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
     <PackageReference Include="DocX" Version="5.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
-    <PackageReference Include="Syncfusion.UI.WPF.NET" Version="27.1.58" />
-    <PackageReference Include="System.DirectoryServices.AccountManagement" Version="10.0.0" />
-    <PackageReference Include="telerik.ui.for.wpf.60.xaml" Version="2024.4.1111" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+    <PackageReference Include="System.DirectoryServices.AccountManagement" Version="10.0.8" />
+    <PackageReference Include="Telerik.UI.for.Wpf.80.Xaml" Version="2025.2.521" />
   </ItemGroup>
 
   <ItemGroup>

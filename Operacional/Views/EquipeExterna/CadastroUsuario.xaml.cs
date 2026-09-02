@@ -1,6 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using Dapper;
-using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Npgsql;
 using Operacional.DataBase;
@@ -46,7 +45,7 @@ public partial class CadastroUsuario : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Erro inesperado: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
         }
     }
@@ -375,85 +374,55 @@ public partial class CadastroUsuarioViewModel : ObservableObject
 
     public async Task<ObservableCollection<EquipeExternaUsuarioModel>> GetUsuariosAsync()
     {
-        using var _db = new Context();
-        var result = await _db.EquipeExternaUsuarios
-            .OrderBy(f => f.nome)
-            .ToListAsync();
+        using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<EquipeExternaUsuarioModel>(
+            @"SELECT *
+              FROM equipe_externa.tblusuario
+              ORDER BY nome;");
+
         return new ObservableCollection<EquipeExternaUsuarioModel>(result);
     }
 
     public async Task AddUsuarioAsync(EquipeExternaUsuarioModel usuario)
     {
-        using var db = new Context();
-        var usuarioExistente = await db.EquipeExternaUsuarios.FindAsync(usuario.id);
-        if (usuarioExistente == null)
-            await db.EquipeExternaUsuarios.AddAsync(usuario);
-        else
-            db.Entry(usuarioExistente).CurrentValues.SetValues(usuario);
+        using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
 
-        await db.SaveChangesAsync();
+        if (usuario.id is null or <= 0)
+        {
+            usuario.id = await connection.ExecuteScalarAsync<long>(@"
+                INSERT INTO equipe_externa.tblusuario
+                (id_equipe, nome, email, aux)
+                VALUES (@id_equipe, @nome, @email, @aux)
+                RETURNING id;",
+                usuario);
+
+            return;
+        }
+
+        var linhas = await connection.ExecuteAsync(@"
+            UPDATE equipe_externa.tblusuario
+            SET id_equipe = @id_equipe,
+                nome = @nome,
+                email = @email,
+                aux = @aux
+            WHERE id = @id;",
+            usuario);
+
+        if (linhas == 0)
+        {
+            usuario.id = null;
+            await AddUsuarioAsync(usuario);
+        }
     }
 
     public async Task<ObservableCollection<EquipeExternaEquipeModel>> GetEquipesAsync()
     {
-        /*
         using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<EquipeExternaEquipeModel>(
+            @"SELECT *
+              FROM equipe_externa.tblequipesext
+              ORDER BY equipe_e;");
 
-        string sql = @"
-            SELECT 
-	            tbl_valores_previsao_equipe.id_equipe, 
-	            tblequipesext.equipe_e 
-            FROM equipe_externa.tblequipesext 
-            JOIN equipe_externa.tbl_valores_previsao_equipe ON equipe_externa.tblequipesext.id = equipe_externa.tbl_valores_previsao_equipe.id_equipe
-            GROUP BY tbl_valores_previsao_equipe.id_equipe, tblequipesext.equipe_e 
-            ORDER BY tblequipesext.equipe_e;
-        ";
-        var result = await connection.QueryAsync<EquipeDTO>(sql);
-
-        return new ObservableCollection<EquipeDTO>([.. result]);
-        */
-        using var _db = new Context();
-        var result = await _db.Equipes
-            .OrderBy(f => f.equipe_e)
-            .ToListAsync();
         return new ObservableCollection<EquipeExternaEquipeModel>(result);
     }
-    /*
-    public async Task<ObservableCollection<EquipeExternaValoresPrevisaoEquipeModel>> GetEquipePrevisoesAsync(long id_equipe)
-    {
-        using var _db = new Context();
-        var result = await _db.EquipePrevisoes
-            .OrderBy(f => f.cliente)
-            .ThenBy(f => f.fase)
-            .Where(f => f.id_equipe == id_equipe)
-            .ToListAsync();
-
-
-        var payload = new BulkRequest
-        {
-            Items =
-                    [
-                        new ClienteFaseDto {
-                            IdAprovado = 1,
-                            SiglaServ = "ABC",
-                            DataInicio = DateTime.UtcNow.Date,
-                            DataFim = null,
-                            Fase = "inicial",
-                            IdUser = 10
-                        },
-                        new ClienteFaseDto {
-                            IdAprovado = 2,
-                            SiglaServ = "XYZ",
-                            DataInicio = null,
-                            DataFim = DateTime.Parse("2025-09-01"),
-                            Fase = "final",
-                            IdUser = 11
-                        }
-                    ]
-        };
-
-
-        return new ObservableCollection<EquipeExternaValoresPrevisaoEquipeModel>(result);
-    }
-    */
 }

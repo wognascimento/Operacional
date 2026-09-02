@@ -60,8 +60,13 @@ public class ValueToBackgroundConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        if (value == null || value == DBNull.Value)
+        if (value == null ||
+            value == DBNull.Value ||
+            value == System.Windows.DependencyProperty.UnsetValue ||
+            string.IsNullOrWhiteSpace(value.ToString()))
+        {
             return new SolidColorBrush(Colors.White);
+        }
 
         if (decimal.TryParse(value.ToString(), out decimal numValue))
         {
@@ -71,7 +76,7 @@ public class ValueToBackgroundConverter : IValueConverter
                 return new SolidColorBrush(Colors.LightBlue);
         }
 
-        return new SolidColorBrush(Colors.Transparent);
+        return new SolidColorBrush(Colors.White);
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

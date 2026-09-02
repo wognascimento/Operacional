@@ -1,5 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Dapper;
 using Npgsql;
+using Operacional.DataBase;
 using Operacional.DataBase.Models;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -32,12 +33,12 @@ namespace Operacional.Views.Despesa
             }
             catch (NpgsqlException ex)
             {
-                MessageBox.Show(ex.Message);
+                Operacional.ErrorDialog.Show(ex, "Erro");
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                Operacional.ErrorDialog.Show(ex, "Erro");
                 Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
             }
         }
@@ -50,6 +51,8 @@ namespace Operacional.Views.Despesa
 
     public partial class TipoRelatorioViewModel : INotifyPropertyChanged
     {
+        private readonly DataBaseSettings _dataBaseSettings = DataBaseSettings.Instance;
+
         public event PropertyChangedEventHandler PropertyChanged;
         public void RaisePropertyChanged(string propName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
         protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -64,10 +67,14 @@ namespace Operacional.Views.Despesa
 
         public async Task<ObservableCollection<OperacionalDespRelatorioModel>> GetTiposRelatorioAsync()
         {
-            using Context context = new();
             try
             {
-                var retorno = await context.DespRelatorios.AsNoTracking().ToListAsync();
+                using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+                var retorno = await connection.QueryAsync<OperacionalDespRelatorioModel>(
+                    @"SELECT *
+                      FROM operacional.t_desp_relatorios
+                      ORDER BY descricao_relatorio;");
+
                 return [.. retorno];
             }
             catch (DbException ex)  // Para erros de banco de dados

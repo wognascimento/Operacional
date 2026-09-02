@@ -1,10 +1,12 @@
-﻿using ClosedXML.Excel;
+using ClosedXML.Excel;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.EntityFrameworkCore;
+using Dapper;
 using Microsoft.Win32;
+using Npgsql;
 using Operacional.DataBase;
 using Operacional.DataBase.Models;
 using Operacional.DataBase.Models.DTOs;
+using Operacional.Utils;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Diagnostics;
@@ -122,7 +124,7 @@ public partial class Programacao : UserControl
         catch (Exception ex)
         {
             vm.StatusMessage = "Erro ao importar";
-            MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            Operacional.ErrorDialog.Show(ex, "Erro");
         }
         finally
         {
@@ -445,8 +447,10 @@ public partial class Programacao : UserControl
 
             await vm.LoadManutencaoSolicitacaoAsync(programacao.id);
 
+            var outputPath = SistemaPathResolver.GetImpressosPath($"{programacao.tipo}_{programacao.data:yyyy_MM_dd}.docx");
+
             // Cria o documento
-            using var doc = DocX.Create(@$"{BaseSettings.CaminhoSistema}Impressos\{programacao.tipo}_{programacao.data:yyyy_MM_dd}.docx");
+            using var doc = DocX.Create(outputPath);
 
             // 28.4f = 1cm
             doc.MarginTop = 120.6f;     // = 4,25 cm
@@ -674,11 +678,7 @@ public partial class Programacao : UserControl
             // Salva e fecha
             doc.Save();
 
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = @$"{BaseSettings.CaminhoSistema}Impressos\{programacao.tipo}_{programacao.data:yyyy_MM_dd}.docx",  // caminho completo do .docx
-                UseShellExecute = true
-            });
+            SistemaPathResolver.OpenFile(outputPath);
         }
         catch (Exception ex)
         {
@@ -721,47 +721,49 @@ public partial class ProgramacaoViewModel : ObservableObject
 
     public async Task<ObservableCollection<OperacionalProgramacaoManutencaoModel>> GetProgramacoesAsync()
     {
-        using var _db = new Context();
-        var programacoes = await _db.OperacionalProgramacaoManutencoes
-            .OrderBy(x => x.shopp)
-            .ThenBy(x => x.tipo)
-            .ThenBy(x => x.data)
-            .ToListAsync();
+        using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+        var programacoes = await connection.QueryAsync<OperacionalProgramacaoManutencaoModel>(
+            @"SELECT *
+              FROM operacional.tbl_programacao_manutencao
+              ORDER BY shopp, tipo, data;");
+
         return new ObservableCollection<OperacionalProgramacaoManutencaoModel>(programacoes);
     }   
 
     public async Task<ObservableCollection<ProducaoAprovadoModel>> GetAprovadosAsync()
     {
-        using var _db = new Context();
-        var aptrovados = await _db.ProducaoAprovados
-            .OrderBy(x => x.sigla_serv)
-            .ToListAsync();
+        using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+        var aptrovados = await connection.QueryAsync<ProducaoAprovadoModel>(
+            @"SELECT *
+              FROM producao.t_aprovados
+              ORDER BY sigla_serv;");
+
         return new ObservableCollection<ProducaoAprovadoModel>(aptrovados);
     }
 
     public async Task<ObservableCollection<string>> GetEquipesAsync()
     {
-        using var context = new Context();
-        var query = from equipe in context.Equipes
-                    join valores in context.EquipePrevisoes
-                    on equipe.id equals valores.id_equipe
-                    group valores by new { valores.id_equipe, equipe.equipe_e } into g
-                    orderby g.Key.equipe_e
-                    select g.Key.equipe_e;
-        return new ObservableCollection<string>(await query.ToListAsync());
+        using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+        var equipes = await connection.QueryAsync<string>(
+            @"SELECT equipe.equipe_e
+              FROM equipe_externa.tblequipesext equipe
+              JOIN equipe_externa.tbl_valores_previsao_equipe valores
+                ON equipe.id = valores.id_equipe
+              GROUP BY valores.id_equipe, equipe.equipe_e
+              ORDER BY equipe.equipe_e;");
+
+        return new ObservableCollection<string>(equipes);
     }
-    /*
-    public bool GetValidateSiglaAsync(string sigla)
-    {
-        using var _db = new Context();
-        var aprovado = _db.ProducaoAprovados.FirstOrDefault(x => x.sigla_serv == sigla);
-        return aprovado != null;
-    }
-    */
     public async Task<bool> GetValidateSiglaAsync(string sigla)
     {
-        await using var _db = new Context();
-        return await _db.ProducaoAprovados.AnyAsync(x => x.sigla_serv == sigla);
+        using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+        return await connection.ExecuteScalarAsync<bool>(
+            @"SELECT EXISTS (
+                SELECT 1
+                FROM producao.t_aprovados
+                WHERE sigla_serv = @sigla
+              );",
+            new { sigla });
     }
 
     public async Task AddProgramacaoImportacaoAsync(ResultadoImportacao resultado, ProgramacaoViewModel vm)
@@ -772,30 +774,48 @@ public partial class ProgramacaoViewModel : ObservableObject
         int total = resultado.Validos.Count;
         int count = 0;
 
-        using var _db = new Context();
+        using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
 
         // 🔹 Buscar aprovações e clientes fora do loop para reduzir consultas
         var siglas = resultado.Validos.Select(r => r.Shopp).Distinct().ToList();
-        var aprovadosDict = _db.ProducaoAprovados
-                                .Where(a => siglas.Contains(a.sigla_serv))
-                                .ToDictionary(a => a.sigla_serv, a => a);
-        var clientesDict = await _db.ComercialClientes
-                                    .Where(c => siglas.Contains(c.sigla))
-                                    .ToDictionaryAsync(c => c.sigla, c => c);
+        var aprovadosDict = (await connection.QueryAsync<ProducaoAprovadoModel>(
+            @"SELECT *
+              FROM producao.t_aprovados
+              WHERE sigla_serv = ANY(@siglas);",
+            new { siglas = siglas.ToArray() },
+            transaction)).Where(a => a.sigla_serv is not null)
+                .ToDictionary(a => a.sigla_serv!, a => a);
 
-        var funcoesDict = await _db.OperacionalNoitescronogPessoas
-                                   .Where(f => siglas.Contains(f.sigla)
-                                               && f.fase.Contains("MANUTENÇÃO PROGRAMADA")
-                                               && f.qtd_pessoas.HasValue      // não nulo
-                                               && f.qtd_pessoas.Value != 0)  // diferente de zero
-                                   .ToListAsync();
+        var clienteSiglas = aprovadosDict.Values.Select(a => a.sigla).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().ToArray();
+        var clientesDict = (await connection.QueryAsync<ComercialClienteModel>(
+            @"SELECT *
+              FROM comercial.clientes
+              WHERE sigla = ANY(@siglas);",
+            new { siglas = clienteSiglas },
+            transaction)).ToDictionary(c => c.sigla, c => c);
+
+        var funcoesDict = (await connection.QueryAsync<OperacionalNoitescronogPessoaFuncaoModel>(
+            @"SELECT *
+              FROM operacional.tblnoitescronog_qtd_pessoa_funcao
+              WHERE sigla = ANY(@siglas)
+                AND fase ILIKE '%MANUTENÇÃO PROGRAMADA%'
+                AND COALESCE(qtd_pessoas, 0) <> 0;",
+            new { siglas = siglas.ToArray() },
+            transaction)).ToList();
 
         foreach (var registro in resultado.Validos)
         {
-            var programacaoExistente = await _db.OperacionalProgramacaoManutencoes
-                .FirstOrDefaultAsync(x => x.shopp == registro.Shopp
-                                          && x.data == registro.Data
-                                          && x.tipo == registro.Tipo);
+            var programacaoExistente = await connection.QueryFirstOrDefaultAsync<OperacionalProgramacaoManutencaoModel>(
+                @"SELECT *
+                  FROM operacional.tbl_programacao_manutencao
+                  WHERE shopp = @Shopp
+                    AND data = @Data
+                    AND tipo = @Tipo
+                  LIMIT 1;",
+                registro,
+                transaction);
 
             if (programacaoExistente != null)
             {
@@ -806,7 +826,9 @@ public partial class ProgramacaoViewModel : ObservableObject
             }
 
             aprovadosDict.TryGetValue(registro.Shopp, out var aprovado);
-            clientesDict.TryGetValue(registro.Shopp, out var cliente);
+            ComercialClienteModel? cliente = null;
+            if (aprovado?.sigla is not null)
+                clientesDict.TryGetValue(aprovado.sigla, out cliente);
 
             var pSalva = new OperacionalProgramacaoManutencaoModel
             {
@@ -819,8 +841,14 @@ public partial class ProgramacaoViewModel : ObservableObject
                 data_cadastro = DateTimeOffset.Now
             };
 
-            await _db.OperacionalProgramacaoManutencoes.AddAsync(pSalva);
-            await _db.SaveChangesAsync(); // necessário aqui para obter o Id gerado
+            pSalva.id = await connection.ExecuteScalarAsync<int>(@"
+                INSERT INTO operacional.tbl_programacao_manutencao
+                (data, shopp, cidade, est, tipo, cadastrado_por, data_cadastro)
+                VALUES
+                (@data, @shopp, @cidade, @est, @tipo, @cadastrado_por, @data_cadastro)
+                RETURNING id;",
+                pSalva,
+                transaction);
 
             // Inserção das funções relacionadas
             var funcoesRegistro = funcoesDict.Where(f => f.sigla == registro.Shopp).ToList();
@@ -835,10 +863,13 @@ public partial class ProgramacaoViewModel : ObservableObject
                     funcao = func.funcao,
                     qtd = (int)Math.Round((decimal)func.qtd_pessoas)
                 };
-                await _db.OperacionalPessoasManutencoes.AddAsync(pessoa);
+                await connection.ExecuteAsync(@"
+                    INSERT INTO operacional.tbl_pessoas_manutencao
+                    (id_programacao, funcao, qtd)
+                    VALUES (@id_programacao, @funcao, @qtd);",
+                    pessoa,
+                    transaction);
             }
-
-            await _db.SaveChangesAsync();
 
             // Atualiza progresso
             count++;
@@ -846,45 +877,127 @@ public partial class ProgramacaoViewModel : ObservableObject
             vm.StatusMessage = $"Salvando registros... {count}/{total}";
             await Task.Yield(); // mantém UI responsiva
         }
+
+        await transaction.CommitAsync();
     }
 
 
     public async Task AddProgramacaoAsync(OperacionalProgramacaoManutencaoModel model)
     {
-        using var _db = new Context();
+        using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
 
-        var aprovado = _db.ProducaoAprovados.FirstOrDefault(x => x.sigla_serv == model.shopp);
-        var cliente = await _db.ComercialClientes.FirstOrDefaultAsync(x => x.sigla == aprovado.sigla);
+        var aprovado = await connection.QueryFirstOrDefaultAsync<ProducaoAprovadoModel>(
+            @"SELECT *
+              FROM producao.t_aprovados
+              WHERE sigla_serv = @shopp
+              LIMIT 1;",
+            new { model.shopp });
+
+        var cliente = aprovado?.sigla is null
+            ? null
+            : await connection.QueryFirstOrDefaultAsync<ComercialClienteModel>(
+                @"SELECT *
+                  FROM comercial.clientes
+                  WHERE sigla = @sigla
+                  LIMIT 1;",
+                new { aprovado.sigla });
 
         model.cidade = cliente?.cidade ?? "N/A";
         model.est = cliente?.est ?? "N/A";
 
-        var modelExistente = await _db.OperacionalProgramacaoManutencoes.FindAsync(model.id);
-        if (modelExistente == null)
+        if (model.id <= 0)
         {
-
-            _db.OperacionalProgramacaoManutencoes.Add(model);
+            model.cadastrado_por = BaseSettings.Username;
+            model.data_cadastro = DateTimeOffset.Now;
+            model.id = await connection.ExecuteScalarAsync<int>(@"
+                INSERT INTO operacional.tbl_programacao_manutencao
+                (data, shopp, cidade, est, tipo, orientacao, qtde_pessoa, nome_equipe,
+                 relatorio_enviado, relatorio_retorno, cadastrado_por, data_cadastro,
+                 vlortotalpessoa, obs_retorno, mat_envio, mat_chk, mat_conf_entrega,
+                 mat_data_entrega, mat_resp, mat_data, motivo, nome_equipe_2,
+                 qtde_pessoa_2, relatorio_enviado_2, relatorio_retorno_2, periodo,
+                 id_kit_solucao, data_chamado_cliente, informmacoes_passadas_cliente,
+                 hora_solicitada_interdicao, data_conclusao, hora_conclusao,
+                 hora_interdicao, motivo_interno, detalhes_motivo, resp_atendimento)
+                VALUES
+                (@data, @shopp, @cidade, @est, @tipo, @orientacao, @qtde_pessoa, @nome_equipe,
+                 @relatorio_enviado, @relatorio_retorno, @cadastrado_por, @data_cadastro,
+                 @vlortotalpessoa, @obs_retorno, @mat_envio, @mat_chk, @mat_conf_entrega,
+                 @mat_data_entrega, @mat_resp, @mat_data, @motivo, @nome_equipe_2,
+                 @qtde_pessoa_2, @relatorio_enviado_2, @relatorio_retorno_2, @periodo,
+                 @id_kit_solucao, @data_chamado_cliente, @informmacoes_passadas_cliente,
+                 @hora_solicitada_interdicao, @data_conclusao, @hora_conclusao,
+                 @hora_interdicao, @motivo_interno, @detalhes_motivo, @resp_atendimento)
+                RETURNING id;",
+                model);
         }
         else
         {
             model.alterado_por = BaseSettings.Username;
             model.data_alteracao = DateTimeOffset.Now;
-            _db.Entry(modelExistente).CurrentValues.SetValues(model); 
+            await connection.ExecuteAsync(@"
+                UPDATE operacional.tbl_programacao_manutencao
+                SET
+                    data = @data,
+                    shopp = @shopp,
+                    cidade = @cidade,
+                    est = @est,
+                    tipo = @tipo,
+                    orientacao = @orientacao,
+                    qtde_pessoa = @qtde_pessoa,
+                    nome_equipe = @nome_equipe,
+                    relatorio_enviado = @relatorio_enviado,
+                    relatorio_retorno = @relatorio_retorno,
+                    alterado_por = @alterado_por,
+                    data_alteracao = @data_alteracao,
+                    vlortotalpessoa = @vlortotalpessoa,
+                    obs_retorno = @obs_retorno,
+                    mat_envio = @mat_envio,
+                    mat_chk = @mat_chk,
+                    mat_conf_entrega = @mat_conf_entrega,
+                    mat_data_entrega = @mat_data_entrega,
+                    mat_resp = @mat_resp,
+                    mat_data = @mat_data,
+                    motivo = @motivo,
+                    nome_equipe_2 = @nome_equipe_2,
+                    qtde_pessoa_2 = @qtde_pessoa_2,
+                    relatorio_enviado_2 = @relatorio_enviado_2,
+                    relatorio_retorno_2 = @relatorio_retorno_2,
+                    periodo = @periodo,
+                    id_kit_solucao = @id_kit_solucao,
+                    data_chamado_cliente = @data_chamado_cliente,
+                    informmacoes_passadas_cliente = @informmacoes_passadas_cliente,
+                    hora_solicitada_interdicao = @hora_solicitada_interdicao,
+                    data_conclusao = @data_conclusao,
+                    hora_conclusao = @hora_conclusao,
+                    hora_interdicao = @hora_interdicao,
+                    motivo_interno = @motivo_interno,
+                    detalhes_motivo = @detalhes_motivo,
+                    resp_atendimento = @resp_atendimento
+                WHERE id = @id;",
+                model);
         }
-        await _db.SaveChangesAsync();
     }
 
     public async Task LoadManutencaoSolicitacaoAsync(long idProgramacao)
     {
-        using var context = new Context();
+        using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
 
-        var solicitacoes = await context.OperacionalSolicitacaoManutencoes
-            .Where(x => x.id_programacao == idProgramacao)
-            .ToListAsync();
+        var solicitacoes = (await connection.QueryAsync<OperacionalSolicitacaoManutencaoModel>(
+            @"SELECT *
+              FROM operacional.tbl_solicitacao_manutencao
+              WHERE id_programacao = @idProgramacao
+              ORDER BY id;",
+            new { idProgramacao })).ToList();
 
-        var fotos = await context.OperacionalSolicitacaoManutencaoFotos
-            .Where(x => solicitacoes.Select(s => s.id).Contains(x.id_solicitacao))
-            .ToListAsync();
+        var fotos = solicitacoes.Count == 0
+            ? []
+            : (await connection.QueryAsync<OperacionalSolicitacaoManutencaoFotoModel>(
+                @"SELECT *
+                  FROM operacional.tbl_solicitacao_manutencao_foto
+                  WHERE id_solicitacao = ANY(@ids)
+                  ORDER BY id;",
+                new { ids = solicitacoes.Select(s => s.id).ToArray() })).ToList();
 
         // Mapeia entidades para DTOs
         Solicitacoes = new ObservableCollection<SolicitacaoManutencaoDTO>(
@@ -908,11 +1021,15 @@ public partial class ProgramacaoViewModel : ObservableObject
 
     public async Task LoadManutencaoFuncoesAsync(long idProgramacao)
     {
-        using var context = new Context();
-        ManutencaoFuncoes = new ObservableCollection<OperacionalPessoasManutencaoModel>(
-            await context.OperacionalPessoasManutencoes
-                .Where(x => x.id_programacao == idProgramacao)
-                .ToListAsync());
+        using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+        var funcoes = await connection.QueryAsync<OperacionalPessoasManutencaoModel>(
+            @"SELECT *
+              FROM operacional.tbl_pessoas_manutencao
+              WHERE id_programacao = @idProgramacao
+              ORDER BY funcao;",
+            new { idProgramacao });
+
+        ManutencaoFuncoes = new ObservableCollection<OperacionalPessoasManutencaoModel>(funcoes);
     }
 }
 

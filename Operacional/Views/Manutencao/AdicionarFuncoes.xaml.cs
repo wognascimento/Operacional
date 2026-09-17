@@ -124,11 +124,9 @@ public partial class AdicionarFuncoesViewModel : ObservableObject
                 WHERE id = @id;",
                 model);
 
-            if (linhas == 0)
+            if (linhas != 1)
             {
-                model.id = 0;
-                await AddManutencaoFuncoesAsync(model);
-                return;
+                throw new InvalidOperationException("O registro nao existe mais ou foi alterado por outro usuario. Recarregue a tela; nenhum novo registro foi criado.");
             }
         }
 

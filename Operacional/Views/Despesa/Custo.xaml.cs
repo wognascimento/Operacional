@@ -77,41 +77,17 @@ public partial class Custo : UserControl
     }
 
 
-    private async void radGridViewRowValidating(object sender, GridViewRowValidatingEventArgs e)
+    private void radGridViewRowValidating(object sender, GridViewRowValidatingEventArgs e)
     {
-        if (e.Row?.Item is not CustoModel item)
-            return;
-
-        // chama validação corretamente
+        if (e.Row?.IsInEditMode != true) return;
+        if (e.Row.Item is not CustoModel item) return;
         item.Validate();
-
-        if (item.HasErrors)
+        if (item.HasErrors) { e.IsValid = false; return; }
+        ValidatedGridSave.Save(sender, e, async () =>
         {
-            e.IsValid = false;
-            return;
-        }
-
-        if (DataContext is not CustoViewModel vm)
-            return;
-
-        try
-        {
-            if (item.codcusto == 0)
-            {
-                item.MarkAsAdded();
-            }
-
-            await vm.SalvarCustoAsync(item);
-        }
-        catch (Exception ex)
-        {
-            e.IsValid = false;
-            MessageBox.Show(
-                ex.Message,
-                "Erro ao salvar",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
-        }
+            if (item.codcusto == 0) item.MarkAsAdded();
+            await ((CustoViewModel)DataContext).SalvarCustoAsync(item);
+        });
     }   
 }
 
@@ -295,7 +271,8 @@ public partial class CustoViewModel : ObservableObject
                 WHERE codcusto = @codcusto;
             ";
 
-            await connection.ExecuteAsync(sql, item);
+            if (await connection.ExecuteAsync(sql, item) != 1)
+                throw new InvalidOperationException("Custo nao encontrado. Recarregue a tela.");
         }
 
         item.MarkAsSaved();

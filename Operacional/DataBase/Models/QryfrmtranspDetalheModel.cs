@@ -9,6 +9,8 @@ namespace Operacional.DataBase.Models
         public long id { get; set; }
         public DateTime? data { get; set; }
         public DateTime? data_de_expedicao { get; set; }
+        public DateTime? data_previsao_chegada { get; set; }
+        public DateTime? data_inicio_montagem { get; set; }
         public string? siglaserv { get; set; }
         public string? num_caminhao { get; set; }
         public int? numero_de_caminhoes { get; set; }

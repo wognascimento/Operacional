@@ -1,0 +1,37 @@
+<UserControl x:Class="Operacional.Views.Cartas.CartaInicioMontagem"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        <TextBlock Text="Período de expedição" FontWeight="SemiBold" Margin="0,0,0,12"/>
+        <WrapPanel x:Name="CamposPeriodo" Grid.Row="1">
+            <StackPanel Margin="0,0,16,12">
+                <TextBlock Text="Data inicial" Margin="0,0,0,4"/>
+                <telerik:RadDatePicker x:Name="DataInicial" Width="160"/>
+            </StackPanel>
+            <StackPanel Margin="0,0,16,12">
+                <TextBlock Text="Data final" Margin="0,0,0,4"/>
+                <telerik:RadDatePicker x:Name="DataFinal" Width="160"/>
+            </StackPanel>
+        </WrapPanel>
+        <WrapPanel Grid.Row="2" Margin="0,0,0,12">
+            <telerik:RadButton x:Name="Gerar" Click="OnGerarClick" Padding="12,6" Margin="0,0,8,0">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="/icones/icons8-ms-excel-blue-ui-16.png" Width="16" Height="16" Margin="0,0,6,0"/>
+                    <TextBlock Text="Gerar carta"/>
+                </StackPanel>
+            </telerik:RadButton>
+            <telerik:RadButton x:Name="AbrirPasta" Content="Abrir pasta" Click="OnAbrirPastaClick"
+                               Padding="12,6" Margin="0,0,8,0" IsEnabled="False"/>
+            <telerik:RadButton x:Name="Cancelar" Content="Cancelar" Click="OnCancelarClick"
+                               Padding="12,6" Visibility="Collapsed"/>
+        </WrapPanel>
+        <TextBlock x:Name="Resultado" Grid.Row="3" TextWrapping="Wrap" VerticalAlignment="Top"/>
+    </Grid>
+</UserControl>

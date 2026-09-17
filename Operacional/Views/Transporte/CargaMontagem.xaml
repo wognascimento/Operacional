@@ -19,10 +19,13 @@
                 RowEditEnded="RadGridView_RowEditEnded" >
             <telerik:RadGridView.Columns>
                 <telerik:GridViewDataColumn Header="data caminhão" DataMemberBinding="{Binding data, StringFormat=\{0:dd/MM/yyyy\}}"/>
+                <telerik:GridViewDataColumn Header="dia caminhão" DataMemberBinding="{Binding data, StringFormat=\{0:dddd\}}" IsReadOnly="True"/>
                 <telerik:GridViewDataColumn Header="sigla serviço" DataMemberBinding="{Binding siglaserv}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn Header="inicio montagem" DataMemberBinding="{Binding data_inicio_montagem, StringFormat=\{0:dd/MM/yyyy\}}"/>
                 <telerik:GridViewDataColumn Header="num caminhao" DataMemberBinding="{Binding num_caminhao}"/>
                 <telerik:GridViewDataColumn Header="noite montagem" DataMemberBinding="{Binding noite_montagem}"/>
                 <telerik:GridViewDataColumn Header="m3 contratado" DataMemberBinding="{Binding m3_contratado}" />
+                <telerik:GridViewDataColumn Header="data previsão chegada" DataMemberBinding="{Binding data_previsao_chegada, StringFormat=\{0:dd/MM/yyyy\}}" />
                 <telerik:GridViewDataColumn Header="data chegada" DataMemberBinding="{Binding data_chegada, StringFormat=\{0:dd/MM/yyyy\}}" />
                 <telerik:GridViewDataColumn Header="transporte" DataMemberBinding="{Binding transporte}" IsReadOnly="True"/>
                 <telerik:GridViewDataColumn Header="obscarga" DataMemberBinding="{Binding obscarga}" />

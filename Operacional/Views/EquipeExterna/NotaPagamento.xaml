@@ -64,8 +64,7 @@
             ItemsSource="{Binding RelatorioDetalhes}"
             AddingNewDataItem="RadGridView_AddingNewDataItem"
             BeginningEdit="Pagamentos_BeginningEdit"
-            RowValidating="Pagamentos_RowValidating" 
-            RowValidated="RadGridView_RowValidated" >
+            RowValidating="Pagamentos_RowValidating" >
             <telerik:RadGridView.Columns>
                 <telerik:GridViewDataColumn Header="#" IsReadOnly="True" DataMemberBinding="{Binding cod_detalhe_relatorio}" IsFilterable="False"/>
                 <telerik:GridViewComboBoxColumn

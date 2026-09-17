@@ -1,4 +1,3 @@
-using Operacional.DataBase.Models.DTOs;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -15,6 +14,7 @@ public partial class tbl_cargas_montagem
     public string siglaserv { get; set; }
 
     public DateTime? data { get; set; }
+    public DateTime? data_previsao_chegada { get; set; }
 
     [StringLength(10)]
     public string? num_caminhao { get; set; }

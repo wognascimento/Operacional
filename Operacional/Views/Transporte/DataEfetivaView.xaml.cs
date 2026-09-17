@@ -45,18 +45,12 @@ namespace Operacional.Views.Transporte
             }
         }
 
-        private async void radGridView_RowValidating(object sender, Telerik.Windows.Controls.GridViewRowValidatingEventArgs e)
+        private void radGridView_RowValidating(object sender, Telerik.Windows.Controls.GridViewRowValidatingEventArgs e)
         {
-            try
+            if (e.Row?.IsInEditMode != true) return;
+            if (e.Row.Item is not QryDataEfetivaModel item) return;
+            ValidatedGridSave.Save(sender, e, async () =>
             {
-
-                DataEfetivaViewModel vm = (DataEfetivaViewModel)DataContext;
-                if (!e.Row.IsInEditMode)
-                    return;
-
-                if (e.Row.Item is QryDataEfetivaModel item)
-                {
-                    //MessageBox.Show($"Linha alterada: {item.SiglaServ}, {item.numero_de_caminhoes}");
                     var dataEfetiva = new DataEfetivaModel
                     {
                         siglaserv = item.siglaserv,
@@ -74,21 +68,10 @@ namespace Operacional.Views.Transporte
                         obs_desmontagem = item.obs_desmontagem,
                         data_libera_area_desmontagem = item.data_libera_area_desmontagem
                     };
-                    bool sucesso = await vm.AtualizarDataEfetiva(dataEfetiva);
-                    if (sucesso == false)
-                    {
-                        e.IsValid = false; // Impede que a linha seja confirmada
-                        MessageBox.Show("Erro ao salvar no banco! Verifique os dados.", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                }
 
-            }
-            catch (DbUpdateException ex)
-            {
-                e.IsValid = false;
-                Operacional.ErrorDialog.Show(ex, "Erro");
-                //Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
-            }
+                if (!await ((DataEfetivaViewModel)DataContext).AtualizarDataEfetiva(dataEfetiva))
+                    throw new InvalidOperationException("Registro nao encontrado. Recarregue a tela.");
+            });
         }
     }
 

@@ -19,7 +19,7 @@
             ItemsSource="{Binding Contatos}" 
             NewRowPosition="Bottom" 
             GroupRenderMode="Flat"
-            RowValidated="ContatoRowValidated">
+            RowValidating="ContatoRowValidated">
             <telerik:RadGridView.Columns>
                 <telerik:GridViewDataColumn Header="#" IsReadOnly="True" DataMemberBinding="{Binding cod_linha}"/>
                 <telerik:GridViewDataColumn Header="NOME" Width="150" DataMemberBinding="{Binding nome}"/>

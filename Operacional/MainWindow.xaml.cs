@@ -116,6 +116,11 @@ namespace Operacional
             adicionarFilho(new CadastroTransportadora(), "CADASTRO TRANSPORTADORA", "CADASTRO_TRANSPORTADORA");
         }
 
+        private void OnCartaInicioMontagemClick(object sender, RoutedEventArgs e)
+        {
+            adicionarFilho(new Views.Cartas.CartaInicioMontagem(), "CARTA - INÍCIO MONTAGEM", "CARTA_INICIO_MONTAGEM");
+        }
+
         private void OnTransporteMontagemClick(object sender, RoutedEventArgs e)
         {
             adicionarFilho(new TransporteMontagem(), "TRANSPORTES MONTAGEM", "TRANSPORTE_MONTAGEM");

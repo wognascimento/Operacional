@@ -205,11 +205,9 @@ public partial class AdicionarSolicitacaoViewModel : ObservableObject
                 WHERE id = @id;",
                 model);
 
-            if (linhas == 0)
+            if (linhas != 1)
             {
-                modelDTO.Id = 0;
-                await AddManutencaoSolicitacaoAsync(modelDTO);
-                return;
+                throw new InvalidOperationException("O registro nao existe mais ou foi alterado por outro usuario. Recarregue a tela; nenhum novo registro foi criado.");
             }
         }
 
@@ -239,11 +237,9 @@ public partial class AdicionarSolicitacaoViewModel : ObservableObject
                 WHERE id = @id;",
                 model);
 
-            if (linhas == 0)
+            if (linhas != 1)
             {
-                modelDTO.Id = 0;
-                await AddManutencaoSolicitacaoFotoAsync(modelDTO, IdProgramacao);
-                return;
+                throw new InvalidOperationException("O registro nao existe mais ou foi alterado por outro usuario. Recarregue a tela; nenhum novo registro foi criado.");
             }
         }
 

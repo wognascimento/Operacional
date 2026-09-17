@@ -45,7 +45,16 @@ namespace Operacional.Views.Despesa
 
         private void radGridView_RowValidating(object sender, Telerik.Windows.Controls.GridViewRowValidatingEventArgs e)
         {
-
+            if (e.Row?.IsInEditMode != true) return;
+            if (e.Row.Item is not OperacionalDespRelatorioModel item) return;
+            if (string.IsNullOrWhiteSpace(item.descricao_relatorio))
+            {
+                e.IsValid = false;
+                e.ValidationResults.Add(new Telerik.Windows.Controls.GridViewCellValidationResult
+                { PropertyName = nameof(item.descricao_relatorio), ErrorMessage = "Informe a descricao." });
+                return;
+            }
+            ValidatedGridSave.Save(sender, e, () => ((TipoRelatorioViewModel)DataContext).SalvarAsync(item));
         }
     }
 
@@ -63,6 +72,19 @@ namespace Operacional.Views.Despesa
             get => despsRelatorio;
             //set { despsRelatorio = value; RaisePropertyChanged("DespsRelatorio"); }
             set { despsRelatorio = value; OnPropertyChanged(nameof(DespsRelatorio)); }
+        }
+
+        public async Task SalvarAsync(OperacionalDespRelatorioModel item)
+        {
+            using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+            if (item.cod_relatorio is null or <= 0)
+                item.cod_relatorio = await connection.QuerySingleAsync<long>(
+                    @"INSERT INTO operacional.t_desp_relatorios (descricao_relatorio)
+                      VALUES (@descricao_relatorio) RETURNING cod_relatorio;", item);
+            else if (await connection.ExecuteAsync(
+                @"UPDATE operacional.t_desp_relatorios SET descricao_relatorio = @descricao_relatorio
+                  WHERE cod_relatorio = @cod_relatorio;", item) != 1)
+                throw new InvalidOperationException("Tipo de relatorio nao encontrado. Recarregue a tela.");
         }
 
         public async Task<ObservableCollection<OperacionalDespRelatorioModel>> GetTiposRelatorioAsync()

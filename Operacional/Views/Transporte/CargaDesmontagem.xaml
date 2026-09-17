@@ -17,7 +17,7 @@
                 ShowGroupPanel="False"
                 SelectionMode="Extended"
                 ClipboardCopyMode="Cells, Header"
-                RowEditEnded="RadGridView_RowEditEnded" >
+                RowValidating="RadGridView_RowValidating" >
             <telerik:RadGridView.Columns>
                 <telerik:GridViewDataColumn Header="sigla serviço" DataMemberBinding="{Binding sigla_serv}" IsReadOnly="True"/>
                 <telerik:GridViewDataColumn Header="estado" DataMemberBinding="{Binding est}" IsReadOnly="True"/>

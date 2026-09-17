@@ -45,67 +45,35 @@ public partial class TransporteDesmontagem : UserControl
         }
     }
 
-    private async void RadGridView_RowValidating(object sender, Telerik.Windows.Controls.GridViewRowValidatingEventArgs e)
+    private void RadGridView_RowValidating(object sender, Telerik.Windows.Controls.GridViewRowValidatingEventArgs e)
     {
-        try
+        if (e.Row?.IsInEditMode != true) return;
+        if (e.Row.Item is not TranspDesmontDTO item) return;
+        if (item.num_caminhoes_desmont < 0) { e.IsValid = false; return; }
+        var vm = (TransporteDesmontagemViewModel)DataContext;
+        ValidatedGridSave.Save(sender, e, async () =>
         {
-
-            TransporteDesmontagemViewModel vm = (TransporteDesmontagemViewModel)DataContext;
-            if (!e.Row.IsInEditMode)
-                return;
-
-            if (e.Row.Item is TranspDesmontDTO item)
+            await vm.AtualizarTransporteAsync(new OperacionalTranporteDesmontagemModel
             {
-                //MessageBox.Show($"Linha alterada: {item.SiglaServ}, {item.numero_de_caminhoes}");
-                var novoTransporte = new OperacionalTranporteDesmontagemModel
-                {
-                    siglaserv = item.siglaserv,
-                    prazo_chegada = Convert.ToInt16(item.prazo_chegada),
-                    volume_carga_desmontagem = Convert.ToInt16(item.volume_carga_desmontagem),
-                    num_caminhoes_desmont = Convert.ToInt16(item.num_caminhoes_desmont),
-                    transportadora = item.transportadora,
-                    alterado_por = BaseSettings.Username,
-                    data_altera = DateTime.Now
-                };
-                bool sucesso = await vm.AtualizarTransporteAsync(novoTransporte);
-                if (sucesso == false)
-                {
-                    e.IsValid = false; // Impede que a linha seja confirmada
-                    MessageBox.Show("Erro ao salvar no banco! Verifique os dados.", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-                else
-                {
-                    //if (item.num_caminhoes_desmont != e.OldValues["num_caminhoes_desmont"] as int?)
-                    //{
-
-                    DateTime data = item.data_inicio_desmontagem ?? new DateTime(DateTime.Now.Year, 12, 25);
-                    await vm.SincronizarCaminhoes(item.siglaserv, item.num_caminhoes_desmont, data, item.transportadora);
-                    item.Cargas = await vm.CaminhoesSigla(item.siglaserv);
-                    radGridView.Rebind(); // Recarrega todos os dados da grade
-
-                    //}
-
-                }
-            }
-
-        }
-        catch (DbUpdateException ex)
+                siglaserv = item.siglaserv,
+                prazo_chegada = Convert.ToInt16(item.prazo_chegada),
+                volume_carga_desmontagem = Convert.ToInt16(item.volume_carga_desmontagem),
+                num_caminhoes_desmont = Convert.ToInt16(item.num_caminhoes_desmont),
+                transportadora = item.transportadora
+            }, item.data_inicio_desmontagem);
+        }, async () =>
         {
-            e.IsValid = false;
-            Operacional.ErrorDialog.Show(ex, "Erro");
-            //Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
-        }
+            item.Cargas = await vm.CaminhoesSigla(item.siglaserv);
+            radGridView.Rebind();
+        });
     }
 
-    private async void RadGridViewFilho_RowValidating(object sender, Telerik.Windows.Controls.GridViewRowValidatingEventArgs e)
+    private void RadGridViewFilho_RowValidating(object sender, Telerik.Windows.Controls.GridViewRowValidatingEventArgs e)
     {
-        try
+        if (e.Row?.IsInEditMode != true) return;
+        if (e.Row.Item is not OperacionalCargaDesmontagemModel c) return;
+        ValidatedGridSave.Save(sender, e, async () =>
         {
-            TransporteDesmontagemViewModel vm = (TransporteDesmontagemViewModel)DataContext;
-            if (!e.Row.IsInEditMode)
-                return;
-            if (e.Row.Item is OperacionalCargaDesmontagemModel c) //{Operacional.DataBase.Models.OperacionalCargaDesmontagemModel}
-            {
                 var carga = new t_cargas_desmontagem
                 {
                     id = c.id,
@@ -118,6 +86,7 @@ public partial class TransporteDesmontagem : UserControl
                     data_chegada_cipolatti = c.data_chegada_cipolatti,
                     obs = c.obs,
                     transportadora = c.transportadora,
+                    confirmado = c.confirmado,
                     descarga_caminhao = c.descarga_caminhao,
                     obs_recebimento = c.obs_recebimento,
                     vl_est_frete = c.vl_est_frete,
@@ -130,19 +99,10 @@ public partial class TransporteDesmontagem : UserControl
                     placa_caminhao = c.placa_caminhao,
                     obs_frete_caminhao_desmont = c.obs_frete_caminhao_desmont
                 };
-                await vm.UpsertcargaDesmontagem(carga);
-            }
-        }
-        catch (DbUpdateException ex)
-        {
-            e.IsValid = false;
-            Operacional.ErrorDialog.Show(ex, "Erro");
-        }
-        catch (Exception ex)
-        {
-            e.IsValid = false;
-            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
-        }
+
+            await ((TransporteDesmontagemViewModel)DataContext).UpsertcargaDesmontagem(carga);
+            c.id = checked((int)carga.id);
+        });
     }
 }
 
@@ -257,7 +217,7 @@ public partial class TransporteDesmontagemViewModel : ObservableObject
 
     }
 
-    public async Task<bool> AtualizarTransporteAsync(OperacionalTranporteDesmontagemModel transporteAtualizado)
+    public async Task<bool> AtualizarTransporteAsync(OperacionalTranporteDesmontagemModel transporteAtualizado, DateTime? data)
     {
         using var conn = new NpgsqlConnection(BaseSettings.ConnectionString);
 
@@ -266,7 +226,7 @@ public partial class TransporteDesmontagemViewModel : ObservableObject
         var existe = await conn.ExecuteScalarAsync<int?>(sqlExiste, new { transporteAtualizado.siglaserv });
 
         if (existe == null)
-            return false; // Não encontrado
+            throw new InvalidOperationException("Transporte nao encontrado. Recarregue a tela.");
 
         // 2. Atualiza somente os campos enviados
         var sqlUpdate = @"
@@ -279,81 +239,26 @@ public partial class TransporteDesmontagemViewModel : ObservableObject
             WHERE siglaserv = @siglaserv
         ";
 
-        var linhasAfetadas = await conn.ExecuteAsync(sqlUpdate, transporteAtualizado);
-
-        return linhasAfetadas > 0;
+        await conn.OpenAsync();
+        await using var trans = await conn.BeginTransactionAsync();
+        var anterior = await conn.QuerySingleAsync<OperacionalTranporteDesmontagemModel>(
+            "SELECT * FROM operacional.t_tranportes_desmont WHERE siglaserv = @siglaserv FOR UPDATE;", transporteAtualizado, trans);
+        if (await conn.ExecuteAsync(sqlUpdate, transporteAtualizado, trans) != 1)
+            throw new InvalidOperationException("Transporte nao encontrado. Recarregue a tela.");
+        await SincronizarCaminhoes(transporteAtualizado.siglaserv, transporteAtualizado.num_caminhoes_desmont,
+            data, transporteAtualizado.transportadora, conn, trans, anterior.transportadora != transporteAtualizado.transportadora);
+        await trans.CommitAsync();
+        return true;
     }
-    /*
-    public async Task SincronizarCaminhoes(string siglaServ, int? totalCaminhoes, DateTime? data, string transportadora)
-    {
-        try
-        {
-            using var conn = new NpgsqlConnection(BaseSettings.ConnectionString);
-            await conn.OpenAsync();
-
-            using var trans = conn.BeginTransaction();
-
-            // 1. Buscar caminhões existentes
-            var sqlSelect = @"SELECT * FROM operacional.t_cargas_desmontagem WHERE siglaserv = @siglaserv ORDER BY caminhao";
-            var caminhoesExistentes = (await conn.QueryAsync<OperacionalCargaDesmontagemModel>(sqlSelect, new { siglaServ }, transaction: trans)).ToList();
-
-            int atuais = caminhoesExistentes.Count;
-
-            // 2. Adicionar caminhões faltantes
-            if (atuais < totalCaminhoes)
-            {
-                for (int i = atuais + 1; i <= totalCaminhoes; i++)
-                {
-                    var novo = new OperacionalCargaDesmontagemModel
-                    {
-                        siglaserv = siglaServ,
-                        caminhao = i.ToString().PadLeft(2, '0'),
-                        data_chegada_shopping = data.Value.AddDays(i - 1),
-                        transportadora = transportadora,
-                        placa_caminhao = null
-                    };
-
-                    var sqlInsert = @"
-                    INSERT INTO operacional.t_cargas_desmontagem
-                        (siglaserv, caminhao, data_chegada_shopping, transportadora, placa_caminhao)
-                        VALUES (@siglaserv, @caminhao, @data_chegada_shopping, @transportadora, @placa_caminhao)
-                    ";
-
-                    await conn.ExecuteAsync(sqlInsert, novo, transaction: trans);
-                }
-            }
-            // 3. Remover excedentes
-            else if (atuais > totalCaminhoes)
-            {
-                var excedentes = caminhoesExistentes.Skip((int)totalCaminhoes).ToList();
-
-                var sqlDelete = @"DELETE FROM operacional.t_cargas_desmontagem WHERE id = @id";
-
-                foreach (var cam in excedentes)
-                    await conn.ExecuteAsync(sqlDelete, new { cam.id }, transaction: trans);
-            }
-
-            // 4. Commit
-            await trans.CommitAsync();
-        }
-        catch (Exception ex)
-        {
-            throw new Exception("Erro inesperado.", ex);
-        }
-    }
-    */
     public async Task SincronizarCaminhoes(
         string siglaServ,
         int? totalCaminhoes,
         DateTime? data,
-        string transportadora)
+        string transportadora, NpgsqlConnection conn, NpgsqlTransaction trans, bool atualizarTransportadora)
     {
         try
         {
-            using var conn = new NpgsqlConnection(BaseSettings.ConnectionString);
-            await conn.OpenAsync();
-
-            using var trans = conn.BeginTransaction();
+            if (totalCaminhoes is null or < 0) throw new InvalidOperationException("Informe a quantidade de caminhoes.");
 
             // ============================================
             // 1. Buscar caminhões existentes
@@ -362,13 +267,17 @@ public partial class TransporteDesmontagemViewModel : ObservableObject
                 SELECT * 
                 FROM operacional.t_cargas_desmontagem 
                 WHERE siglaserv = @siglaServ 
-                ORDER BY caminhao;
+                ORDER BY caminhao FOR UPDATE;
             ";
 
             var caminhoesExistentes = (await conn.QueryAsync<OperacionalCargaDesmontagemModel>(
                 sqlSelect, new { siglaServ }, trans)).ToList();
 
             int atuais = caminhoesExistentes.Count;
+            if (atuais > totalCaminhoes)
+                throw new InvalidOperationException("A reducao excluiria cargas e romaneios existentes. Revise as cargas antes de reduzir a quantidade.");
+            var numeros = caminhoesExistentes.Select(c => int.TryParse(c.caminhao, out var n) ? n : 0).ToHashSet();
+            int proximoNumero = 1;
 
             // ============================================
             // 2. Atualizar os caminhões existentes
@@ -376,8 +285,7 @@ public partial class TransporteDesmontagemViewModel : ObservableObject
             foreach (var cam in caminhoesExistentes)
             {
                 bool precisaUpdate =
-                    cam.transportadora != transportadora ||
-                    cam.data_chegada_shopping != data;
+                    atualizarTransportadora && cam.transportadora != transportadora;
 
                 if (precisaUpdate)
                 {
@@ -401,7 +309,7 @@ public partial class TransporteDesmontagemViewModel : ObservableObject
                     );
 
                     // Chamar sincronização de UPDATE
-                    await SyncCargaParaRomaneio(conn, trans, updated, cam, "UPDATE");
+                    await SyncCargaParaRomaneio(conn, trans, updated);
                 }
             }
 
@@ -412,11 +320,13 @@ public partial class TransporteDesmontagemViewModel : ObservableObject
             {
                 for (int i = atuais + 1; i <= totalCaminhoes; i++)
                 {
+                    while (numeros.Contains(proximoNumero)) proximoNumero++;
+                    numeros.Add(proximoNumero);
                     var novo = new OperacionalCargaDesmontagemModel
                     {
                         siglaserv = siglaServ,
-                        caminhao = i.ToString().PadLeft(2, '0'),
-                        data_chegada_shopping = data.Value.AddDays(i - 1),
+                        caminhao = proximoNumero.ToString().PadLeft(2, '0'),
+                        data_chegada_shopping = data?.AddDays(i - 1),
                         transportadora = transportadora,
                         placa_caminhao = null
                     };
@@ -432,7 +342,7 @@ public partial class TransporteDesmontagemViewModel : ObservableObject
                     var inserted = await conn.QuerySingleAsync<OperacionalCargaDesmontagemModel>(
                         sqlInsert, novo, trans);
 
-                    await SyncCargaParaRomaneio(conn, trans, inserted, null, "INSERT");
+                    await SyncCargaParaRomaneio(conn, trans, inserted);
                 }
             }
 
@@ -441,21 +351,8 @@ public partial class TransporteDesmontagemViewModel : ObservableObject
             // ============================================
             else if (atuais > totalCaminhoes)
             {
-                var excedentes = caminhoesExistentes
-                    .Skip((int)totalCaminhoes)
-                    .ToList();
-
-                var sqlDelete = @"DELETE FROM operacional.t_cargas_desmontagem WHERE id = @id";
-
-                foreach (var cam in excedentes)
-                {
-                    await SyncCargaParaRomaneio(conn, trans, null, cam, "DELETE");
-
-                    await conn.ExecuteAsync(sqlDelete, new { cam.id }, trans);
-                }
+                throw new InvalidOperationException("A reducao excluiria cargas e romaneios existentes. Revise as cargas antes de reduzir a quantidade.");
             }
-
-            await trans.CommitAsync();
         }
         catch (Exception ex)
         {
@@ -466,37 +363,8 @@ public partial class TransporteDesmontagemViewModel : ObservableObject
     private async Task SyncCargaParaRomaneio(
         IDbConnection conn,
         IDbTransaction trans,
-        OperacionalCargaDesmontagemModel newRow,
-        OperacionalCargaDesmontagemModel oldRow,
-        string operacao)
+        OperacionalCargaDesmontagemModel newRow)
     {
-        // ============================================
-        // DELETE → remover do romaneio
-        // ============================================
-        if (operacao == "DELETE")
-        {
-            int numero = int.Parse(oldRow.caminhao);
-
-            string sql = @"
-                DELETE FROM expedicao.t_romaneio
-                WHERE shopping_destino = @sigla
-                  AND numero_caminhao = @num
-                  AND operacao = 'DESCARREGAMENTO SHOPPING';
-            ";
-
-            await conn.ExecuteAsync(sql, new
-            {
-                sigla = oldRow.siglaserv,
-                num = numero
-            }, trans);
-
-            return;
-        }
-
-        // ============================================
-        // INSERT / UPDATE
-        // ============================================
-
         // 1. Buscar codtransportadora (corrigido)
         int? codTransportadora = null;
 
@@ -528,7 +396,6 @@ public partial class TransporteDesmontagemViewModel : ObservableObject
             await conn.ExecuteAsync(@"
                 UPDATE expedicao.t_romaneio
                 SET 
-                    data_carregamento = @data,
                     codtransportadora = COALESCE(@codt, codtransportadora)
                 WHERE shopping_destino = @sigla
                   AND numero_caminhao = @num
@@ -569,165 +436,8 @@ public partial class TransporteDesmontagemViewModel : ObservableObject
         return new ObservableCollection<OperacionalCargaDesmontagemModel>(lista);
     }
 
-    public async Task UpsertcargaDesmontagem(t_cargas_desmontagem model)
+    public Task UpsertcargaDesmontagem(t_cargas_desmontagem model)
     {
-        using var conn = new NpgsqlConnection(BaseSettings.ConnectionString);
-
-        var sqlSelect = @"SELECT * FROM operacional.t_cargas_desmontagem WHERE id = @id";
-        var existente = await conn.QueryFirstOrDefaultAsync<t_cargas_desmontagem?>(sqlSelect, new { model.id });
-
-        if (existente == null)
-        {
-            // INSERT
-            var sqlInsert = @"
-                INSERT INTO operacional.t_cargas_desmontagem
-                (   
-                    siglaserv,
-                    data_chegada_shopping,
-                    data_saida_shopping,
-                    volume,
-                    caminhao,
-                    prev_volume,
-                    data_chegada_cipolatti,
-                    obs,
-                    transportadora,
-                    confirmado,
-                    descarga_caminhao,
-                    obs_recebimento,
-                    vl_est_frete,
-                    vl_est_seguro,
-                    vl_est_icms,
-                    vl_est_total,
-                    obs_embalagem,
-                    data_chegada_galpao,
-                    hora_chegada_galpao,
-                    placa_caminhao,
-                    obs_frete_caminhao_desmont,
-                )
-                VALUES
-                (
-                    @siglaserv,
-                    @data_chegada_shopping,
-                    @data_saida_shopping,
-                    @volume,
-                    @caminhao,
-                    @prev_volume,
-                    @data_chegada_cipolatti,
-                    @obs,
-                    @transportadora,
-                    @confirmado,
-                    @descarga_caminhao,
-                    @obs_recebimento,
-                    @vl_est_frete,
-                    @vl_est_seguro,
-                    @vl_est_icms,
-                    @vl_est_total,
-                    @obs_embalagem,
-                    @data_chegada_galpao,
-                    @hora_chegada_galpao,
-                    @placa_caminhao,
-                    @obs_frete_caminhao_desmont
-                )
-                RETURNING id;
-            ";
-
-            model.id = await conn.ExecuteScalarAsync<int>(sqlInsert, model);
-        }
-        else
-        {
-            var tipo = typeof(t_cargas_desmontagem);
-
-            // 2) Lista de SETs só dos alterados
-            var setList = new List<string>();
-            var parametros = new DynamicParameters();
-
-            foreach (var prop in tipo.GetProperties())
-            {
-                if (prop.Name.Equals("id", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                var valorNovo = prop.GetValue(model);
-                var valorAntigo = prop.GetValue(existente);
-
-                // Ignora valores nulos do modelo novo
-                // (você pode mudar esse comportamento)
-                if (valorNovo == null)
-                    continue;
-
-                // Só adiciona se mudou
-                if (!Equals(valorNovo, valorAntigo))
-                {
-                    setList.Add($"{prop.Name} = @{prop.Name}");
-                    parametros.Add(prop.Name, valorNovo);
-                }
-            }
-
-            // Se nada mudou, não atualizar
-            if (setList.Count == 0)
-                return;
-
-            // 3) Completar parâmetros com @id
-            parametros.Add("id", model.id);
-
-            // 4) Montar SQL final
-            var sqlUpdate = $@"
-                UPDATE operacional.t_cargas_desmontagem
-                SET {string.Join(", ", setList)}
-                WHERE id = @id;
-            ";
-
-            await conn.ExecuteAsync(sqlUpdate, model);
-
-            string[] campos = [
-                "placa_caminhao",
-                "data_chegada_cipolatti",
-                "transportadora"
-            ];
-
-            // verifica se algum dos campos monitorados realmente foi alterado
-            bool camposAlterados = setList.Any(s => campos.Any(c => s.Contains(c)));
-
-            if (camposAlterados)
-            {
-                var updateServicosList = new List<string>();
-                //var parametros = new DynamicParameters();
-                parametros = new DynamicParameters();
-
-                // SE placa mudou → incluir no UPDATE
-                if (setList.Any(s => s.Contains("placa_caminhao")))
-                {
-                    updateServicosList.Add("placa_carroceria = @placa_caminhao");
-                    parametros.Add("placa_caminhao", model.placa_caminhao);
-                }
-
-                // SE data mudou → incluir no UPDATE
-                if (setList.Any(s => s.Contains("data_chegada_cipolatti")))
-                {
-                    updateServicosList.Add("data_carregamento = @data_chegada_cipolatti");
-                    parametros.Add("data_chegada_cipolatti", model.data_chegada_cipolatti);
-                }
-
-                // (transportadora não tem equivalente no romaneio, mas se tiver você coloca aqui)
-
-                // se nenhum campo do romaneio mudou → não faz nada
-                if (updateServicosList.Count == 0)
-                    return;
-
-                // parametros fixos
-                parametros.Add("siglaserv", model.siglaserv);
-                parametros.Add("caminhao", int.Parse(model.caminhao));
-
-                var sqlUpdateServicos = $@"
-                    UPDATE expedicao.t_romaneio
-                    SET {string.Join(", ", updateServicosList)}
-                    WHERE shopping_destino = @siglaserv
-                      AND numero_caminhao = @caminhao
-                      AND operacao = 'DESCARREGAMENTO SHOPPING';
-                ";
-
-                await conn.ExecuteAsync(sqlUpdateServicos, parametros);
-            }
-
-        }
+        return CargaDesmontagemRepository.SalvarAsync(model, true);
     }
 }

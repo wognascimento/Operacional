@@ -18,9 +18,9 @@
             ItemsSource="{Binding Equipes}" 
             NewRowPosition="Bottom"
             GroupRenderMode="Flat"
-            RowValidated="EquipeRowValidated">
+            RowValidating="EquipeRowValidated">
             <telerik:RadGridView.Columns>
-                <telerik:GridViewDataColumn Header="#" DataMemberBinding="{Binding id}"/>
+                <telerik:GridViewDataColumn Header="#" DataMemberBinding="{Binding id}" IsReadOnly="True"/>
                 <telerik:GridViewDataColumn Header="equipe" DataMemberBinding="{Binding equipe_e}"/>
                 <telerik:GridViewDataColumn Header="tipo" DataMemberBinding="{Binding tipo}"/>
                 <telerik:GridViewDataColumn Header="cidade referencia" DataMemberBinding="{Binding cidadereferencia}"/>

@@ -42,26 +42,18 @@ public partial class CadastroEquipe : UserControl
         }
     }
 
-    private async void EquipeRowValidated(object sender, Telerik.Windows.Controls.GridViewRowValidatedEventArgs e)
+    private void EquipeRowValidated(object sender, Telerik.Windows.Controls.GridViewRowValidatingEventArgs e)
     {
-        try
+        if (e.Row?.IsInEditMode != true) return;
+        if (e.Row.Item is not EquipeExternaEquipeModel item) return;
+        if (string.IsNullOrWhiteSpace(item.equipe_e))
         {
-            Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
-            CadastroEquipeViewModel vm = (CadastroEquipeViewModel)DataContext;
-            var equipe = e.Row.Item as EquipeExternaEquipeModel;
-            await vm.AddEquipeAsync(equipe);
-            Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+            e.IsValid = false;
+            e.ValidationResults.Add(new Telerik.Windows.Controls.GridViewCellValidationResult
+            { ErrorMessage = "Preencha os campos obrigatorios." });
+            return;
         }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx)
-        {
-            MessageBox.Show($"Erro do banco: {pgEx.MessageText}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-            Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-        }
-        catch (Exception ex)
-        {
-            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
-            Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-        }
+        ValidatedGridSave.Save(sender, e, () => ((CadastroEquipeViewModel)DataContext).AddEquipeAsync(item));
     }
 }
 
@@ -171,11 +163,10 @@ public partial class CadastroEquipeViewModel : ObservableObject
             WHERE id = @id;",
             model);
 
-        if (linhas == 0)
-        {
-            model.id = 0;
-            return await AddEquipeAsync(model);
-        }
+        if (linhas != 1)
+            {
+                throw new InvalidOperationException("O registro nao existe mais ou foi alterado por outro usuario. Recarregue a tela; nenhum novo registro foi criado.");
+            }
 
         return true;
     }

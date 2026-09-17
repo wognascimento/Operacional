@@ -137,6 +137,9 @@
     <None Update="Modelos\MODELO-RELATORIO-DESPESA.xlsx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Modelos\MODELO_CARTA_INICIO_MONTAGEM.docx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

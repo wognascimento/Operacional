@@ -136,186 +136,68 @@ namespace Operacional.Views.Despesa
 
         }
 
-        private async void dGRelatorio_RowValidating(object sender, GridViewRowValidatingEventArgs e)
+        private void dGRelatorio_RowValidating(object sender, GridViewRowValidatingEventArgs e)
         {
-            CadastroDespesaViewModel vm = (CadastroDespesaViewModel)DataContext;
-            try
+            if (e.Row?.IsInEditMode != true) return;
+            if (e.Row.Item is not OperacionalRelatorioDespesaModel item) return;
+            
+            if (!ValidarRelatorio(item, e)) return;
+            ValidatedGridSave.Save(sender, e, async () =>
             {
-                if (e.Row?.IsInEditMode != true)
-                    return;
+                await ((CadastroDespesaViewModel)DataContext).AdcionarRelatorio(item);
+                item.RelatorioObservacao ??= [];
+                item.RelatorioAdiantamento ??= [];
+                if (item.RelatorioObservacao.Count == 0)
+                    item.RelatorioObservacao.Add(new() { cod_relatorio = item.cod_relatorio });
+                if (item.RelatorioAdiantamento.Count == 0)
+                    item.RelatorioAdiantamento.Add(new() { cod_relatorio = item.cod_relatorio });
 
-                Mouse.OverrideCursor = Cursors.Wait;
-                var relatorio = e.Row.Item as OperacionalRelatorioDespesaModel;
-                if (relatorio is null)
-                    return;
-
-                if (!ValidarRelatorio(relatorio, e))
-                    return;
-
-                relatorio.RelatorioObservacao = new ObservableCollection<OperacionalRelatorioObservacaoModel> {
-                    new() 
-                    {
-                        observacao = "",
-                    }
-                };
-                relatorio.RelatorioAdiantamento = new ObservableCollection<OperacionalAdiantamentoModel> {
-                    new()
-                    {
-                        emitido_por = "",
-                        emitido_data = DateTime.Now.Date,
-                    }
-                };
-                bool sucesso = await vm.AdcionarRelatorio(relatorio);
-                if (sucesso == false)
-                {
-                    Mouse.OverrideCursor = null;
-                    e.IsValid = false; // Impede que a linha seja confirmada
-                    MessageBox.Show("Erro ao salvar no banco! Verifique os dados.", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-            catch (DbUpdateException ex)
-            {
-                Mouse.OverrideCursor = null;
-                Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
-                e.IsValid = false; // Impede que a linha seja confirmada
-            }
-            catch (Exception ex)
-            {
-                Mouse.OverrideCursor = null;
-                Operacional.ErrorDialog.Show(ex, "Erro");
-                e.IsValid = false; // Impede que a linha seja confirmada
-            }
-            finally
-            {
-                Mouse.OverrideCursor = null;
-            }
+            });
         }
 
-        private async void dGRelatorioObservacao_RowValidating(object sender, GridViewRowValidatingEventArgs e)
+        private void dGRelatorioObservacao_RowValidating(object sender, GridViewRowValidatingEventArgs e)
         {
-            CadastroDespesaViewModel vm = (CadastroDespesaViewModel)DataContext;
-            try
+            if (e.Row?.IsInEditMode != true) return;
+            if (e.Row.Item is not OperacionalRelatorioObservacaoModel item) return;
+            var pai = (sender as FrameworkElement)?.DataContext as OperacionalRelatorioDespesaModel;
+            if (pai == null || pai.cod_relatorio <= 0) { e.IsValid = false; return; }
+            item.cod_relatorio = pai.cod_relatorio;
+            if (!ValidarObservacao(item, e)) return;
+            ValidatedGridSave.Save(sender, e, async () =>
             {
-                if (e.Row?.IsInEditMode != true)
-                    return;
-
-                Mouse.OverrideCursor = Cursors.Wait;
-                var relatorio = e.Row.Item as OperacionalRelatorioObservacaoModel;
-                if (relatorio is null)
-                    return;
-
-                if (!ValidarObservacao(relatorio, e))
-                    return;
-
-                bool sucesso = await vm.AdcionarRelatorioObservacao(relatorio);
-                if (sucesso == false)
-                {
-                    Mouse.OverrideCursor = null;
-                    e.IsValid = false; // Impede que a linha seja confirmada
-                    MessageBox.Show("Erro ao salvar no banco! Verifique os dados.", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-            catch (DbUpdateException ex)
-            {
-                Mouse.OverrideCursor = null;
-                Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
-                e.IsValid = false; // Impede que a linha seja confirmada
-            }
-            catch (Exception ex)
-            {
-                Mouse.OverrideCursor = null;
-                Operacional.ErrorDialog.Show(ex, "Erro");
-                e.IsValid = false; // Impede que a linha seja confirmada
-            }
-            finally
-            {
-                Mouse.OverrideCursor = null;
-            }
+                await ((CadastroDespesaViewModel)DataContext).AdcionarRelatorioObservacao(item);
+            });
         }
 
-        private async void dGRelatorioAdiantamento_RowValidating(object sender, GridViewRowValidatingEventArgs e)
+        private void dGRelatorioAdiantamento_RowValidating(object sender, GridViewRowValidatingEventArgs e)
         {
-            CadastroDespesaViewModel vm = (CadastroDespesaViewModel)DataContext;
-            try
+            if (e.Row?.IsInEditMode != true) return;
+            if (e.Row.Item is not OperacionalAdiantamentoModel item) return;
+            var pai = (sender as FrameworkElement)?.DataContext as OperacionalRelatorioDespesaModel;
+            if (pai == null || pai.cod_relatorio <= 0) { e.IsValid = false; return; }
+            item.cod_relatorio = pai.cod_relatorio;
+            if (!ValidarAdiantamento(item, e)) return;
+            ValidatedGridSave.Save(sender, e, async () =>
             {
-                if (e.Row?.IsInEditMode != true)
-                    return;
-
-                Mouse.OverrideCursor = Cursors.Wait;
-                var relatorio = e.Row.Item as OperacionalAdiantamentoModel;
-                if (relatorio is null)
-                    return;
-
-                if (!ValidarAdiantamento(relatorio, e))
-                    return;
-
-                bool sucesso = await vm.AdcionarRelatorioAdiantamento(relatorio);
-                if (sucesso == false)
-                {
-                    Mouse.OverrideCursor = null;
-                    e.IsValid = false; // Impede que a linha seja confirmada
-                    MessageBox.Show("Erro ao salvar no banco! Verifique os dados.", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-            catch (DbUpdateException ex)
-            {
-                Mouse.OverrideCursor = null;
-                Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
-                e.IsValid = false; // Impede que a linha seja confirmada
-            }
-            catch (Exception ex)
-            {
-                Mouse.OverrideCursor = null;
-                Operacional.ErrorDialog.Show(ex, "Erro");
-                e.IsValid = false; // Impede que a linha seja confirmada
-            }
-            finally
-            {
-                Mouse.OverrideCursor = null;
-            }
+                await ((CadastroDespesaViewModel)DataContext).AdcionarRelatorioAdiantamento(item);
+            });
         }
 
-        private async void dGRelatorioDetalhes_RowValidating(object sender, GridViewRowValidatingEventArgs e)
+        private void dGRelatorioDetalhes_RowValidating(object sender, GridViewRowValidatingEventArgs e)
         {
-            CadastroDespesaViewModel vm = (CadastroDespesaViewModel)DataContext;
-            var pai = vm.Relatorio; //((RegistroDespesa)e.RowData).RelatorioPai; //{Operacional.DataBase.Models.OperacionalRelatorioDespesaModel}
-            try
+            if (e.Row?.IsInEditMode != true) return;
+            if (e.Row.Item is not RegistroDespesa item) return;
+            var pai = item.RelatorioPai ?? (sender as FrameworkElement)?.DataContext as OperacionalRelatorioDespesaModel;
+            if (pai == null || pai.cod_relatorio <= 0) { e.IsValid = false; return; }
+            item.RelatorioPai = pai;
+            item.cod_relatorio = pai.cod_relatorio;
+            if (!ValidarDetalhe(item, e)) return;
+            ValidatedGridSave.Save(sender, e, async () =>
             {
-                if (e.Row?.IsInEditMode != true)
-                    return;
-
-                Mouse.OverrideCursor = Cursors.Wait;
-
-                var registro = e.Row.Item as RegistroDespesa ?? throw new InvalidOperationException("Linha inválida, não é um RegistroDespesa.");
-                if (!ValidarDetalhe(registro, e))
-                    return;
-
-                var model = registro.ToModel(); // Aqui você converte para o model de banco
-                model.cod_relatorio = pai.cod_relatorio;
-
-                bool sucesso = await vm.AdcionarRelatorioDetalhes(model);
-                if (!sucesso)
-                {
-                    e.IsValid = false;
-                    MessageBox.Show("Erro ao salvar no banco! Verifique os dados.", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-            catch (DbUpdateException ex)
-            {
-                System.IO.File.WriteAllText("erro_log.txt", ex.ToString());
-                Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
-                e.IsValid = false;
-            }
-            catch (Exception ex)
-            {
-                System.IO.File.WriteAllText("erro_log.txt", ex.ToString());
-                Operacional.ErrorDialog.Show(ex, "Erro");
-                e.IsValid = false;
-            }
-            finally
-            {
-                Mouse.OverrideCursor = null;
-            }
+                var model = item.ToModel();
+                await ((CadastroDespesaViewModel)DataContext).AdcionarRelatorioDetalhes(model);
+                item.cod_linha_detalhe = model.cod_linha_detalhe;
+            });
         }
 
         private void OnImprimirRelatorioClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
@@ -737,43 +619,26 @@ namespace Operacional.Views.Despesa
             }
         }
 
-        public async Task<bool> AdcionarRelatorio(OperacionalRelatorioDespesaModel relatorio)
+        public async Task<bool> AdcionarRelatorio(OperacionalRelatorioDespesaModel item)
         {
-            try
-            {
-                await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
-                const string sql = @"
+            using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+            if (item.cod_relatorio <= 0)
+                item.cod_relatorio = await connection.QuerySingleAsync<long>(@"
                     INSERT INTO operacional.t_relatorio_despesas
-                    (cod_relatorio, data, codigo_funcionario, nome_funcionario, nome_relatorio, localidade,
-                     codigo_empresa, emitido_por, emitido_data, cod_conta_corrente, finalizado, classif_financeiro)
-                    VALUES
-                    (@cod_relatorio, @data, @codigo_funcionario, @nome_funcionario, @nome_relatorio, @localidade,
-                     @codigo_empresa, @emitido_por, @emitido_data, @cod_conta_corrente, @finalizado, @classif_financeiro)
-                    ON CONFLICT (cod_relatorio) DO UPDATE SET
-                        data = EXCLUDED.data,
-                        codigo_funcionario = EXCLUDED.codigo_funcionario,
-                        nome_funcionario = EXCLUDED.nome_funcionario,
-                        nome_relatorio = EXCLUDED.nome_relatorio,
-                        localidade = EXCLUDED.localidade,
-                        codigo_empresa = EXCLUDED.codigo_empresa,
-                        emitido_por = EXCLUDED.emitido_por,
-                        emitido_data = EXCLUDED.emitido_data,
-                        cod_conta_corrente = EXCLUDED.cod_conta_corrente,
-                        finalizado = EXCLUDED.finalizado,
-                        classif_financeiro = EXCLUDED.classif_financeiro;";
-
-                await connection.ExecuteAsync(sql, relatorio);
-
-                return true;
-            }
-            catch (DbUpdateException)
-            {
-                throw;
-            }
-            catch (Exception ex)  // Para qualquer outro erro
-            {
-                throw new Exception("Erro inesperado.", ex);
-            }
+                    (data, codigo_funcionario, nome_funcionario, nome_relatorio, localidade,
+                     codigo_empresa, emitido_por, emitido_data, cod_conta_corrente, classif_financeiro)
+                    VALUES (@data, @codigo_funcionario, @nome_funcionario, @nome_relatorio, @localidade,
+                     @codigo_empresa, @emitido_por, @emitido_data, @cod_conta_corrente, @classif_financeiro)
+                    RETURNING cod_relatorio;", item);
+            else if (await connection.ExecuteAsync(@"
+                    UPDATE operacional.t_relatorio_despesas SET
+                        data = @data, codigo_funcionario = @codigo_funcionario,
+                        nome_funcionario = @nome_funcionario, nome_relatorio = @nome_relatorio,
+                        localidade = @localidade, codigo_empresa = @codigo_empresa,
+                        classif_financeiro = @classif_financeiro
+                    WHERE cod_relatorio = @cod_relatorio;", item) != 1)
+                throw new InvalidOperationException("Relatorio nao encontrado. Recarregue a tela.");
+            return true;
         }
 
         public async Task<bool> AdcionarRelatorioObservacao(OperacionalRelatorioObservacaoModel relatorio)
@@ -826,19 +691,10 @@ namespace Operacional.Views.Despesa
                         valor_cotacao_dolar = EXCLUDED.valor_cotacao_dolar,
                         valor_dolar_dolar = EXCLUDED.valor_dolar_dolar,
                         total_adiantamento = EXCLUDED.total_adiantamento,
-                        total_despesas = EXCLUDED.total_despesas,
-                        saldo_final = EXCLUDED.saldo_final,
-                        emitido_por = EXCLUDED.emitido_por,
-                        emitido_data = EXCLUDED.emitido_data,
                         alterado_por = EXCLUDED.alterado_por,
                         alterado_data = EXCLUDED.alterado_data,
-                        aprovado_por = EXCLUDED.aprovado_por,
-                        data_aprovacao = EXCLUDED.data_aprovacao,
                         data_pagamento = EXCLUDED.data_pagamento,
-                        forma_pagto = EXCLUDED.forma_pagto,
-                        pagto_realizado_por = EXCLUDED.pagto_realizado_por,
-                        data_pagto_realizado = EXCLUDED.data_pagto_realizado,
-                        aprovacao = EXCLUDED.aprovacao;";
+                        forma_pagto = EXCLUDED.forma_pagto;";
 
                 await connection.ExecuteAsync(sql, relatorio);
 
@@ -854,49 +710,28 @@ namespace Operacional.Views.Despesa
             }
         }
 
-        public async Task<bool> AdcionarRelatorioDetalhes(OperacionalRelatorioDespesasDetalheModel relatorio)
+        public async Task<bool> AdcionarRelatorioDetalhes(OperacionalRelatorioDespesasDetalheModel item)
         {
-            try
-            {
-                await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
-                const string sql = @"
+            if (item.cod_relatorio is null or <= 0)
+                throw new InvalidOperationException("Salve o relatorio antes de incluir despesas.");
+            using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+            if (item.cod_linha_detalhe is null or <= 0)
+                item.cod_linha_detalhe = await connection.QuerySingleAsync<long>(@"
                     INSERT INTO operacional.t_relatorio_despesas_detalhe
-                    (cod_linha_detalhe, cod_relatorio, data, sigla, quantidade, etapa, classificacao,
-                     descricao, valor, codigo_empresa, cod_relatorio_empresa, emitido_por, emitido_data,
-                     alterado_por, alterado_data, documento)
-                    VALUES
-                    (@cod_linha_detalhe, @cod_relatorio, @data, @sigla, @quantidade, @etapa, @classificacao,
-                     @descricao, @valor, @codigo_empresa, @cod_relatorio_empresa, @emitido_por, @emitido_data,
-                     @alterado_por, @alterado_data, @documento)
-                    ON CONFLICT (cod_linha_detalhe) DO UPDATE SET
-                        cod_relatorio = EXCLUDED.cod_relatorio,
-                        data = EXCLUDED.data,
-                        sigla = EXCLUDED.sigla,
-                        quantidade = EXCLUDED.quantidade,
-                        etapa = EXCLUDED.etapa,
-                        classificacao = EXCLUDED.classificacao,
-                        descricao = EXCLUDED.descricao,
-                        valor = EXCLUDED.valor,
-                        codigo_empresa = EXCLUDED.codigo_empresa,
-                        cod_relatorio_empresa = EXCLUDED.cod_relatorio_empresa,
-                        emitido_por = EXCLUDED.emitido_por,
-                        emitido_data = EXCLUDED.emitido_data,
-                        alterado_por = EXCLUDED.alterado_por,
-                        alterado_data = EXCLUDED.alterado_data,
-                        documento = EXCLUDED.documento;";
-
-                await connection.ExecuteAsync(sql, relatorio);
-                return true;
-            }
-            catch (DbUpdateException ex)
-            {
-                // Aqui você pode logar ou mostrar algo mais específico se quiser
-                throw;
-            }
-            catch (Exception ex)
-            {
-                throw;
-            }
+                    (cod_relatorio, data, sigla, quantidade, etapa, classificacao, descricao,
+                     valor, codigo_empresa, cod_relatorio_empresa, emitido_por, emitido_data, documento)
+                    VALUES (@cod_relatorio, @data, @sigla, @quantidade, @etapa, @classificacao, @descricao,
+                     @valor, @codigo_empresa, @cod_relatorio_empresa, @emitido_por, @emitido_data, @documento)
+                    RETURNING cod_linha_detalhe;", item);
+            else if (await connection.ExecuteAsync(@"
+                    UPDATE operacional.t_relatorio_despesas_detalhe SET
+                        data = @data, sigla = @sigla, quantidade = @quantidade, etapa = @etapa,
+                        classificacao = @classificacao, descricao = @descricao, valor = @valor,
+                        codigo_empresa = @codigo_empresa, cod_relatorio_empresa = @cod_relatorio_empresa,
+                        alterado_por = @alterado_por, alterado_data = @alterado_data, documento = @documento
+                    WHERE cod_linha_detalhe = @cod_linha_detalhe AND cod_relatorio = @cod_relatorio;", item) != 1)
+                throw new InvalidOperationException("Despesa nao encontrada neste relatorio. Recarregue a tela.");
+            return true;
         }
     }
 

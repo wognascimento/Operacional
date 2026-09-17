@@ -91,6 +91,10 @@
                 </telerik:RadMenuItem>
             </telerik:RadMenuItem>
 
+            <telerik:RadMenuItem Header="Carta">
+                <telerik:RadMenuItem Header="Início Montagem" Click="OnCartaInicioMontagemClick"/>
+            </telerik:RadMenuItem>
+
             <telerik:RadMenuItem Header="Documentos">
                 <telerik:RadMenuItem Header="Controle" Click="OnOpenControleDocumentoClick"/>
                 <telerik:RadMenuItem Header="Consultas">

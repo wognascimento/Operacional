@@ -40,63 +40,36 @@ namespace Operacional.Views
             }
         }
 
-        private async void RadGridView_RowValidating(object sender, Telerik.Windows.Controls.GridViewRowValidatingEventArgs e)
+        private void RadGridView_RowValidating(object sender, GridViewRowValidatingEventArgs e)
         {
-            try
+            if (e.Row?.IsInEditMode != true) return;
+            if (e.Row.Item is not QryTransporteDTO item) return;
+            if (item.numero_de_caminhoes < 0 || string.IsNullOrWhiteSpace(item.SiglaServ))
+            { e.IsValid = false; return; }
+            var vm = (TransporteMontagemViewModel)DataContext;
+            ValidatedGridSave.Save(sender, e, async () =>
             {
-
-                TransporteMontagemViewModel vm = (TransporteMontagemViewModel)DataContext;
-                if (!e.Row.IsInEditMode)
-                    return;
-
-                if (e.Row.Item is QryTransporteDTO item)
+                await vm.AtualizarTransporteMontagem(new TransporteMontagemModel
                 {
-                    //MessageBox.Show($"Linha alterada: {item.SiglaServ}, {item.numero_de_caminhoes}");
-                    var novoTransporte = new TransporteMontagemModel
-                    {
-                        SiglaServ = item.SiglaServ,
-                        DataDeExpedicao = item.data_de_expedicao,
-                        VolumeDaCarga = item.volume_da_carga,
-                        NumeroDeCaminhoes = item.numero_de_caminhoes,
-                        Transportadora = item.transportadora,
-                    };
-                    bool sucesso = await vm.AtualizarTransporteMontagem(novoTransporte);
-                    if (sucesso == false)
-                    {
-                        e.IsValid = false; // Impede que a linha seja confirmada
-                        MessageBox.Show("Erro ao salvar no banco! Verifique os dados.", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                    else
-                    {
-                        if (item.numero_de_caminhoes != e.OldValues["numero_de_caminhoes"] as int?)
-                        {
-                            await vm.SincronizarCaminhoes(item.SiglaServ, item.numero_de_caminhoes, item.data_de_expedicao);
-                            item.Cargas = await vm.CaminhoesSigla(item.SiglaServ);
-                            radGridView.Rebind(); // Recarrega todos os dados da grade
-
-                        }
-
-                    }
-                }
-
-            }
-            catch (DbUpdateException ex)
+                    SiglaServ = item.SiglaServ, DataDeExpedicao = item.data_de_expedicao,
+                    VolumeDaCarga = item.volume_da_carga, NumeroDeCaminhoes = item.numero_de_caminhoes,
+                    Transportadora = item.transportadora
+                });
+            }, async () =>
             {
-                e.IsValid = false;
-                Operacional.ErrorDialog.Show(ex, "Erro");
-                //Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
-            }
+                item.Cargas = await vm.CaminhoesSigla(item.SiglaServ);
+                radGridView.Rebind();
+            });
         }
 
-        private async void RadGridViewFilho_RowValidating(object sender, GridViewRowValidatingEventArgs e)
+        private void RadGridViewFilho_RowValidating(object sender, GridViewRowValidatingEventArgs e)
         {
-            try
+            if (e.Row?.IsInEditMode != true) return;
+            if (e.Row.Item is not QryCargaMontagemDTO c) return;
+            if (string.IsNullOrWhiteSpace(c.siglaserv) || !int.TryParse(c.num_caminhao, out var numero) || numero <= 0)
+            { e.IsValid = false; return; }
+            ValidatedGridSave.Save(sender, e, async () =>
             {
-                TransporteMontagemViewModel vm = (TransporteMontagemViewModel)DataContext;
-                if (!e.Row.IsInEditMode)
-                    return;
-                if (e.Row.Item is QryCargaMontagemDTO c) //tbl_cargas_montagem
-                {
                     var carga = new tbl_cargas_montagem 
                     {
                         id = c.id,
@@ -120,20 +93,10 @@ namespace Operacional.Views
                         obs_externas = c.obs_externas,
                         obs_frete_contratado = c.obs_frete_contratado
                     };
-                    bool sucesso = await vm.UpsertcargaMontagem(carga);
-                    if (sucesso == false)
-                    {
-                        e.IsValid = false; // Impede que a linha seja confirmada
-                        MessageBox.Show("Erro ao salvar no banco! Verifique os dados.", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                }
-            }
-            catch (DbUpdateException ex)
-            {
-                e.IsValid = false;
-                Operacional.ErrorDialog.Show(ex, "Erro");
-                //Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
-            }
+
+                await ((TransporteMontagemViewModel)DataContext).UpsertcargaMontagem(carga);
+                c.id = carga.id;
+            });
         }
     }
 
@@ -260,7 +223,14 @@ namespace Operacional.Views
                         transportadora = @Transportadora
                     WHERE siglaserv = @SiglaServ;";
 
-                return await connection.ExecuteAsync(sql, transporteAtualizado) > 0;
+                await connection.OpenAsync();
+                await using var transaction = await connection.BeginTransactionAsync();
+                if (await connection.ExecuteAsync(sql, transporteAtualizado, transaction) != 1)
+                    throw new InvalidOperationException("Transporte nao encontrado. Recarregue a tela.");
+                await SincronizarCaminhoes(transporteAtualizado.SiglaServ, transporteAtualizado.NumeroDeCaminhoes,
+                    transporteAtualizado.DataDeExpedicao, connection, transaction);
+                await transaction.CommitAsync();
+                return true;
             }
             catch (DbUpdateException)
             {
@@ -272,33 +242,35 @@ namespace Operacional.Views
             }
         }
 
-        public async Task SincronizarCaminhoes(string siglaServ, int totalCaminhoes, DateTime? data)
+        private async Task SincronizarCaminhoes(string siglaServ, int totalCaminhoes, DateTime? data, NpgsqlConnection connection, NpgsqlTransaction transaction)
         {
             try
             {
-                using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
-                await connection.OpenAsync();
-                await using var transaction = await connection.BeginTransactionAsync();
+                if (totalCaminhoes < 0) throw new InvalidOperationException("Quantidade de caminhoes invalida.");
 
                 var caminhõesExistentes = (await connection.QueryAsync<tbl_cargas_montagem>(
                     @"SELECT * FROM operacional.tbl_cargas_montagem
                       WHERE siglaserv = @siglaServ
-                      ORDER BY num_caminhao;",
+                      ORDER BY num_caminhao FOR UPDATE;",
                     new { siglaServ },
                     transaction)).ToList();
 
                 int caminhõesAtuais = caminhõesExistentes.Count;
+                var numeros = caminhõesExistentes.Select(c => int.TryParse(c.num_caminhao, out var n) ? n : 0).ToHashSet();
+                int proximoNumero = 1;
 
                 // **Se precisar adicionar caminhões**
                 if (caminhõesAtuais < totalCaminhoes)
                 {
                     for (int i = caminhõesAtuais + 1; i <= totalCaminhoes; i++)
                     {
+                        while (numeros.Contains(proximoNumero)) proximoNumero++;
+                        numeros.Add(proximoNumero);
                         var novoCaminhao = new tbl_cargas_montagem
                         {
                             siglaserv = siglaServ,
-                            num_caminhao = i.ToString().PadLeft(2, '0'), // Formato "01", "02", etc.
-                            data = data.Value.AddDays(i-1),
+                            num_caminhao = proximoNumero.ToString().PadLeft(2, '0'), // Formato "01", "02", etc.
+                            data = data?.AddDays(i-1),
                             placa_caminhao = null // Ou alguma lógica para definir a placa
                         };
 
@@ -313,15 +285,10 @@ namespace Operacional.Views
                 // **Se precisar remover caminhões excedentes**
                 else if (caminhõesAtuais > totalCaminhoes)
                 {
-                    var caminhõesParaRemover = caminhõesExistentes.Skip(totalCaminhoes).ToList();
-                    await connection.ExecuteAsync(
-                        @"DELETE FROM operacional.tbl_cargas_montagem
-                          WHERE id = ANY(@ids);",
-                        new { ids = caminhõesParaRemover.Select(c => c.id).ToArray() },
-                        transaction);
+                    throw new InvalidOperationException("A reducao excluiria cargas existentes. Revise as cargas antes de reduzir a quantidade.");
                 }
 
-                await transaction.CommitAsync();
+
             }
             catch (DbUpdateException)
             {
@@ -412,29 +379,8 @@ namespace Operacional.Views
                     WHERE id = @id;",
                     cargaMontagem);
 
-                if (linhas == 0)
-                    return await UpsertcargaMontagem(new tbl_cargas_montagem
-                    {
-                        siglaserv = cargaMontagem.siglaserv,
-                        data = cargaMontagem.data,
-                        num_caminhao = cargaMontagem.num_caminhao,
-                        placa_caminhao = cargaMontagem.placa_caminhao,
-                        m3_contratado = cargaMontagem.m3_contratado,
-                        m3_utilizado = cargaMontagem.m3_utilizado,
-                        hora_saida = cargaMontagem.hora_saida,
-                        obs = cargaMontagem.obs,
-                        local_carga = cargaMontagem.local_carga,
-                        obscarga = cargaMontagem.obscarga,
-                        trasnportadora = cargaMontagem.trasnportadora,
-                        veiculo_programado = cargaMontagem.veiculo_programado,
-                        data_chegada = cargaMontagem.data_chegada,
-                        data_chegada_efetiva = cargaMontagem.data_chegada_efetiva,
-                        obs_saida = cargaMontagem.obs_saida,
-                        valor_frete_contratado_caminhao = cargaMontagem.valor_frete_contratado_caminhao,
-                        noite_montagem = cargaMontagem.noite_montagem,
-                        obs_externas = cargaMontagem.obs_externas,
-                        obs_frete_contratado = cargaMontagem.obs_frete_contratado
-                    });
+                if (linhas != 1)
+                    throw new InvalidOperationException("Carga nao encontrada. Recarregue a tela.");
 
                 return true;
             }

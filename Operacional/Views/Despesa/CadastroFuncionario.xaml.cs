@@ -39,61 +39,34 @@ namespace Operacional.Views.Despesa
             }
         }
 
-        private async void RGVFuncionario_RowValidating(object sender, Telerik.Windows.Controls.GridViewRowValidatingEventArgs e)
+        private void RGVFuncionario_RowValidating(object sender, Telerik.Windows.Controls.GridViewRowValidatingEventArgs e)
         {
-            try
-            {
-                CadastroFuncionarioViewModel vm = (CadastroFuncionarioViewModel)DataContext;
-                if (!e.Row.IsInEditMode)
-                    return;
-
-                if (e.Row.Item is OperacionalTDespFuncionarioModel funcionario)
-                {
-                    funcionario.DadosBancarios = new ObservableCollection<OperacionalTblDespDadoBancarioModel>
-                    {
-                        new() {
-                            titular_conta = funcionario.nome_func,
-                        },
-                    };
-                    bool sucesso = await vm.AdcionarFuncionario(funcionario);
-                    if (sucesso == false)
-                    {
-                        e.IsValid = false; // Impede que a linha seja confirmada
-                        MessageBox.Show("Erro ao salvar no banco! Verifique os dados.", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                }
-            }
-            catch (DbUpdateException ex)
+            if (e.Row?.IsInEditMode != true) return;
+            if (e.Row.Item is not OperacionalTDespFuncionarioModel item) return;
+            if (string.IsNullOrWhiteSpace(item.nome_func))
             {
                 e.IsValid = false;
-                Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
+                return;
             }
+            ValidatedGridSave.Save(sender, e, async () =>
+            {
+                await ((CadastroFuncionarioViewModel)DataContext).AdcionarFuncionario(item);
+                item.DadosBancarios ??= [];
+            });
         }
 
-        private async void RGVBanco_RowValidating(object sender, Telerik.Windows.Controls.GridViewRowValidatingEventArgs e)
+        private void RGVBanco_RowValidating(object sender, Telerik.Windows.Controls.GridViewRowValidatingEventArgs e)
         {
-            try
-            {
-                CadastroFuncionarioViewModel vm = (CadastroFuncionarioViewModel)DataContext;
-                if (!e.Row.IsInEditMode)
-                    return;
-
-                if (e.Row.Item is OperacionalTblDespDadoBancarioModel dadosBancario)
-                {
-
-                    bool sucesso = await vm.AdcionarDadosBancarioFuncionario(dadosBancario);
-                    if (sucesso == false)
-                    {
-                        e.IsValid = false; // Impede que a linha seja confirmada
-                        MessageBox.Show("Erro ao salvar no banco! Verifique os dados.", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                }
-            }
-            catch (DbUpdateException ex)
+            if (e.Row?.IsInEditMode != true) return;
+            if (e.Row.Item is not OperacionalTblDespDadoBancarioModel item) return;
+            var pai = (sender as FrameworkElement)?.DataContext as OperacionalTDespFuncionarioModel;
+            if (pai?.cod_func is null or <= 0)
             {
                 e.IsValid = false;
-                Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
+                return;
             }
+            item.cod_func = pai.cod_func;
+            ValidatedGridSave.Save(sender, e, () => ((CadastroFuncionarioViewModel)DataContext).AdcionarDadosBancarioFuncionario(item));
         }
     }
 
@@ -223,8 +196,7 @@ namespace Operacional.Views.Despesa
 
                 if (linhas == 0)
                 {
-                    funcionario.cod_func = null;
-                    await AdcionarFuncionario(funcionario);
+                    throw new InvalidOperationException("Funcionario nao encontrado. Recarregue a tela.");
                 }
 
                 return true;
@@ -263,7 +235,6 @@ namespace Operacional.Views.Despesa
                 var linhas = await connection.ExecuteAsync(@"
                     UPDATE operacional.tbl_desp_dados_bancarios
                     SET
-                        cod_func = @cod_func,
                         titular_conta = @titular_conta,
                         banco = @banco,
                         tipo_conta = @tipo_conta,
@@ -272,13 +243,12 @@ namespace Operacional.Views.Despesa
                         digito_agencia = @digito_agencia,
                         digito_conta = @digito_conta,
                         cpf_conta = @cpf_conta
-                    WHERE cod_linha_dados_bancarios = @cod_linha_dados_bancarios;",
+                    WHERE cod_linha_dados_bancarios = @cod_linha_dados_bancarios AND cod_func = @cod_func;",
                     dadosBancario);
 
                 if (linhas == 0)
                 {
-                    dadosBancario.cod_linha_dados_bancarios = null;
-                    await AdcionarDadosBancarioFuncionario(dadosBancario);
+                    throw new InvalidOperationException("Dados bancarios nao encontrados. Recarregue a tela.");
                 }
 
                 return true;

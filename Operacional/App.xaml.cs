@@ -23,6 +23,7 @@ namespace Operacional
         {
             BaseSettings.LoadFromConfiguration();
             DapperTypeHandlers.Register();
+            GridFilterDefaults.Register();
             StyleManager.ApplicationTheme = new Office2016Theme();
             LocalizationManager.Manager = new LocalizationManager
             {

@@ -248,11 +248,10 @@ public partial class ControleDocumentoViewModel : ObservableObject
             WHERE id = @id;",
             model);
 
-        if (linhas == 0)
-        {
-            model.id = 0;
-            await GravarAsync(model);
-        }
+        if (linhas != 1)
+            {
+                throw new InvalidOperationException("O registro nao existe mais ou foi alterado por outro usuario. Recarregue a tela; nenhum novo registro foi criado.");
+            }
 
     }
 }

@@ -49,36 +49,18 @@ public partial class Contato : UserControl
         }
     }
 
-    private async void ContatoRowValidated(object sender, Telerik.Windows.Controls.GridViewRowValidatedEventArgs e)
+    private void ContatoRowValidated(object sender, Telerik.Windows.Controls.GridViewRowValidatingEventArgs e)
     {
-        try
+        if (e.Row?.IsInEditMode != true) return;
+        if (e.Row.Item is not EquipeExternaContatoModel item) return;
+        if (string.IsNullOrWhiteSpace(item.nome) || string.IsNullOrWhiteSpace(item.funcao) || string.IsNullOrWhiteSpace(item.tel_1))
         {
-            ContatoViewModel vm = (ContatoViewModel)DataContext;
-            if (e.Row is not null && e.Row.DataContext is EquipeExternaContatoModel model)
-            {
-                if (string.IsNullOrWhiteSpace(model.nome) || string.IsNullOrWhiteSpace(model.funcao) || string.IsNullOrWhiteSpace(model.tel_1))
-                {
-                    MessageBox.Show("Preencha os campos obrigatórios: Nome, Função e Telefone 1.", "Campos Obrigatórios", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
-                await vm.AdcionarContato(model);
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-            }
+            e.IsValid = false;
+            e.ValidationResults.Add(new Telerik.Windows.Controls.GridViewCellValidationResult
+            { ErrorMessage = "Preencha os campos obrigatorios." });
+            return;
         }
-        catch (DbUpdateException ex)
-        {
-            Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-            if (ex.InnerException is not null)
-                MessageBox.Show(ex.InnerException.Message, "Erro de atualização", MessageBoxButton.OK, MessageBoxImage.Error);
-            else
-                MessageBox.Show(ex.Message, "Erro de atualização", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-        catch (Exception ex)  // Para qualquer outro erro
-        {
-            Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-            Operacional.ErrorDialog.Show(ex, "Erro");
-        }
+        ValidatedGridSave.Save(sender, e, () => ((ContatoViewModel)DataContext).AdcionarContato(item));
     }
 }
 
@@ -126,10 +108,9 @@ public partial class ContatoViewModel : ObservableObject
             WHERE cod_linha = @cod_linha;",
             model);
 
-        if (linhas == 0)
-        {
-            model.cod_linha = null;
-            await AdcionarContato(model);
-        }
+        if (linhas != 1)
+            {
+                throw new InvalidOperationException("O registro nao existe mais ou foi alterado por outro usuario. Recarregue a tela; nenhum novo registro foi criado.");
+            }
     }
 }

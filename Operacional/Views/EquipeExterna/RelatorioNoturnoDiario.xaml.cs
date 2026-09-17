@@ -197,10 +197,9 @@ public partial class RelatorioNoturnoDiarioViewModel : ObservableObject
             WHERE cod_relatorio_noturno = @cod_relatorio_noturno;",
             model);
 
-        if (linhas == 0)
-        {
-            model.cod_relatorio_noturno = null;
-            await AtualizarRelatorioAsync(model);
-        }
+        if (linhas != 1)
+            {
+                throw new InvalidOperationException("O registro nao existe mais ou foi alterado por outro usuario. Recarregue a tela; nenhum novo registro foi criado.");
+            }
     }
 }

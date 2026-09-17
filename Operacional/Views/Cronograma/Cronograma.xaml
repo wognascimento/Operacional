@@ -182,7 +182,12 @@
         </Grid>
 
         <!-- COLUNA LATERAL DIREITA: BLOCO DE MONTAGEM/MANUTENÇÃO/DEMONSTAGEM/MONITOR -->
-        <StackPanel Grid.Row="1" Grid.Column="1" Margin="4" >
+        <ScrollViewer Grid.Row="1"
+                      Grid.Column="1"
+                      Margin="4"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+        <StackPanel>
             <!-- Card Montagem -->
             <Border BorderBrush="Orange" BorderThickness="2" Margin="0,0,0,8" Background="#FFF9E5CF" Padding="8">
                 <StackPanel>
@@ -307,6 +312,7 @@
                 </StackPanel>
             </Border>
         </StackPanel>
+        </ScrollViewer>
     </Grid>
 
 </UserControl>

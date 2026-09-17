@@ -115,24 +115,27 @@ public partial class NotaPagamento : UserControl
         };
     }
 
-    private void Pagamentos_RowValidating(object sender, GridViewRowValidatingEventArgs e)
+    private void Pagamentos_RowValidating(object sender, Telerik.Windows.Controls.GridViewRowValidatingEventArgs e)
     {
-        var item = e.Row.Item as RelatorioDetalheModel; // Substitua YourItemType pelo tipo do seu item
-        if (item == null)
-            return;
-
-        if (item.envia_fluxo)
+        if (e.Row?.IsInEditMode != true) return;
+        if (e.Row.Item is not RelatorioDetalheModel item) return;
+        if (item.envia_fluxo || item.codrelatorio <= 0 || string.IsNullOrWhiteSpace(item.tipo_detalhe))
         {
             e.IsValid = false;
-            MessageBox.Show("Este lançamento já foi enviado para o fluxo e não pode ser alterado.", "Edição bloqueada", MessageBoxButton.OK, MessageBoxImage.Information);
+            e.ValidationResults.Add(new Telerik.Windows.Controls.GridViewCellValidationResult
+            {
+                PropertyName = nameof(item.tipo_detalhe),
+                ErrorMessage = item.envia_fluxo ? "Lancamento enviado ao fluxo: edicao bloqueada." : "Informe o tipo e selecione um relatorio salvo."
+            });
             return;
         }
-
-        // Suponha que "Nome" seja a propriedade da coluna que você quer validar
-        if (string.IsNullOrWhiteSpace(item.tipo_detalhe))
+        var vm = (NotaPagamentoViewModel)DataContext;
+        ValidatedGridSave.Save(sender, e, () => vm.AtualizarPagamentoAsync(item), async () =>
         {
-            e.IsValid = false; // Define a linha como inválida
-        }
+            var detalhes = await vm.GetPagamentosEquipeBySiglaAsync(item.codrelatorio);
+            if ((cmbAprovado.SelectedItem as RelatorioPagamentoModel)?.cod_relatorio == item.codrelatorio)
+                vm.RelatorioDetalhes = detalhes;
+        });
     }
 
     private void Pagamentos_BeginningEdit(object sender, GridViewBeginningEditRoutedEventArgs e)
@@ -144,40 +147,7 @@ public partial class NotaPagamento : UserControl
         }
     }
 
-    private async void RadGridView_RowValidated(object sender, GridViewRowValidatedEventArgs e)
-    {
-        try
-        {
-            NotaPagamentoViewModel vm = (NotaPagamentoViewModel)DataContext;
-            if (e.Row.Item is RelatorioDetalheModel linha)
-            {
-                if (linha.envia_fluxo)
-                    return;
-
-                var relatorio = cmbAprovado.SelectedItem as RelatorioPagamentoModel;
-                await vm.AtualizarPagamentoAsync(linha);
-                await vm.AtualizarSaldosRelatorioAsync(relatorio.cod_relatorio);
-                vm.RelatorioDetalhes = await vm.GetPagamentosEquipeBySiglaAsync(relatorio.cod_relatorio);
-            }
-
-        }
-        catch (PostgresException ex)
-        {
-            MessageBox.Show($"Erro do banco: {ex.MessageText}\nDetalhe: {ex.Detail}\nLocal: {ex.Where}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-        catch (NpgsqlException ex)
-        {
-            MessageBox.Show($"Erro do banco: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx)
-        {
-            MessageBox.Show($"Erro do banco: {pgEx.MessageText}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-        catch (Exception ex)
-        {
-            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
-        }
-    }
+    
 
     private async void OnSendFluxo(object sender, RoutedEventArgs e)
     {
@@ -330,63 +300,9 @@ public partial class NotaPagamentoViewModel : ObservableObject
         return new ObservableCollection<ComprasEmpresaModel>(result);
     }
 
-    public async Task<bool> AtualizarPagamentoAsync(RelatorioDetalheModel model)
+    public Task<bool> AtualizarPagamentoAsync(RelatorioDetalheModel model)
     {
-        using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
-
-        if (model.cod_detalhe_relatorio is null or <= 0)
-        {
-            model.cod_detalhe_relatorio = await connection.ExecuteScalarAsync<long>(@"
-                INSERT INTO equipe_externa.tbl_detalhes_relatorio
-                (codrelatorio, tipo_detalhe, valor_detalhe, data, enviado_fin, descricao,
-                 data_pagto, numero_nf, empresa_nf, id_equipe, totvs, cod_servico_totvs,
-                 empresa_pagadora, aprovado_por, data_aprovado, exportado, cancelado,
-                 cliente, envia_fluxo, saldo, inserido_por, inserido_em, alterado_por,
-                 alterado_em, enviado_fluxo_por, enviado_fluxo_em)
-                VALUES
-                (@codrelatorio, @tipo_detalhe, @valor_detalhe, @data, @enviado_fin, @descricao,
-                 @data_pagto, @numero_nf, @empresa_nf, @id_equipe, @totvs, @cod_servico_totvs,
-                 @empresa_pagadora, @aprovado_por, @data_aprovado, @exportado, @cancelado,
-                 @cliente, @envia_fluxo, @saldo, @inserido_por, @inserido_em, @alterado_por,
-                 @alterado_em, @enviado_fluxo_por, @enviado_fluxo_em)
-                RETURNING cod_detalhe_relatorio;",
-                model);
-
-            return true;
-        }
-
-        await connection.ExecuteAsync(@"
-            UPDATE equipe_externa.tbl_detalhes_relatorio
-            SET codrelatorio = @codrelatorio,
-                tipo_detalhe = @tipo_detalhe,
-                valor_detalhe = @valor_detalhe,
-                data = @data,
-                enviado_fin = @enviado_fin,
-                descricao = @descricao,
-                data_pagto = @data_pagto,
-                numero_nf = @numero_nf,
-                empresa_nf = @empresa_nf,
-                id_equipe = @id_equipe,
-                totvs = @totvs,
-                cod_servico_totvs = @cod_servico_totvs,
-                empresa_pagadora = @empresa_pagadora,
-                aprovado_por = @aprovado_por,
-                data_aprovado = @data_aprovado,
-                exportado = @exportado,
-                cancelado = @cancelado,
-                cliente = @cliente,
-                envia_fluxo = @envia_fluxo,
-                saldo = @saldo,
-                inserido_por = @inserido_por,
-                inserido_em = @inserido_em,
-                alterado_por = @alterado_por,
-                alterado_em = @alterado_em,
-                enviado_fluxo_por = @enviado_fluxo_por,
-                enviado_fluxo_em = @enviado_fluxo_em
-            WHERE cod_detalhe_relatorio = @cod_detalhe_relatorio;",
-            model);
-
-        return true;
+        return NotaEquipeRepository.SalvarAsync(model);
     }
 
     public async Task AtualizarSaldosRelatorioAsync(long codRelatorio)

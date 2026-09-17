@@ -50,25 +50,18 @@ public partial class CadastroUsuario : UserControl
         }
     }
 
-    private async void UsuarioRowValidated(object sender, GridViewRowValidatedEventArgs e)
+    private void UsuarioRowValidated(object sender, Telerik.Windows.Controls.GridViewRowValidatingEventArgs e)
     {
-        try
+        if (e.Row?.IsInEditMode != true) return;
+        if (e.Row.Item is not EquipeExternaUsuarioModel item) return;
+        if (string.IsNullOrWhiteSpace(item.nome))
         {
-            Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
-            CadastroUsuarioViewModel vm = (CadastroUsuarioViewModel)DataContext;
-            var usuario = e.Row.Item as EquipeExternaUsuarioModel;
-            if (usuario != null)
-            {
-                // Adicionar ou atualizar o usuário no banco de dados
-                await vm.AddUsuarioAsync(usuario);
-            }
-            Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+            e.IsValid = false;
+            e.ValidationResults.Add(new Telerik.Windows.Controls.GridViewCellValidationResult
+            { ErrorMessage = "Preencha os campos obrigatorios." });
+            return;
         }
-        catch (DbUpdateException ex)
-        {
-            MessageBox.Show($"Erro ao cadastrar usuário: {ex.InnerException?.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-            Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-        }
+        ValidatedGridSave.Save(sender, e, () => ((CadastroUsuarioViewModel)DataContext).AddUsuarioAsync(item));
     }
 
     private void RadContextMenu_Opening(object sender, Telerik.Windows.RadRoutedEventArgs e)
@@ -408,11 +401,10 @@ public partial class CadastroUsuarioViewModel : ObservableObject
             WHERE id = @id;",
             usuario);
 
-        if (linhas == 0)
-        {
-            usuario.id = null;
-            await AddUsuarioAsync(usuario);
-        }
+        if (linhas != 1)
+            {
+                throw new InvalidOperationException("O registro nao existe mais ou foi alterado por outro usuario. Recarregue a tela; nenhum novo registro foi criado.");
+            }
     }
 
     public async Task<ObservableCollection<EquipeExternaEquipeModel>> GetEquipesAsync()

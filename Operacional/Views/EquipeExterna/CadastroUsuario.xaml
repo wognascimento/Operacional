@@ -20,7 +20,7 @@
             ItemsSource="{Binding Usuarios}" 
             NewRowPosition="Bottom"
             GroupRenderMode="Flat"
-            RowValidated="UsuarioRowValidated">
+            RowValidating="UsuarioRowValidated">
             <telerik:RadContextMenu.ContextMenu>
                 <telerik:RadContextMenu Opening="RadContextMenu_Opening">
                     <telerik:RadMenuItem Header="Enviar WEB" Click="OnEnviarWebClick" />

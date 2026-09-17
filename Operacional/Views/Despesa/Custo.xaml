@@ -87,10 +87,10 @@
                     ItemsSource="{Binding Descricoes}"/>
 -->
                 <telerik:GridViewDataColumn DataMemberBinding="{Binding vunit}" Header="VUNIT" DataFormatString="{}{0:C2}"/>
-                <telerik:GridViewDataColumn DataMemberBinding="{Binding cadastro_por}" Header="CADASTRADO POR"/>
-                <telerik:GridViewDataColumn DataMemberBinding="{Binding cadastro_data}" Header="CADASTRADO EM" DataFormatString="{}{0:dd/MM/yyyy}"/>
-                <telerik:GridViewDataColumn DataMemberBinding="{Binding alterado_por}" Header="ALTERADO POR"/>
-                <telerik:GridViewDataColumn DataMemberBinding="{Binding alterado_data}" Header="ALTERADO EM" DataFormatString="{}{0:dd/MM/yyyy}"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding cadastro_por}" Header="CADASTRADO POR" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding cadastro_data}" Header="CADASTRADO EM" DataFormatString="{}{0:dd/MM/yyyy}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding alterado_por}" Header="ALTERADO POR" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding alterado_data}" Header="ALTERADO EM" DataFormatString="{}{0:dd/MM/yyyy}" IsReadOnly="True"/>
             </telerik:RadGridView.Columns>
 
         </telerik:RadGridView>

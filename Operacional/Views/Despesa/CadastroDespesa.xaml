@@ -119,27 +119,22 @@
                                 RowValidating="dGRelatorioDetalhes_RowValidating">
                                 <telerik:RadGridView.Columns>
                                     <telerik:GridViewDataColumn Header="DATA" DataMemberBinding="{Binding data}" DataFormatString="{}{0:dd/MM/yyyy}"/>
-                                    <telerik:GridViewComboBoxColumn Header="SIGLA" DataMemberBinding="{Binding sigla}" ItemsSource="{Binding DataContext.Clientes, ElementName=Root}" DisplayMemberPath="sigla" SelectedValueMemberPath="sigla"/>
+                                    <telerik:GridViewComboBoxColumn Header="SIGLA"
+                                                                    DataMemberBinding="{Binding sigla, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    ItemsSource="{Binding DataContext.Clientes, Source={x:Reference Root}}"
+                                                                    DisplayMemberPath="sigla"
+                                                                    SelectedValueMemberPath="sigla"/>
                                     <telerik:GridViewDataColumn Header="QTDE" DataMemberBinding="{Binding quantidade}" DataFormatString="{}{0:N2}"/>
-                                    <telerik:GridViewComboBoxColumn Header="ETAPA" DataMemberBinding="{Binding etapa}" ItemsSource="{Binding DataContext.Fases, ElementName=Root}"/>
-
-                                    <telerik:GridViewDataColumn Header="CLASSIFICAÇÃO" DataMemberBinding="{Binding classificacao}">
-                                        <telerik:GridViewDataColumn.CellEditTemplate>
-                                            <DataTemplate>
-                                                <ComboBox ItemsSource="{Binding DataContext.TiposClassificacao, ElementName=Root}"
-                                                          SelectedItem="{Binding classificacao, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                            </DataTemplate>
-                                        </telerik:GridViewDataColumn.CellEditTemplate>
-                                    </telerik:GridViewDataColumn>
-
-                                    <telerik:GridViewDataColumn Header="DESCRIÇÃO" DataMemberBinding="{Binding descricao}" Width="220">
-                                        <telerik:GridViewDataColumn.CellEditTemplate>
-                                            <DataTemplate>
-                                                <ComboBox ItemsSource="{Binding DescricoesDisponiveis}"
-                                                          SelectedItem="{Binding descricao, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                            </DataTemplate>
-                                        </telerik:GridViewDataColumn.CellEditTemplate>
-                                    </telerik:GridViewDataColumn>
+                                    <telerik:GridViewComboBoxColumn Header="ETAPA"
+                                                                    DataMemberBinding="{Binding etapa, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    ItemsSource="{Binding DataContext.Fases, Source={x:Reference Root}}"/>
+                                    <telerik:GridViewComboBoxColumn Header="CLASSIFICAÇÃO"
+                                                                    DataMemberBinding="{Binding classificacao, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    ItemsSource="{Binding DataContext.TiposClassificacao, Source={x:Reference Root}}"/>
+                                    <telerik:GridViewComboBoxColumn Header="DESCRIÇÃO"
+                                                                    DataMemberBinding="{Binding descricao, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    ItemsSourceBinding="{Binding DescricoesDisponiveis}"
+                                                                    Width="220"/>
 
                                     <telerik:GridViewDataColumn Header="DOCUMENTO" DataMemberBinding="{Binding documento}"/>
                                     <telerik:GridViewDataColumn Header="VALOR" DataMemberBinding="{Binding valor}" DataFormatString="{}{0:N2}"/>

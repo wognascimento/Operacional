@@ -37,8 +37,12 @@ namespace Operacional.Views.Despesa
                 vm.DescricoesPorTipo = await vm.GetDescricoesAsync();
                 RegistroDespesa.BuscarDescricoesExternamente = vm.ObterDescricoesPorTipo;
 
-                //vm.BaseCustos = new ObservableCollection<OperacionalBaseCustoModel>(await vm.GetBaseCustosAsync());
                 vm.TiposClassificacao = [.. vm.BaseCustos.Select(b => b.tipo).Distinct()];
+                vm.Funcionarios = await vm.GetFuncionariosAsync();
+                vm.DespsRelatorio = await vm.GetTiposRelatorioAsync();
+                vm.Clientes = await vm.GetClientesAsync();
+                vm.Empresas = await vm.GetEmpresasAsync();
+                vm.Fases = await vm.GetEtapasAsync();
 
                 var relatorios = await vm.GetRelatoriosAsync();
                 
@@ -73,9 +77,14 @@ namespace Operacional.Views.Despesa
                         .Select(x =>
                         {
                             Debug.WriteLine($"Criando RegistroDespesa para linha: {x.cod_linha_detalhe}");
+                            AdicionarOpcaoAusente(vm.TiposClassificacao, x.classificacao);
+                            AdicionarOpcaoAusente(vm.Fases, x.etapa);
+
+                            var descricoes = vm.ObterDescricoesPorTipo(x.classificacao);
+                            AdicionarOpcaoAusente(descricoes, x.descricao);
                             var r = new RegistroDespesa(x, relatorio)
                             {
-                                DescricoesDisponiveis = [.. vm.ObterDescricoesPorTipo(x.classificacao) ?? []]
+                                DescricoesDisponiveis = [.. descricoes]
                             };
                             return r;
                         })
@@ -87,20 +96,21 @@ namespace Operacional.Views.Despesa
 
                 // Atualiza a propriedade no ViewModel
                 vm.Relatorios = relatorios;
-
-                // Atribui ao ViewModel
-                //m.Relatorios = relatorios;
-                vm.Funcionarios = await vm.GetFuncionariosAsync();
-                vm.DespsRelatorio = await vm.GetTiposRelatorioAsync();
-                vm.Clientes = await vm.GetClientesAsync();
-                vm.Empresas = await vm.GetEmpresasAsync();
-                vm.Fases = await vm.GetEtapasAsync();
                 Mouse.OverrideCursor = null;
             }
             catch (DbUpdateException ex)
             {
                 Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
                 Mouse.OverrideCursor = null;
+            }
+        }
+
+        private static void AdicionarOpcaoAusente(ICollection<string> opcoes, string? valor)
+        {
+            if (!string.IsNullOrWhiteSpace(valor) &&
+                !opcoes.Contains(valor, StringComparer.OrdinalIgnoreCase))
+            {
+                opcoes.Add(valor);
             }
         }
 
@@ -520,8 +530,13 @@ namespace Operacional.Views.Despesa
             {
                 await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
                 var retorno = await connection.QueryAsync<ComercialClienteModel>(
-                    @"SELECT *
+                    @"SELECT sigla
                       FROM comercial.clientes
+                      WHERE sigla IS NOT NULL
+                      UNION
+                      SELECT sigla
+                      FROM operacional.t_relatorio_despesas_detalhe
+                      WHERE sigla IS NOT NULL
                       ORDER BY sigla;");
                 return [.. retorno];
             }
@@ -557,9 +572,14 @@ namespace Operacional.Views.Despesa
             {
                 await using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
                 var retorno = await connection.QueryAsync<string>(
-                    @"SELECT fase
+                    @"SELECT fase AS etapa
                       FROM operacional.tblfases
-                      ORDER BY fase;");
+                      WHERE fase IS NOT NULL
+                      UNION
+                      SELECT etapa
+                      FROM operacional.t_relatorio_despesas_detalhe
+                      WHERE etapa IS NOT NULL
+                      ORDER BY etapa;");
                 return [.. retorno];
             }
             catch (DbException ex)  // Para erros de banco de dados

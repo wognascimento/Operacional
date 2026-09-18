@@ -15,6 +15,8 @@ public static class DapperTypeHandlers
 
         SqlMapper.AddTypeHandler(new DateTimeHandler());
         SqlMapper.AddTypeHandler(new NullableDateTimeHandler());
+        SqlMapper.AddTypeHandler(new TimeOnlyHandler());
+        SqlMapper.AddTypeHandler(new NullableTimeOnlyHandler());
         SqlMapper.AddTypeHandler(new TimeSpanHandler());
         SqlMapper.AddTypeHandler(new NullableTimeSpanHandler());
         _registered = true;
@@ -49,6 +51,40 @@ public static class DapperTypeHandlers
         public override void SetValue(IDbDataParameter parameter, DateTime? value)
         {
             parameter.Value = value ?? (object)DBNull.Value;
+        }
+    }
+
+    private sealed class TimeOnlyHandler : SqlMapper.TypeHandler<TimeOnly>
+    {
+        public override TimeOnly Parse(object value) => value switch
+        {
+            TimeOnly time => time,
+            TimeSpan timeSpan => TimeOnly.FromTimeSpan(timeSpan),
+            DateTime dateTime => TimeOnly.FromDateTime(dateTime),
+            _ => TimeOnly.Parse(value.ToString() ?? "00:00:00")
+        };
+
+        public override void SetValue(IDbDataParameter parameter, TimeOnly value)
+        {
+            parameter.Value = value.ToTimeSpan();
+        }
+    }
+
+    private sealed class NullableTimeOnlyHandler : SqlMapper.TypeHandler<TimeOnly?>
+    {
+        public override TimeOnly? Parse(object value) => value switch
+        {
+            null => null,
+            DBNull => null,
+            TimeOnly time => time,
+            TimeSpan timeSpan => TimeOnly.FromTimeSpan(timeSpan),
+            DateTime dateTime => TimeOnly.FromDateTime(dateTime),
+            _ => TimeOnly.Parse(value.ToString() ?? "00:00:00")
+        };
+
+        public override void SetValue(IDbDataParameter parameter, TimeOnly? value)
+        {
+            parameter.Value = value?.ToTimeSpan() ?? (object)DBNull.Value;
         }
     }
 

@@ -12,10 +12,14 @@ internal static class MalaDiretaMontagem
 {
     internal const string NomePlanilha = "qrybasemalamontagem";
 
-    public static void ExportarExcel(DataTable dados, string caminho, CancellationToken cancellationToken = default)
+    public static void ExportarExcel(
+        DataTable dados,
+        string caminho,
+        CancellationToken cancellationToken = default,
+        string nomePlanilha = NomePlanilha)
     {
         using var workbook = new XLWorkbook();
-        var sheet = workbook.Worksheets.Add(NomePlanilha);
+        var sheet = workbook.Worksheets.Add(nomePlanilha);
         for (int c = 0; c < dados.Columns.Count; c++)
             sheet.Cell(1, c + 1).Value = dados.Columns[c].ColumnName;
         for (int r = 0; r < dados.Rows.Count; r++)
@@ -58,7 +62,7 @@ internal static class MalaDiretaMontagem
         workbook.SaveAs(caminho);
     }
 
-    public static void VincularPlanilha(string carta, string planilha)
+    public static void VincularPlanilha(string carta, string planilha, string nomePlanilha = NomePlanilha)
     {
         var caminho = Path.GetFullPath(planilha);
         if (!File.Exists(caminho)) throw new FileNotFoundException("Planilha da mala direta nao encontrada.", caminho);
@@ -84,9 +88,9 @@ internal static class MalaDiretaMontagem
             ["Extended Properties"] = "Excel 12.0 Xml;HDR=YES;IMEX=1"
         }.ConnectionString;
         SetValue(merge, w + "connectString", connection, w);
-        SetValue(merge, w + "query", $"SELECT * FROM [{NomePlanilha}$]", w);
+        SetValue(merge, w + "query", $"SELECT * FROM [{nomePlanilha}$]", w);
         SetValue(odso, w + "udl", connection, w);
-        SetValue(odso, w + "table", NomePlanilha + "$", w);
+        SetValue(odso, w + "table", nomePlanilha + "$", w);
         var ids = new[] { merge.Element(w + "dataSource"), odso.Element(w + "src") }
             .Select(e => (string?)e?.Attribute(r + "id")).ToArray();
         foreach (var id in ids)
@@ -102,10 +106,41 @@ internal static class MalaDiretaMontagem
         GravarXml(relsEntry, rels);
     }
 
+    public static void ConfigurarAssuntoEmail(string carta, string assunto)
+    {
+        using var zip = ZipFile.Open(carta, ZipArchiveMode.Update);
+        var settingsEntry = zip.GetEntry("word/settings.xml")
+            ?? throw new InvalidDataException("O modelo nao possui configuracoes de mala direta.");
+        var settings = LerXml(settingsEntry);
+        XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        var merge = settings.Root?.Element(w + "mailMerge")
+            ?? throw new InvalidDataException("O modelo nao esta configurado como mala direta.");
+
+        SetOrAddValue(merge, w + "destination", "email", w);
+        SetOrAddValue(merge, w + "mailSubject", assunto, w);
+        GravarXml(settingsEntry, settings);
+    }
+
     private static void SetValue(XElement parent, XName name, string value, XNamespace w)
     {
         var element = parent.Element(name)
             ?? throw new InvalidDataException($"Configuracao de mala direta ausente: {name.LocalName}.");
+        element.SetAttributeValue(w + "val", value);
+    }
+
+    private static void SetOrAddValue(XElement parent, XName name, string value, XNamespace w)
+    {
+        var element = parent.Element(name);
+        if (element == null)
+        {
+            element = new XElement(name);
+            var odso = parent.Element(w + "odso");
+            if (odso != null)
+                odso.AddBeforeSelf(element);
+            else
+                parent.Add(element);
+        }
+
         element.SetAttributeValue(w + "val", value);
     }
 

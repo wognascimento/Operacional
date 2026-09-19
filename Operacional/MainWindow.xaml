@@ -93,6 +93,7 @@
 
             <telerik:RadMenuItem Header="Carta">
                 <telerik:RadMenuItem Header="Início Montagem" Click="OnCartaInicioMontagemClick"/>
+                <telerik:RadMenuItem Header="Apoio Montagem" Click="OnCartaApoioMontagemClick"/>
             </telerik:RadMenuItem>
 
             <telerik:RadMenuItem Header="Documentos">

@@ -18,7 +18,8 @@
                 ItemsSource="{Binding Transportes}" 
                 AutoGenerateColumns="False"
                 ShowGroupPanel="False"
-                RowValidating="RadGridView_RowValidating">
+                RowValidating="RadGridView_RowValidating"
+                RowEditEnded="RadGridView_RowEditEnded">
                 <!-- Configuração da Tabela Pai (Customers) -->
             <telerik:RadGridView.Columns>
                 <telerik:GridViewDataColumn DataMemberBinding="{Binding SiglaServ}" IsReadOnly="True"/>
@@ -38,7 +39,7 @@
                 <!-- <telerik:GridViewDataColumn DataMemberBinding="{Binding OK}" /> -->
                 <!-- <telerik:GridViewDataColumn DataMemberBinding="{Binding valor_frete_contratado}" /> -->
                 <telerik:GridViewDataColumn DataMemberBinding="{Binding AlteradoPor}" IsReadOnly="True"/>
-                <telerik:GridViewDataColumn DataMemberBinding="{Binding DataAltera}" IsReadOnly="True"/>
+                <telerik:GridViewDataColumn DataMemberBinding="{Binding DataAltera, StringFormat={}{0:dd/MM/yyyy HH:mm}}" IsReadOnly="True"/>
                 </telerik:RadGridView.Columns>
 
                 <!-- Definição da Hierarquia -->

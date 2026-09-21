@@ -17,6 +17,9 @@ namespace Operacional.Views
     /// </summary>
     public partial class TransporteMontagem : UserControl
     {
+        private QryTransporteDTO? reducaoConfirmadaItem;
+        private int? reducaoConfirmadaQuantidade;
+
         public TransporteMontagem()
         {
             InitializeComponent();
@@ -46,20 +49,67 @@ namespace Operacional.Views
             if (e.Row.Item is not QryTransporteDTO item) return;
             if (item.numero_de_caminhoes < 0 || string.IsNullOrWhiteSpace(item.SiglaServ))
             { e.IsValid = false; return; }
+
+            var permitirReducao = false;
+            var quantidadeAtual = item.Cargas?.Count ?? 0;
+            if (item.numero_de_caminhoes < quantidadeAtual)
+            {
+                permitirReducao = ReferenceEquals(reducaoConfirmadaItem, item) &&
+                                  reducaoConfirmadaQuantidade == item.numero_de_caminhoes;
+                if (!permitirReducao)
+                {
+                    var confirmar = MessageBox.Show(
+                        $"A redução de {quantidadeAtual} para {item.numero_de_caminhoes} caminhão(ões) excluirá " +
+                        "as cargas excedentes e seus dados. Deseja continuar?",
+                        "Reduzir número de caminhões",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning);
+
+                    if (confirmar != MessageBoxResult.Yes)
+                    {
+                        reducaoConfirmadaItem = null;
+                        reducaoConfirmadaQuantidade = null;
+                        e.IsValid = false;
+                        radGridView.Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            radGridView.CancelEdit();
+                            item.numero_de_caminhoes = quantidadeAtual;
+                            radGridView.Rebind();
+                        }));
+                        return;
+                    }
+
+                    reducaoConfirmadaItem = item;
+                    reducaoConfirmadaQuantidade = item.numero_de_caminhoes;
+                    permitirReducao = true;
+                }
+            }
+
             var vm = (TransporteMontagemViewModel)DataContext;
             ValidatedGridSave.Save(sender, e, async () =>
             {
-                await vm.AtualizarTransporteMontagem(new TransporteMontagemModel
+                var transporte = new TransporteMontagemModel
                 {
                     SiglaServ = item.SiglaServ, DataDeExpedicao = item.data_de_expedicao,
                     VolumeDaCarga = item.volume_da_carga, NumeroDeCaminhoes = item.numero_de_caminhoes,
                     Transportadora = item.transportadora
-                });
+                };
+                item.DataAltera = await vm.AtualizarTransporteMontagem(transporte, permitirReducao);
+                item.AlteradoPor = transporte.AlteradoPor;
             }, async () =>
             {
                 item.Cargas = await vm.CaminhoesSigla(item.SiglaServ);
                 radGridView.Rebind();
             });
+        }
+
+        private void RadGridView_RowEditEnded(object sender, GridViewRowEditEndedEventArgs e)
+        {
+            if (!ReferenceEquals(e.Row?.Item, reducaoConfirmadaItem))
+                return;
+
+            reducaoConfirmadaItem = null;
+            reducaoConfirmadaQuantidade = null;
         }
 
         private void RadGridViewFilho_RowValidating(object sender, GridViewRowValidatingEventArgs e)
@@ -209,94 +259,113 @@ namespace Operacional.Views
         }
 
 
-        public async Task<bool> AtualizarTransporteMontagem(TransporteMontagemModel transporteAtualizado)
+        public async Task<DateTime> AtualizarTransporteMontagem(
+            TransporteMontagemModel transporteAtualizado,
+            bool permitirReducao = false)
         {
-            try
-            {
-                using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
-                var sql = @"
+            using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
+            transporteAtualizado.AlteradoPor = _dataBaseSettings.Username;
+            var sql = @"
                     UPDATE operacional.t_transportes_mont
                     SET
                         data_de_expedicao = @DataDeExpedicao,
                         volume_da_carga = @VolumeDaCarga,
                         numero_de_caminhoes = @NumeroDeCaminhoes,
-                        transportadora = @Transportadora
-                    WHERE siglaserv = @SiglaServ;";
+                        transportadora = @Transportadora,
+                        alteradopor = @AlteradoPor,
+                        dataaltera = CURRENT_TIMESTAMP
+                    WHERE siglaserv = @SiglaServ
+                    RETURNING dataaltera;";
 
-                await connection.OpenAsync();
-                await using var transaction = await connection.BeginTransactionAsync();
-                if (await connection.ExecuteAsync(sql, transporteAtualizado, transaction) != 1)
-                    throw new InvalidOperationException("Transporte nao encontrado. Recarregue a tela.");
-                await SincronizarCaminhoes(transporteAtualizado.SiglaServ, transporteAtualizado.NumeroDeCaminhoes,
-                    transporteAtualizado.DataDeExpedicao, connection, transaction);
-                await transaction.CommitAsync();
-                return true;
-            }
-            catch (DbUpdateException)
-            {
-                throw;
-            }
-            catch (Exception ex)  // Para qualquer outro erro
-            {
-                throw new Exception("Erro inesperado.", ex);
-            }
+            await connection.OpenAsync();
+            await using var transaction = await connection.BeginTransactionAsync();
+            var dataAlteracao = await connection.QuerySingleOrDefaultAsync<DateTime?>(
+                sql,
+                transporteAtualizado,
+                transaction);
+            if (!dataAlteracao.HasValue)
+                throw new InvalidOperationException("Transporte nao encontrado. Recarregue a tela.");
+            await SincronizarCaminhoes(
+                transporteAtualizado.SiglaServ,
+                transporteAtualizado.NumeroDeCaminhoes,
+                transporteAtualizado.DataDeExpedicao,
+                permitirReducao,
+                connection,
+                transaction);
+            await transaction.CommitAsync();
+            return dataAlteracao.Value;
         }
 
-        private async Task SincronizarCaminhoes(string siglaServ, int totalCaminhoes, DateTime? data, NpgsqlConnection connection, NpgsqlTransaction transaction)
+        private async Task SincronizarCaminhoes(
+            string siglaServ,
+            int totalCaminhoes,
+            DateTime? data,
+            bool permitirReducao,
+            NpgsqlConnection connection,
+            NpgsqlTransaction transaction)
         {
-            try
-            {
-                if (totalCaminhoes < 0) throw new InvalidOperationException("Quantidade de caminhoes invalida.");
+            if (totalCaminhoes < 0)
+                throw new InvalidOperationException("Quantidade de caminhões inválida.");
 
-                var caminhõesExistentes = (await connection.QueryAsync<tbl_cargas_montagem>(
+            var caminhõesExistentes = (await connection.QueryAsync<tbl_cargas_montagem>(
                     @"SELECT * FROM operacional.tbl_cargas_montagem
                       WHERE siglaserv = @siglaServ
                       ORDER BY num_caminhao FOR UPDATE;",
                     new { siglaServ },
                     transaction)).ToList();
 
-                int caminhõesAtuais = caminhõesExistentes.Count;
-                var numeros = caminhõesExistentes.Select(c => int.TryParse(c.num_caminhao, out var n) ? n : 0).ToHashSet();
-                int proximoNumero = 1;
+            int caminhõesAtuais = caminhõesExistentes.Count;
+            var numeros = caminhõesExistentes.Select(c => int.TryParse(c.num_caminhao, out var n) ? n : 0).ToHashSet();
+            int proximoNumero = 1;
 
-                // **Se precisar adicionar caminhões**
-                if (caminhõesAtuais < totalCaminhoes)
+            if (caminhõesAtuais < totalCaminhoes)
+            {
+                for (int i = caminhõesAtuais + 1; i <= totalCaminhoes; i++)
                 {
-                    for (int i = caminhõesAtuais + 1; i <= totalCaminhoes; i++)
+                    while (numeros.Contains(proximoNumero)) proximoNumero++;
+                    numeros.Add(proximoNumero);
+                    var novoCaminhao = new tbl_cargas_montagem
                     {
-                        while (numeros.Contains(proximoNumero)) proximoNumero++;
-                        numeros.Add(proximoNumero);
-                        var novoCaminhao = new tbl_cargas_montagem
-                        {
-                            siglaserv = siglaServ,
-                            num_caminhao = proximoNumero.ToString().PadLeft(2, '0'), // Formato "01", "02", etc.
-                            data = data?.AddDays(i-1),
-                            placa_caminhao = null // Ou alguma lógica para definir a placa
-                        };
+                        siglaserv = siglaServ,
+                        num_caminhao = proximoNumero.ToString().PadLeft(2, '0'),
+                        data = data?.AddDays(i - 1),
+                        placa_caminhao = null
+                    };
 
-                        await connection.ExecuteAsync(
-                            @"INSERT INTO operacional.tbl_cargas_montagem
+                    await connection.ExecuteAsync(
+                        @"INSERT INTO operacional.tbl_cargas_montagem
                               (siglaserv, num_caminhao, data, placa_caminhao)
                               VALUES (@siglaserv, @num_caminhao, @data, @placa_caminhao);",
-                            novoCaminhao,
-                            transaction);
-                    }
+                        novoCaminhao,
+                        transaction);
                 }
-                // **Se precisar remover caminhões excedentes**
-                else if (caminhõesAtuais > totalCaminhoes)
+            }
+            else if (caminhõesAtuais > totalCaminhoes)
+            {
+                if (!permitirReducao)
+                    throw new InvalidOperationException(
+                        "A redução excluiria cargas existentes. Confirme a redução para continuar.");
+
+                var idsExcedentes = caminhõesExistentes
+                    .OrderBy(c => int.TryParse(c.num_caminhao, out var numero) ? numero : int.MaxValue)
+                    .Skip(totalCaminhoes)
+                    .Select(c => c.id)
+                    .ToArray();
+
+                try
                 {
-                    throw new InvalidOperationException("A reducao excluiria cargas existentes. Revise as cargas antes de reduzir a quantidade.");
+                    await connection.ExecuteAsync(
+                        @"DELETE FROM operacional.tbl_cargas_montagem
+                          WHERE id = ANY(@idsExcedentes);",
+                        new { idsExcedentes },
+                        transaction);
                 }
-
-
-            }
-            catch (DbUpdateException)
-            {
-                throw;
-            }
-            catch (Exception ex)  // Para qualquer outro erro
-            {
-                throw new Exception("Erro inesperado.", ex);
+                catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.ForeignKeyViolation)
+                {
+                    throw new InvalidOperationException(
+                        "Não foi possível reduzir a quantidade porque uma das cargas excedentes possui registros vinculados.",
+                        ex);
+                }
             }
         }
 

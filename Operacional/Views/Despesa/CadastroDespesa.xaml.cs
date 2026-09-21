@@ -197,6 +197,7 @@ namespace Operacional.Views.Despesa
 
         private void dGRelatorioAdiantamento_RowValidating(object sender, GridViewRowValidatingEventArgs e)
         {
+            
             if (e.Row?.IsInEditMode != true) return;
             if (e.Row.Item is not OperacionalAdiantamentoModel item) return;
             var pai = (sender as FrameworkElement)?.DataContext as OperacionalRelatorioDespesaModel;
@@ -207,6 +208,7 @@ namespace Operacional.Views.Despesa
             {
                 await ((CadastroDespesaViewModel)DataContext).AdcionarRelatorioAdiantamento(item);
             });
+            
         }
 
         private void dGRelatorioDetalhes_RowValidating(object sender, GridViewRowValidatingEventArgs e)
@@ -262,13 +264,13 @@ namespace Operacional.Views.Despesa
         {
             var campos = new List<string>();
 
-            AddIfMissing(campos, adiantamento.valor_adiantamento, "Valor adiantamento");
-            AddIfMissing(campos, adiantamento.valor_real_peso, "Valor do peso");
-            AddIfMissing(campos, adiantamento.valor_cotacao_peso, "Cotação peso");
-            AddIfMissing(campos, adiantamento.valor_peso_peso, "Valor peso");
-            AddIfMissing(campos, adiantamento.valor_real_dolar, "Valor do US$");
-            AddIfMissing(campos, adiantamento.valor_cotacao_dolar, "Cotação US$");
-            AddIfMissing(campos, adiantamento.valor_dolar_dolar, "Valor US$");
+            //AddIfMissing(campos, adiantamento.valor_adiantamento, "Valor adiantamento");
+            //AddIfMissing(campos, adiantamento.valor_real_peso, "Valor do peso");
+            //AddIfMissing(campos, adiantamento.valor_cotacao_peso, "Cotação peso");
+            //AddIfMissing(campos, adiantamento.valor_peso_peso, "Valor peso");
+            //AddIfMissing(campos, adiantamento.valor_real_dolar, "Valor do US$");
+            //AddIfMissing(campos, adiantamento.valor_cotacao_dolar, "Cotação US$");
+            //AddIfMissing(campos, adiantamento.valor_dolar_dolar, "Valor US$");
             AddIfMissing(campos, adiantamento.total_adiantamento, "Total adiantamento");
             AddIfMissing(campos, adiantamento.data_pagamento, "Data pagamento");
             AddIfMissing(campos, adiantamento.forma_pagto, "Forma pagamento");

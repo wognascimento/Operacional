@@ -103,7 +103,9 @@
                                     <telerik:GridViewDataColumn Header="VALOR US$" DataMemberBinding="{Binding valor_dolar_dolar}" DataFormatString="{}{0:N2}"/>
                                     <telerik:GridViewDataColumn Header="TOTAL ADIANTAMENTO" DataMemberBinding="{Binding total_adiantamento}" DataFormatString="{}{0:N2}"/>
                                     <telerik:GridViewDataColumn Header="DATA PAGAMENTO" DataMemberBinding="{Binding data_pagamento}" DataFormatString="{}{0:dd/MM/yyyy}"/>
-                                    <telerik:GridViewComboBoxColumn Header="FORMA PAGAMENTO" DataMemberBinding="{Binding forma_pagto}" ItemsSource="{Binding DataContext.FormaPagamento, ElementName=Root}"/>
+                                    <telerik:GridViewComboBoxColumn Header="FORMA PAGAMENTO"
+                                                                    DataMemberBinding="{Binding forma_pagto, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    ItemsSource="{Binding DataContext.FormaPagamento, Source={x:Reference Root}}"/>
                                 </telerik:RadGridView.Columns>
                             </telerik:RadGridView>
                         </TabItem>

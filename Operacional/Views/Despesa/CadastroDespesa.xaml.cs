@@ -48,6 +48,22 @@ namespace Operacional.Views.Despesa
                 
                 foreach (var relatorio in relatorios)
                 {
+                    if (relatorio.RelatorioObservacao.Count == 0)
+                    {
+                        relatorio.RelatorioObservacao.Add(new OperacionalRelatorioObservacaoModel
+                        {
+                            cod_relatorio = relatorio.cod_relatorio
+                        });
+                    }
+
+                    if (relatorio.RelatorioAdiantamento.Count == 0)
+                    {
+                        relatorio.RelatorioAdiantamento.Add(new OperacionalAdiantamentoModel
+                        {
+                            cod_relatorio = relatorio.cod_relatorio
+                        });
+                    }
+
                     /*
                     var pai = relatorio.RelatorioObservacao
                         .Select(x =>
@@ -486,8 +502,8 @@ namespace Operacional.Views.Despesa
 
                 foreach (var relatorio in relatorios)
                 {
-                    relatorio.RelatorioAdiantamento = adiantamentos[relatorio.cod_relatorio].ToList();
-                    relatorio.RelatorioObservacao = observacoes[relatorio.cod_relatorio].ToList();
+                    relatorio.RelatorioAdiantamento = [.. adiantamentos[relatorio.cod_relatorio]];
+                    relatorio.RelatorioObservacao = [.. observacoes[relatorio.cod_relatorio]];
                     relatorio.RelatorioDespesaDetalhes = detalhes[relatorio.cod_relatorio].ToList();
                 }
 

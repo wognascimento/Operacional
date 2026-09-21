@@ -167,23 +167,7 @@ namespace Operacional
                 
 
                 var path = SistemaPathResolver.GetImpressosPath("QUERY_CARGAS_MONTAGEM.xlsx");
-                using (var workbook = new XLWorkbook())
-                {
-                    var worksheet = workbook.Worksheets.Add("QUERY CARGAS MONTAGEM");
-                    worksheet.Cell(1, 1).InsertTable(retorno);
-                    worksheet.Columns().AdjustToContents();
-
-                    var rowCount = retorno.Count + 1;
-                    for (var row = 2; row <= rowCount; row++)
-                    {
-                        if (worksheet.Cell(row, 1).GetString() != worksheet.Cell(row, 2).GetString())
-                        {
-                            worksheet.Range(row, 1, row, 3).Style.Fill.BackgroundColor = XLColor.Yellow;
-                        }
-                    }
-
-                    workbook.SaveAs(path);
-                }
+                ConsultaExcelExporter.Exportar(retorno, path, "QUERY CARGAS MONTAGEM");
 
                 SistemaPathResolver.OpenFile(path);
 
@@ -246,12 +230,7 @@ namespace Operacional
                 await connection.CloseAsync();
 
                 var path = SistemaPathResolver.GetImpressosPath("DATAS-MONTAGEM.xlsx");
-                using (var workbook = new XLWorkbook())
-                {
-                    var worksheet = workbook.Worksheets.Add(dataTable, "DATAS MONTAGEM");
-                    worksheet.Columns().AdjustToContents();
-                    workbook.SaveAs(path);
-                }
+                ConsultaExcelExporter.Exportar(dataTable, path, "DATAS MONTAGEM");
 
                 SistemaPathResolver.OpenFile(path);
 
@@ -280,13 +259,7 @@ namespace Operacional
                 var retorno = new ObservableCollection<TranspDesmontDetalheModel>(lista);
 
                 var path = SistemaPathResolver.GetImpressosPath("QUERY_CARGAS_DESMONTAGEM.xlsx");
-                using (var workbook = new XLWorkbook())
-                {
-                    var worksheet = workbook.Worksheets.Add("QUERY CARGAS DESMONTAGEM");
-                    worksheet.Cell(1, 1).InsertTable(retorno);
-                    worksheet.Columns().AdjustToContents();
-                    workbook.SaveAs(path);
-                }
+                ConsultaExcelExporter.Exportar(retorno, path, "QUERY CARGAS DESMONTAGEM");
 
                 SistemaPathResolver.OpenFile(path);
 
@@ -342,13 +315,7 @@ namespace Operacional
                       ORDER BY sigla, fase, funcao;")).ToList();
 
                 var path = SistemaPathResolver.GetImpressosPath("QUERY_FUNCOES_CRONOGRAMA.xlsx");
-                using (var workbook = new XLWorkbook())
-                {
-                    var worksheet = workbook.Worksheets.Add("FUNCOES CRONOGRAMA");
-                    worksheet.Cell(1, 1).InsertTable(retorno);
-                    worksheet.Columns().AdjustToContents();
-                    workbook.SaveAs(path);
-                }
+                ConsultaExcelExporter.Exportar(retorno, path, "FUNCOES CRONOGRAMA");
 
                 SistemaPathResolver.OpenFile(path);
 
@@ -524,19 +491,7 @@ namespace Operacional
                 // Salva em background (ClosedXML é síncrono)
                 await Task.Run(() =>
                 {
-                    using var wb = new XLWorkbook();
-                    wb.Worksheets.Add(dataTable, "CONSULTA GERAL MANUTENCAO");
-
-                    var ws = wb.Worksheet(1);
-                    var used = ws.RangeUsed();
-                    if (used != null)
-                    {
-                        ws.Row(1).Style.Font.Bold = true;
-                        //used.SetAutoFilter();
-                        ws.Columns().AdjustToContents();
-                    }
-
-                    wb.SaveAs(path);
+                    ConsultaExcelExporter.Exportar(dataTable, path, "CONSULTA GERAL MANUTENCAO");
                 });
 
                 // abrir
@@ -619,19 +574,7 @@ namespace Operacional
                 // Salva em background (ClosedXML é síncrono)
                 await Task.Run(() =>
                 {
-                    using var wb = new XLWorkbook();
-                    wb.Worksheets.Add(dataTable, "CONTROLE DOCUMENTOS");
-
-                    var ws = wb.Worksheet(1);
-                    var used = ws.RangeUsed();
-                    if (used != null)
-                    {
-                        ws.Row(1).Style.Font.Bold = true;
-                        //used.SetAutoFilter();
-                        ws.Columns().AdjustToContents();
-                    }
-
-                    wb.SaveAs(path);
+                    ConsultaExcelExporter.Exportar(dataTable, path, "CONTROLE DOCUMENTOS");
                 });
 
                 // abrir

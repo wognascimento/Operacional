@@ -22,8 +22,8 @@ namespace Operacional.DataBase.Models
         public string? finalizado { get; set; }
         public string? classif_financeiro { get; set; }
 
-        public ICollection<OperacionalRelatorioObservacaoModel>? RelatorioObservacao { get; set; } = [];
-        public ICollection<OperacionalAdiantamentoModel>? RelatorioAdiantamento { get; set; } = [];
+        public ObservableCollection<OperacionalRelatorioObservacaoModel> RelatorioObservacao { get; set; } = [];
+        public ObservableCollection<OperacionalAdiantamentoModel> RelatorioAdiantamento { get; set; } = [];
         public ICollection<OperacionalRelatorioDespesasDetalheModel> RelatorioDespesaDetalhes { get; set; } = [];
 
         [NotMapped]

@@ -209,6 +209,7 @@ public partial class NotaDespesaViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<string> tipos = ["IMPOSTOS", "SERVIÇOS", "DESPESAS"];
 
+
     public NotaDespesaViewModel()
     {
         _dataBaseSettings = DataBaseSettings.Instance;

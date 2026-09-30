@@ -230,6 +230,7 @@ public partial class NotaPagamentoViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<string> tipos = ["IMPOSTOS", "SERVIÇOS", "DESPESAS"];
 
+
     public NotaPagamentoViewModel()
     {
         _dataBaseSettings = DataBaseSettings.Instance;
@@ -277,14 +278,11 @@ public partial class NotaPagamentoViewModel : ObservableObject
 
     public  async Task<ObservableCollection<EquipeExternaDescricaoServicoModel>> GetDescricoesAsync()
     {
-        ObservableCollection<string> descricoes = ["ADIANTAMENTO ALIMENTAÇÃO","ADIANTAMENTO TRANSPORTE","PAGAMENTO DE ALIMENTAÇÃO","PAGAMENTO DE TRANSPORTE","PAGAMENTO DE IMPRESSÃO","PAGAMENTO DE MATERIAL"];
         using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
         var result = await connection.QueryAsync<EquipeExternaDescricaoServicoModel>(@"
             SELECT *
             FROM equipe_externa.tbl_descricao_servicos
-            WHERE descricao <> ALL(@descricoes)
-            ORDER BY descricao;",
-            new { descricoes = descricoes.ToArray() });
+            ORDER BY descricao;");
 
         return new ObservableCollection<EquipeExternaDescricaoServicoModel>(result);
     }

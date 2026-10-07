@@ -81,6 +81,85 @@ public partial class CadastroUsuario : UserControl
         }
     }
 
+    private bool enviandoAplicativo;
+
+    private async void OnEnviarAplicativoClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
+    {
+        if (enviandoAplicativo || radUsuarios.SelectedItem is not EquipeExternaUsuarioModel usuarioSelecionado) return;
+        enviandoAplicativo = true;
+        var enviados = new List<string>();
+        string? pendente = null;
+        string? idCriado = null;
+        bool cadastroSolicitado = false;
+        try
+        {
+            Mouse.OverrideCursor = Cursors.Wait;
+            var service = new ClientesAplicativoService();
+            var vm = (CadastroUsuarioViewModel)DataContext;
+            if (usuarioSelecionado.id is null or <= 0)
+                throw new InvalidOperationException("Salve o usuario antes de enviar ao aplicativo.");
+            // Read the persisted identity instead of submitting uncommitted grid edits.
+            var usuario = await vm.GetUsuarioAplicativoAsync(usuarioSelecionado.id.Value);
+            if (!string.IsNullOrWhiteSpace(usuarioSelecionado.id_aplicativo) || !string.IsNullOrWhiteSpace(usuario.id_aplicativo))
+            {
+                var id = usuarioSelecionado.id_aplicativo ?? usuario.id_aplicativo!;
+                await vm.SalvarIdAplicativoAsync(usuario.id.Value, id);
+                usuarioSelecionado.id_aplicativo = id;
+                MessageBox.Show("Usuario ja cadastrado no aplicativo. ID: " + id, "Enviar Aplicativo");
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(usuario.nome) ||
+                !System.Net.Mail.MailAddress.TryCreate(usuario.email, out var endereco) || endereco.Address != usuario.email)
+                throw new InvalidOperationException("Preencha e salve um nome e e-mail validos antes de enviar.");
+            vm.ClienteIdsAplicativo = Array.Empty<string>();
+            vm.FuncoesAplicativo = await vm.GetFuncoesAplicativoAsync(usuario.id_equipe);
+            if (vm.FuncoesAplicativo.Count == 0 || vm.FuncoesAplicativo.Any(f => string.IsNullOrWhiteSpace(f.funcao) || f.valor < 0))
+                throw new InvalidOperationException("A equipe precisa ter funcoes validas e valores nao negativos.");
+            var clientes = await service.ConsultarPendentesAsync(BaseSettings.ConnectionString);
+            Mouse.OverrideCursor = null;
+            if (MessageBox.Show($"Solicitar cadastro de {usuario.nome} ({usuario.email}) com {vm.FuncoesAplicativo.Count} funcao(oes)?\n\nSe o e-mail ja existir com senha provisoria, a API reenviara a senha SEM atualizar funcoes ou clientes. Se houver duvida, cancele e confira o cadastro com o administrador.\n\nClientes novos: {clientes.Count(c => c.Novo)}, com coordenadas zero e raio 200. Clientes alterados: {clientes.Count(c => !c.Novo)}, preservando coordenadas e raio.",
+                "Enviar Aplicativo", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+            Mouse.OverrideCursor = Cursors.Wait;
+            foreach (var cliente in clientes)
+            {
+                pendente = cliente.sigla;
+                await service.EnviarAsync(cliente);
+                if (cliente.Novo) enviados.Add(cliente.sigla);
+                pendente = null;
+            }
+            vm.ClienteIdsAplicativo = await service.ConsultarIdsEquipeAsync(BaseSettings.ConnectionString, usuario.id_equipe);
+            cadastroSolicitado = true;
+            idCriado = await new UsuarioAplicativoService().CadastrarAsync(usuario.nome, usuario.email, vm.FuncoesAplicativo, vm.ClienteIdsAplicativo);
+            usuarioSelecionado.id_aplicativo = idCriado;
+            await vm.SalvarIdAplicativoAsync(usuario.id.Value, idCriado);
+            var avisoCoordenadas = enviados.Count == 0 ? "" :
+                "\n\nCorrigir latitude e longitude das siglas cadastradas com coordenadas zero:\n" + string.Join(", ", enviados);
+            MessageBox.Show("Solicitacao aceita pela API. ID vinculado: " + idCriado +
+                "\nSe o usuario ja possuia senha provisoria, o e-mail foi reenviado e as funcoes/clientes anteriores foram mantidos. A resposta nao distingue esse caso de um novo cadastro." + avisoCoordenadas,
+                "Enviar Aplicativo", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            var aviso = enviados.Count == 0 ? "" :
+                "\n\nCadastros confirmados com latitude e longitude zero. Corrigir as coordenadas das siglas:\n" + string.Join(", ", enviados);
+            if (pendente != null)
+                aviso += $"\n\nConfira o cadastro de {pendente} na API antes de tentar novamente: o resultado do envio nao foi confirmado.";
+            if (idCriado != null)
+                aviso += "\n\nUsuario criado na API, mas o ID nao foi salvo localmente: " + idCriado +
+                    ". Tente novamente nesta tela para salvar somente o vinculo, sem cadastrar novamente.";
+            else if (cadastroSolicitado)
+                aviso += "\n\nConfira se o usuario foi criado na API antes de reenviar, para evitar novo cadastro ou e-mail.";
+            MessageBox.Show("Envio interrompido. " + ex.Message + aviso,
+                "Enviar Aplicativo", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            Mouse.OverrideCursor = null;
+            enviandoAplicativo = false;
+        }
+    }
+
     private async void OnEnviarWebClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
     {
         //var selectedItem = radUsuarios.CurrentCellInfo.Item;
@@ -358,6 +437,43 @@ public async Task PostClientesFasesAsync(string baseUrl, BulkRequest payload)
 public partial class CadastroUsuarioViewModel : ObservableObject
 {
     DataBaseSettings BaseSettings = DataBaseSettings.Instance;
+
+    public IReadOnlyList<FuncaoAplicativoDto> FuncoesAplicativo { get; internal set; } = Array.Empty<FuncaoAplicativoDto>();
+    public IReadOnlyList<string> ClienteIdsAplicativo { get; internal set; } = Array.Empty<string>();
+
+    public async Task<EquipeExternaUsuarioModel> GetUsuarioAplicativoAsync(long id)
+    {
+        using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+        return await connection.QuerySingleOrDefaultAsync<EquipeExternaUsuarioModel>(
+            "SELECT * FROM equipe_externa.tblusuario WHERE id = @id", new { id })
+            ?? throw new InvalidOperationException("Usuario nao encontrado. Recarregue a tela.");
+    }
+
+    public async Task SalvarIdAplicativoAsync(long id, string idAplicativo)
+    {
+        using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+        var affected = await connection.ExecuteAsync(@"
+            UPDATE equipe_externa.tblusuario SET id_aplicativo = @idAplicativo
+            WHERE id = @id AND (NULLIF(BTRIM(id_aplicativo), '') IS NULL OR id_aplicativo = @idAplicativo);",
+            new { id, idAplicativo });
+        if (affected != 1)
+            throw new InvalidOperationException("Usuario removido ou vinculado a outro ID de aplicativo. Recarregue a tela.");
+    }
+
+    public async Task<IReadOnlyList<FuncaoAplicativoDto>> GetFuncoesAplicativoAsync(long id_equipe)
+    {
+        using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+        var result = await connection.QueryAsync<FuncaoAplicativoDto>(@"
+            SELECT funcao,
+                   MAX(COALESCE(valor_ano_atual, 0)
+                       + COALESCE(lanche, 0)
+                       + COALESCE(transporte, 0)) AS valor
+            FROM equipe_externa.qry_previsao_valores_cronograma
+            WHERE id_equipe = @id_equipe
+            GROUP BY funcao
+            ORDER BY funcao;", new { id_equipe });
+        return result.ToList();
+    }
 
     [ObservableProperty]
     private ObservableCollection<EquipeExternaEquipeModel> equipes;

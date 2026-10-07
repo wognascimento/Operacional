@@ -24,6 +24,7 @@
             <telerik:RadContextMenu.ContextMenu>
                 <telerik:RadContextMenu Opening="RadContextMenu_Opening">
                     <telerik:RadMenuItem Header="Enviar WEB" Click="OnEnviarWebClick" />
+                    <telerik:RadMenuItem Header="Enviar Aplicativo" Click="OnEnviarAplicativoClick" />
                 </telerik:RadContextMenu>
             </telerik:RadContextMenu.ContextMenu>
             <telerik:RadGridView.Columns>

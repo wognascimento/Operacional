@@ -15,5 +15,6 @@ namespace Operacional.DataBase.Models
         [Required]
         public required string email { get; set; }
         public string? aux { get; set; }
+        public string? id_aplicativo { get; set; }
     }
 }

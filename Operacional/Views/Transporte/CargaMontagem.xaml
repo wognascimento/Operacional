@@ -25,6 +25,7 @@
                 <telerik:GridViewDataColumn Header="num caminhao" DataMemberBinding="{Binding num_caminhao}"/>
                 <telerik:GridViewDataColumn Header="noite montagem" DataMemberBinding="{Binding noite_montagem}"/>
                 <telerik:GridViewDataColumn Header="m3 contratado" DataMemberBinding="{Binding m3_contratado}" />
+                <telerik:GridViewDataColumn Header="cubagem produto" DataMemberBinding="{Binding cubagem_por_produto}" IsReadOnly="True"/>
                 <telerik:GridViewDataColumn Header="data previsão chegada" DataMemberBinding="{Binding data_previsao_chegada, StringFormat=\{0:dd/MM/yyyy\}}" />
                 <telerik:GridViewDataColumn Header="data chegada" DataMemberBinding="{Binding data_chegada, StringFormat=\{0:dd/MM/yyyy\}}" />
                 <telerik:GridViewDataColumn Header="transporte" DataMemberBinding="{Binding transporte}" IsReadOnly="True"/>

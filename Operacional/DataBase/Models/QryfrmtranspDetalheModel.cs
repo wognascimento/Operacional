@@ -16,6 +16,7 @@ namespace Operacional.DataBase.Models
         public int? numero_de_caminhoes { get; set; }
         public int? noite_montagem { get; set; }
         public double? m3_contratado { get; set; }
+        public double? cubagem_por_produto { get; set; }
         public DateTime? data_chegada { get; set; }
         public string? transporte { get; set; }
         public string? obscarga { get; set; }

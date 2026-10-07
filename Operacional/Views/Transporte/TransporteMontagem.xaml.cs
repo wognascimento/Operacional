@@ -1,7 +1,6 @@
 using Dapper;
 using Npgsql;
 using Operacional.DataBase;
-using Operacional.DataBase.Models;
 using Operacional.DataBase.Models.DTOs;
 using System.Collections.ObjectModel;
 using System.ComponentModel;

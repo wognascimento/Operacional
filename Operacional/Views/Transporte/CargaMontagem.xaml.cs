@@ -116,9 +116,43 @@ public partial class CargaMontagemViewModel : ObservableObject
     {
         using var connection = new NpgsqlConnection(_dataBaseSettings.ConnectionString);
         var result = await connection.QueryAsync<QryfrmtranspDetalheModel>(
-            @"SELECT *
-              FROM operacional.qryfrmtransp_detalhe
-              ORDER BY data, siglaserv;");
+            @"SELECT 
+                  td.id,
+                  td.data,
+                  td.data_de_expedicao,
+                  td.data_previsao_chegada,
+                  td.data_inicio_montagem,
+                  td.siglaserv,
+                  td.num_caminhao,
+                  td.numero_de_caminhoes,
+                  td.noite_montagem,
+                  td.m3_contratado,
+                  td.data_chegada,
+                  td.transporte,
+                  td.obscarga,
+                  td.regiao,
+                  td.cidade,
+                  td.veiculo_programado,
+                  td.trasnportadora,
+                  td.obs_saida,
+                  td.volume_informado,
+                  td.distancia,
+                  td.local_carga,
+                  td.obs_externas, 
+                  td.valor_frete_contratado_caminhao,
+                  td.obs_frete_contratado,
+                  td.ok,
+                  td.dataaltera,
+                  td.alteradopor, 
+                  td.origem,
+                  td.volume_da_carga,
+                  td.post_alterado,
+                  td.post_data_alterado,
+                  td.data_chegada_efetiva,
+                  round(ecc.somadecubagem_total::numeric, 3) AS cubagem_por_produto
+              FROM operacional.qryfrmtransp_detalhe td
+              LEFT JOIN expedicao.qry_cubagem_cliente_total ecc ON td.siglaserv::text = ecc.sigla_serv::text
+              ORDER BY td.data, td.siglaserv, td.num_caminhao;");
 
         CargasMontagem = new ObservableCollection<QryfrmtranspDetalheModel>(result);
         _iniciosMontagem.Clear();

@@ -32,7 +32,13 @@ namespace Operacional.DataBase
             Username = ReadSetting("Username", EnvUsername, Environment.UserName);
             Password = ReadSetting("Password", EnvPassword, null);
             CaminhoSistema = ReadSetting("SystemPath", null, CaminhoSistema);
-            UpdateInfoUrl = ReadSetting("UpdateInfoUrl", null, "http://192.168.0.49/downloads/operacional/version.json");
+            UpdateInfoUrl = ReadSetting("UpdateInfoUrl", "OPERACIONAL_UPDATE_URL", "https://atualizasig.cipolatti.com.br/downloads/operacional/version.json");
+            // Resolve legacy settings without overwriting local database credentials.
+            if (string.Equals(UpdateInfoUrl?.Trim(), "http://192.168.0.49/downloads/operacional/version.json", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(UpdateInfoUrl?.Trim(), "https://192.168.0.49/downloads/operacional/version.json", StringComparison.OrdinalIgnoreCase))
+            {
+                UpdateInfoUrl = "https://atualizasig.cipolatti.com.br/downloads/operacional/version.json";
+            }
 
             RefreshConnectionString();
         }

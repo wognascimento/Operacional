@@ -3,7 +3,7 @@ using Operacional.DataBase;
 using Operacional.Localization;
 using System.Diagnostics;
 using System.Globalization;
-using System.Net.Http;
+using System.IO;
 using System.Reflection;
 using System.Text.Json;
 using System.Windows;
@@ -18,6 +18,7 @@ namespace Operacional
         private readonly string CURRENT_VERSION = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0.0";
 
         public string CurrentVersion => CURRENT_VERSION;
+        private bool checkingForUpdates;
 
         public App()
         {
@@ -51,9 +52,10 @@ namespace Operacional
 
         public async Task CheckForUpdatesAsync(bool showUpToDate = false)
         {
-            if (string.IsNullOrWhiteSpace(BaseSettings.UpdateInfoUrl))
+            if (checkingForUpdates || string.IsNullOrWhiteSpace(BaseSettings.UpdateInfoUrl))
                 return;
 
+            checkingForUpdates = true;
             try
             {
                 var updateChecker = new UpdateChecker(BaseSettings.UpdateInfoUrl, CURRENT_VERSION);
@@ -81,17 +83,28 @@ namespace Operacional
                     return;
 
                 string jsonData = JsonSerializer.Serialize(updateInfo);
-                string arguments = $"\"{jsonData.Replace("\"", "\\\"")}\" \"Operacional.exe\"";
-                Process.Start("Update.exe", arguments);
+                string updaterPath = Path.Combine(AppContext.BaseDirectory, "Update.exe");
+                if (!File.Exists(updaterPath))
+                    throw new FileNotFoundException("Atualizador nao encontrado. Reinstale o Operacional.", updaterPath);
+
+                var startInfo = new ProcessStartInfo(updaterPath)
+                {
+                    WorkingDirectory = AppContext.BaseDirectory,
+                    UseShellExecute = false
+                };
+                startInfo.ArgumentList.Add(jsonData);
+                startInfo.ArgumentList.Add("Operacional.exe");
+                using var updater = Process.Start(startInfo)
+                    ?? throw new InvalidOperationException("Nao foi possivel iniciar o atualizador.");
                 Shutdown();
-            }
-            catch (HttpRequestException ex)
-            {
-                ErrorDialog.Show(ex, "Erro ao verificar atualizacoes");
             }
             catch (Exception ex)
             {
                 ErrorDialog.Show(ex, "Erro ao verificar atualizacoes");
+            }
+            finally
+            {
+                checkingForUpdates = false;
             }
         }
 

@@ -1,359 +1,161 @@
+#Requires -Version 7.0
+[CmdletBinding()]
 param(
-    [string]$ServerUploadPath = "root@192.168.0.49:/var/www/updates/downloads/operacional/",
-    [string]$UpdateBaseUrl = "http://192.168.0.49/downloads/operacional",
-    [string]$NetworkDeployPath = "\\192.168.0.4\sistemas\SIG",
-    [string]$InnoCompiler = "",
-    [string]$DotNetDesktopRuntimeInstallerPath = "",
-    [System.Management.Automation.PSCredential]$NetworkCredential = $null,
-    [string[]]$Changelog = @("Ajustes", "Melhorias"),
+    [string]$ServerUrl = 'https://atualizasig.cipolatti.com.br',
+    [PSCredential]$Credential,
+    [string[]]$Changelog,
+    [string]$MinimumCompatibleVersion = '1.0.0.0',
+    [string]$InnoCompiler = '',
+    [string]$DotNetDesktopRuntimeInstallerPath = '',
+    [switch]$SkipRuntimeBundle,
     [switch]$SkipServerUpload,
+    [switch]$UploadOnly,
+    [string]$ArtifactDirectory,
+    [switch]$CopyPublishedInstaller,
+    [string]$NetworkDeployPath = '\\192.168.0.4\sistemas\SIG',
+    [PSCredential]$NetworkCredential,
+    # Compatibility with earlier invocations; network copying is now opt-in.
     [switch]$SkipNetworkCopy,
-    [switch]$ForceDeploy
+    [switch]$ForceDeploy,
+    [string]$ServerUploadPath,
+    [string]$UpdateBaseUrl
 )
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+Import-Module (Join-Path $PSScriptRoot 'scripts\UpdatePublishing.psm1') -Force
+if ($ForceDeploy -or $ServerUploadPath -or $UpdateBaseUrl) { throw 'ForceDeploy/ServerUploadPath/UpdateBaseUrl nao se aplicam a Central. Use ServerUrl e uma versao nova; pacotes publicados sao imutaveis.' }
+if ($UploadOnly -and $SkipServerUpload) { throw 'UploadOnly nao pode ser combinado com SkipServerUpload.' }
+if ($CopyPublishedInstaller -and ($UploadOnly -or $SkipNetworkCopy)) { throw 'CopyPublishedInstaller deve ser usado sozinho, com ArtifactDirectory e NetworkDeployPath.' }
+if ($ArtifactDirectory -and -not ($UploadOnly -or $CopyPublishedInstaller)) { throw 'ArtifactDirectory e usado apenas com UploadOnly ou CopyPublishedInstaller.' }
 
-$ErrorActionPreference = "Stop"
-
-$projectPath = $PSScriptRoot
-$workspaceRoot = Resolve-Path (Join-Path $projectPath "..")
-$projectFile = Join-Path $projectPath "Operacional\Operacional.csproj"
-$publishPath = Join-Path $projectPath "publish"
-$artifactsPath = Join-Path $projectPath "artifacts"
-$installerPath = Join-Path $artifactsPath "installer"
-$versionJsonPath = Join-Path $artifactsPath "version.json"
-$redistPath = Join-Path $projectPath "redist"
-$runtimeInstallerName = "windowsdesktop-runtime-10.0-win-x64.exe"
-$runtimeInstallerSearchPattern = "windowsdesktop-runtime-10.*-win-x64.exe"
-$runtimeInstallerTargetPath = Join-Path $redistPath $runtimeInstallerName
-
-function Get-ApplicationVersion {
-    $projContent = [xml](Get-Content $projectFile)
-    $propertyGroups = @($projContent.Project.PropertyGroup)
-
-    $version = ($propertyGroups | ForEach-Object { $_.AssemblyVersion } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 1)
-
-    if ([string]::IsNullOrWhiteSpace($version)) {
-        $version = ($propertyGroups | ForEach-Object { $_.Version } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 1)
-    }
-
-    if ([string]::IsNullOrWhiteSpace($version)) {
-        throw "Versao nao encontrada no .csproj. Informe <AssemblyVersion> ou <Version>."
-    }
-
-    return $version
-}
-
-function Resolve-InnoCompiler {
-    param([string]$ConfiguredPath)
-
-    $candidates = @()
-
-    if (-not [string]::IsNullOrWhiteSpace($ConfiguredPath)) {
-        $candidates += $ConfiguredPath
-    }
-
-    $candidates += Join-Path $workspaceRoot "tools\InnoSetup6\ISCC.exe"
-    $candidates += "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-
-    foreach ($candidate in $candidates) {
-        if (Test-Path $candidate) {
-            return (Resolve-Path $candidate).Path
-        }
-    }
-
-    throw "ISCC.exe nao encontrado. Coloque o Inno Setup portable em '$workspaceRoot\tools\InnoSetup6' ou informe -InnoCompiler."
-}
-
-function Resolve-DotNetRuntimeInstaller {
-    param([string]$ConfiguredPath)
-
-    $candidates = @()
-
-    if (-not [string]::IsNullOrWhiteSpace($ConfiguredPath)) {
-        $candidates += $ConfiguredPath
-    }
-
-    $candidates += Join-Path $workspaceRoot "tools\dotnet\$runtimeInstallerName"
-
-    foreach ($candidate in $candidates) {
-        if (Test-Path $candidate) {
-            return (Resolve-Path $candidate).Path
-        }
-    }
-
-    $runtimeDirectory = Join-Path $workspaceRoot "tools\dotnet"
-    if (Test-Path $runtimeDirectory) {
-        $installer = Get-ChildItem -Path $runtimeDirectory -Filter $runtimeInstallerSearchPattern -File |
-            Sort-Object LastWriteTime -Descending |
-            Select-Object -First 1
-
-        if ($installer) {
-            return $installer.FullName
-        }
-    }
-
-    return ""
-}
+$projectPath = [IO.Path]::GetFullPath($PSScriptRoot)
+$workspaceRoot = Split-Path $projectPath -Parent
+$projectFile = Join-Path $projectPath 'Operacional\Operacional.csproj'
+$versionsPath = Join-Path $projectPath 'artifacts\versions'
+$stagingRoot = Join-Path $projectPath 'artifacts\.staging'
+$session = $null
+$stage = $null
 
 function Invoke-NativeCommand {
-    param(
-        [string]$FilePath,
-        [string[]]$Arguments
-    )
-
+    param([string]$FilePath, [string[]]$Arguments)
     & $FilePath @Arguments
-
-    if ($LASTEXITCODE -ne 0) {
-        throw "Comando falhou com codigo ${LASTEXITCODE}: $FilePath $($Arguments -join ' ')"
+    if ($LASTEXITCODE -ne 0) { throw "Comando falhou (codigo $LASTEXITCODE): $FilePath" }
+}
+function Get-ApplicationVersion {
+    $xml = [xml](Get-Content -LiteralPath $projectFile -Raw)
+    $assemblyNode = $xml.SelectSingleNode('/Project/PropertyGroup/AssemblyVersion')
+    if ($null -eq $assemblyNode) { throw 'Defina AssemblyVersion no projeto antes de gerar a versao.' }
+    $v = ConvertTo-SigVersion $assemblyNode.InnerText
+    foreach ($name in @('Version', 'FileVersion')) {
+        $node = $xml.SelectSingleNode("/Project/PropertyGroup/$name")
+        if ($null -eq $node -or (ConvertTo-SigVersion $node.InnerText) -ne $v) { throw "Version, AssemblyVersion e FileVersion devem indicar a mesma versao. Confira $name no .csproj." }
     }
+    return $v
+}
+function Resolve-InnoCompiler {
+    if ($InnoCompiler) { return (Resolve-Path -LiteralPath $InnoCompiler -ErrorAction Stop).Path }
+    foreach ($candidate in @((Join-Path $workspaceRoot 'tools\InnoSetup6\ISCC.exe'), 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe')) {
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
+    }
+    throw 'ISCC.exe nao encontrado. Informe -InnoCompiler ou use tools\InnoSetup6\ISCC.exe no workspace.'
+}
+function Resolve-RuntimeInstaller {
+    if ($SkipRuntimeBundle) { return $null }
+    if ($DotNetDesktopRuntimeInstallerPath) { return (Resolve-Path -LiteralPath $DotNetDesktopRuntimeInstallerPath -ErrorAction Stop).Path }
+    $directory = Join-Path $workspaceRoot 'tools\dotnet'
+    $candidates = @(Get-ChildItem -LiteralPath $directory -Filter 'windowsdesktop-runtime-10.*-win-x64.exe' -File -ErrorAction SilentlyContinue |
+        Where-Object Name -Match '^windowsdesktop-runtime-10\.0\.\d+-win-x64\.exe$' |
+        Sort-Object { [version]($_.BaseName -replace '^windowsdesktop-runtime-', '' -replace '-win-x64$', '') } -Descending)
+    if ($candidates.Count) { return $candidates[0].FullName }
+    $fixedName = Join-Path $directory 'windowsdesktop-runtime-10.0-win-x64.exe'
+    if (Test-Path -LiteralPath $fixedName -PathType Leaf) { return $fixedName }
+    throw 'Instalador .NET Desktop Runtime 10 x64 nao encontrado em tools\dotnet. Informe -DotNetDesktopRuntimeInstallerPath ou use -SkipRuntimeBundle somente se o runtime ja estiver instalado nas estacoes.'
+}
+function Remove-StagingDirectory {
+    param([string]$Path)
+    $resolvedRoot = [IO.Path]::GetFullPath($stagingRoot).TrimEnd('\') + '\'
+    $resolvedTarget = [IO.Path]::GetFullPath($Path)
+    if (-not $resolvedTarget.StartsWith($resolvedRoot, [StringComparison]::OrdinalIgnoreCase) -or $resolvedTarget -eq $resolvedRoot.TrimEnd('\')) { throw "Limpeza recusada fora de artifacts\.staging: $resolvedTarget" }
+    if ((Get-Item -LiteralPath $resolvedTarget).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Limpeza recusada em link de diretorio.' }
+    Remove-Item -LiteralPath $resolvedTarget -Recurse -Force
 }
 
-function Copy-ToNetwork {
-    param(
-        [string]$SourcePath,
-        [string]$DestinationPath,
-        [System.Management.Automation.PSCredential]$Credential = $null
-    )
-
-    if ([string]::IsNullOrWhiteSpace($DestinationPath)) {
-        return
-    }
-
-    $destination = $DestinationPath.Trim().TrimEnd("\")
-    $copyDestination = $destination
-    $temporaryDriveName = $null
-
-    try {
-        if ($Credential -and $destination -match "^\\\\([^\\]+)\\([^\\]+)(\\.*)?$") {
-            $networkShare = "\\$($Matches[1])\$($Matches[2])"
-            $relativePath = $Matches[3]
-
-            if ([string]::IsNullOrWhiteSpace($relativePath)) {
-                $relativePath = ""
-            }
-            else {
-                $relativePath = $relativePath.TrimStart("\")
-            }
-
-            $temporaryDriveName = "SIGDEPLOY$([Guid]::NewGuid().ToString("N").Substring(0, 8))"
-            New-PSDrive -Name $temporaryDriveName -PSProvider FileSystem -Root $networkShare -Credential $Credential -ErrorAction Stop | Out-Null
-
-            if ([string]::IsNullOrWhiteSpace($relativePath)) {
-                $copyDestination = "${temporaryDriveName}:\"
-            }
-            else {
-                $copyDestination = Join-Path "${temporaryDriveName}:\" $relativePath
-            }
-        }
-
-        if (-not (Test-Path -LiteralPath $copyDestination -PathType Container)) {
-            New-Item -ItemType Directory -Path $copyDestination -Force | Out-Null
-        }
-
-        Copy-Item -LiteralPath $SourcePath -Destination $copyDestination -Force
-        Write-Host "Instalador copiado para: $destination"
-    }
-    catch {
-        throw "Nao foi possivel copiar o instalador para '$destination'. Verifique se o compartilhamento existe, se o usuario tem permissao e, se necessario, execute com -NetworkCredential. Detalhe: $($_.Exception.Message)"
-    }
-    finally {
-        if ($temporaryDriveName) {
-            Remove-PSDrive -Name $temporaryDriveName -Force -ErrorAction SilentlyContinue
-        }
-    }
-}
-
-function Convert-ToVersion {
-    param([string]$Value)
-
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        throw "Versao vazia."
-    }
-
-    try {
-        return [version]$Value
-    }
-    catch {
-        throw "Versao invalida: $Value"
-    }
-}
-
-function Convert-BytesToText {
-    param([byte[]]$Bytes)
-
-    if ($Bytes.Length -ge 2 -and $Bytes[0] -eq 0xFF -and $Bytes[1] -eq 0xFE) {
-        return [System.Text.Encoding]::Unicode.GetString($Bytes, 2, $Bytes.Length - 2)
-    }
-
-    if ($Bytes.Length -ge 2 -and $Bytes[0] -eq 0xFE -and $Bytes[1] -eq 0xFF) {
-        return [System.Text.Encoding]::BigEndianUnicode.GetString($Bytes, 2, $Bytes.Length - 2)
-    }
-
-    if ($Bytes.Length -ge 3 -and $Bytes[0] -eq 0xEF -and $Bytes[1] -eq 0xBB -and $Bytes[2] -eq 0xBF) {
-        return [System.Text.Encoding]::UTF8.GetString($Bytes, 3, $Bytes.Length - 3)
-    }
-
-    return [System.Text.Encoding]::UTF8.GetString($Bytes)
-}
-
-function Test-ServerVersion {
-    param(
-        [string]$LocalVersion,
-        [string]$BaseUrl,
-        [switch]$Force
-    )
-
-    if ($Force) {
-        Write-Host "Validacao de versao do servidor ignorada por -ForceDeploy."
-        return
-    }
-
-    $versionUrl = "$($BaseUrl.TrimEnd('/'))/version.json"
-    Write-Host "Verificando versao publicada: $versionUrl"
-
-    try {
-        $webClient = [System.Net.WebClient]::new()
-        $versionBytes = $webClient.DownloadData($versionUrl)
-    }
-    catch {
-        $statusCode = $null
-        $exception = $_.Exception
-
-        while ($exception) {
-            if ($exception.Response -and $exception.Response.StatusCode) {
-                $statusCode = [int]$exception.Response.StatusCode
-                break
-            }
-
-            $exception = $exception.InnerException
-        }
-
-        if ($statusCode -eq 404 -or $_.Exception.Message -match "\(404\)|404|Nao Localizado|Não Localizado|Not Found") {
-            Write-Host "Nenhum version.json encontrado no servidor. Deploy inicial permitido."
+try {
+    if ($UploadOnly -or $CopyPublishedInstaller) {
+        if (-not $ArtifactDirectory) { throw 'Informe -ArtifactDirectory com a pasta que contem release.json, ZIP e instalador.' }
+        $release = Read-SigRelease -ArtifactDirectory $ArtifactDirectory
+        if ($CopyPublishedInstaller) {
+            Copy-SigPublishedInstaller -Release $release -ServerUrl $ServerUrl -Destination $NetworkDeployPath -Credential $NetworkCredential
             return
         }
-
-        throw "Nao foi possivel consultar a versao atual no servidor: $($_.Exception.Message)"
-    }
-    finally {
-        if ($webClient) {
-            $webClient.Dispose()
+        $version = $release.Metadata.version
+    } else {
+        $version = Get-ApplicationVersion
+        $minimum = ConvertTo-SigVersion $MinimumCompatibleVersion
+        if ([version]$minimum -gt [version]$version) { throw 'MinimumCompatibleVersion nao pode ser maior que a versao do projeto.' }
+        $notes = @($Changelog | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object { $_.Trim() })
+        if (-not $notes.Count -or ($notes -join "`n").Length -gt 10000) { throw 'Informe -Changelog com as alteracoes desta versao (ate 10.000 caracteres).' }
+        $artifactPath = Join-Path $versionsPath $version
+        if (Test-Path -LiteralPath $artifactPath) { throw "Os artefatos de $version ja existem em $artifactPath. Para reenvio use -UploadOnly -ArtifactDirectory; para novo conteudo incremente a versao." }
+        $compiler = Resolve-InnoCompiler
+        $runtime = Resolve-RuntimeInstaller
+        if (-not $SkipServerUpload) {
+            $session = Open-SigSession -ServerUrl $ServerUrl -Credential $Credential
+            Assert-SigVersionAvailable -Session $session -Version $version
         }
+        $stage = Join-Path $stagingRoot ([guid]::NewGuid().ToString('N'))
+        $publishPath = Join-Path $stage 'publish'
+        $outputPath = Join-Path $stage 'release'
+        New-Item -ItemType Directory -Path $publishPath, $outputPath -Force | Out-Null
+        Write-Host "Gerando Operacional $version para win-x64."
+        Invoke-NativeCommand -FilePath 'dotnet' -Arguments @('publish', $projectFile, '-c', 'Release', '-r', 'win-x64', '--self-contained', 'false', '-o', $publishPath)
+        foreach ($file in @('Operacional.exe', 'Operacional.dll', 'Operacional.deps.json', 'Operacional.runtimeconfig.json', 'Update.exe', 'Update.dll', 'Update.deps.json', 'Update.runtimeconfig.json', 'BibliotecasSIG.dll')) {
+            if (-not (Test-Path -LiteralPath (Join-Path $publishPath $file) -PathType Leaf)) { throw "Arquivo obrigatorio ausente no publish: $file" }
+        }
+        $assemblyVersion = [Reflection.AssemblyName]::GetAssemblyName((Join-Path $publishPath 'Operacional.dll')).Version.ToString()
+        if ($assemblyVersion -ne $version) { throw "A DLL gerada tem versao $assemblyVersion; era esperada $version." }
+        # Local database settings must not be shipped or overwrite workstation settings.
+        foreach ($configName in @('Operacional.dll.config', 'Operacional.exe.config', 'App.config')) {
+            $configPath = Join-Path $publishPath $configName
+            if (Test-Path -LiteralPath $configPath) { Remove-Item -LiteralPath $configPath -Force }
+        }
+        $innoArgs = @((Join-Path $projectPath 'Setup.iss'), "/DMyAppVersion=$version", "/DPublishSourcePath=$publishPath", "/DInstallerOutputPath=$outputPath")
+        if ($runtime) { $innoArgs += "/DDotNetRuntimeInstaller=$runtime" }
+        else { $innoArgs += '/DSkipRuntimeBundle=1' }
+        Invoke-NativeCommand -FilePath $compiler -Arguments $innoArgs
+        $zip = Join-Path $outputPath "application-$version.zip"
+        [IO.Compression.ZipFile]::CreateFromDirectory($publishPath, $zip, [IO.Compression.CompressionLevel]::Optimal, $false)
+        $installer = Join-Path $outputPath "OperacionalSetup-$version.exe"
+        $zipFile = Get-Item -LiteralPath $zip
+        $installerFile = Get-Item -LiteralPath $installer
+        if ($zipFile.Length -gt 1000000000 -or $installerFile.Length -gt 500000000) { throw 'Artefatos excedem os limites da Central: ZIP 1 GB, EXE 500 MB.' }
+        $metadata = [ordered]@{
+            schemaVersion = 1; system = 'operacional'; version = $version; minimumCompatibleVersion = $minimum
+            changelog = $notes; builtAt = [DateTimeOffset]::UtcNow.ToString('o'); target = 'win-x64'; runtimeBundled = [bool]$runtime
+            package = @{ file = $zipFile.Name; size = $zipFile.Length; sha256 = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant() }
+            installer = @{ file = $installerFile.Name; size = $installerFile.Length; sha256 = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant() }
+        }
+        $metadata | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $outputPath 'release.json') -Encoding utf8NoBOM
+        New-Item -ItemType Directory -Path $versionsPath -Force | Out-Null
+        # Do not replace an existing version, including one produced by another process.
+        New-Item -ItemType Directory -Path $artifactPath -ErrorAction Stop | Out-Null
+        foreach ($file in Get-ChildItem -LiteralPath $outputPath -File) { Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $artifactPath $file.Name) }
+        $release = Read-SigRelease -ArtifactDirectory $artifactPath
+        Remove-StagingDirectory -Path $stage
+        $stage = $null
+        Write-Host "Artefatos preservados em: $artifactPath"
     }
-
-    try {
-        $serverJson = Convert-BytesToText -Bytes $versionBytes
-        $serverInfo = $serverJson | ConvertFrom-Json
-    }
-    catch {
-        throw "O version.json do servidor nao esta em um formato JSON valido. Arquivo consultado: $versionUrl. Detalhe: $($_.Exception.Message)"
-    }
-
-    $serverVersionText = $serverInfo.updateVersion
-
-    if ([string]::IsNullOrWhiteSpace($serverVersionText)) {
-        $serverVersionText = $serverInfo.currentVersion
-    }
-
-    if ([string]::IsNullOrWhiteSpace($serverVersionText)) {
-        throw "O version.json do servidor nao contem updateVersion nem currentVersion."
-    }
-
-    $local = Convert-ToVersion -Value $LocalVersion
-    $server = Convert-ToVersion -Value $serverVersionText
-
-    Write-Host "Versao local: $local"
-    Write-Host "Versao no servidor: $server"
-
-    if ($local -le $server) {
-        throw "Deploy bloqueado. A versao local ($local) e igual ou inferior a versao publicada ($server). Atualize a versao do projeto ou use -ForceDeploy."
-    }
+    if (-not $SkipServerUpload) {
+        if (-not $session) { $session = Open-SigSession -ServerUrl $ServerUrl -Credential $Credential }
+        Assert-SigVersionAvailable -Session $session -Version $version
+        $id = Send-SigRelease -Session $session -Release $release
+        Write-Host "Rascunho enviado: $id"
+        Write-Host "Abra $($session.BaseUrl), homologue a versao e depois publique em producao."
+    } else { Write-Host 'Geracao local concluida. Nenhum arquivo enviado a Central ou ao compartilhamento.' }
+    Write-Host "ZIP: $(Join-Path $release.Directory $release.Metadata.package.file)"
+    Write-Host "Instalador: $(Join-Path $release.Directory $release.Metadata.installer.file)"
+    Write-Host 'O version.json e gerado pela Central ao publicar. Nao envie um manifesto manual.'
+} finally {
+    Close-SigSession -Session $session
+    if ($stage -and (Test-Path -LiteralPath $stage)) { Write-Warning "Arquivos de diagnostico preservados em: $stage" }
 }
-
-$version = Get-ApplicationVersion
-$resolvedInnoCompiler = Resolve-InnoCompiler -ConfiguredPath $InnoCompiler
-$runtimeInstallerSourcePath = Resolve-DotNetRuntimeInstaller -ConfiguredPath $DotNetDesktopRuntimeInstallerPath
-$zipFileName = "application-$version.zip"
-$zipFullPath = Join-Path $artifactsPath $zipFileName
-
-Write-Host "Projeto: $projectPath"
-Write-Host "Versao: $version"
-Write-Host "Inno Setup: $resolvedInnoCompiler"
-
-if ([string]::IsNullOrWhiteSpace($runtimeInstallerSourcePath)) {
-    Write-Host ".NET Desktop Runtime 10 nao sera embutido. Coloque '$runtimeInstallerName' ou '$runtimeInstallerSearchPattern' em '$workspaceRoot\tools\dotnet' ou informe -DotNetDesktopRuntimeInstallerPath."
-}
-else {
-    Write-Host ".NET Desktop Runtime 10: $runtimeInstallerSourcePath"
-}
-
-if (Test-Path $publishPath) {
-    Remove-Item -LiteralPath $publishPath -Recurse -Force
-}
-
-if (Test-Path $artifactsPath) {
-    Remove-Item -LiteralPath $artifactsPath -Recurse -Force
-}
-
-if (Test-Path $redistPath) {
-    Remove-Item -LiteralPath $redistPath -Recurse -Force
-}
-
-New-Item -ItemType Directory -Path $publishPath -Force | Out-Null
-New-Item -ItemType Directory -Path $installerPath -Force | Out-Null
-New-Item -ItemType Directory -Path $redistPath -Force | Out-Null
-
-if (-not [string]::IsNullOrWhiteSpace($runtimeInstallerSourcePath)) {
-    Copy-Item -Path $runtimeInstallerSourcePath -Destination $runtimeInstallerTargetPath -Force
-}
-
-Invoke-NativeCommand -FilePath "dotnet" -Arguments @("publish", $projectFile, "-c", "Release", "-o", $publishPath)
-
-Push-Location $projectPath
-try {
-    Invoke-NativeCommand -FilePath $resolvedInnoCompiler -Arguments @("Setup.iss", "/DMyAppVersion=$version")
-}
-finally {
-    Pop-Location
-}
-
-Compress-Archive -Path (Join-Path $publishPath "*") -DestinationPath $zipFullPath -Force
-
-$updateJson = @{
-    currentVersion = $version
-    updateVersion = $version
-    updateUrl = "$($UpdateBaseUrl.TrimEnd('/'))/$zipFileName"
-    changelog = $Changelog
-    releaseDate = (Get-Date).ToString("yyyy-MM-dd")
-    minimumCompatibleVersion = "1.0.0"
-} | ConvertTo-Json
-
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText($versionJsonPath, $updateJson, $utf8NoBom)
-
-$installerFile = Get-ChildItem -Path $installerPath -Filter "OperacionalSetup-$version.exe" | Select-Object -First 1
-
-if (-not $installerFile) {
-    throw "Instalador nao foi gerado em $installerPath"
-}
-
-if (-not $SkipServerUpload) {
-    Test-ServerVersion -LocalVersion $version -BaseUrl $UpdateBaseUrl -Force:$ForceDeploy
-
-    $remoteBasePath = $ServerUploadPath.TrimEnd("/")
-    $tempZipRemotePath = "$remoteBasePath/$zipFileName.tmp"
-    $remoteHost = $remoteBasePath.Split(":")[0]
-    $remoteDirectory = $remoteBasePath.Split(":")[1]
-
-    Invoke-NativeCommand -FilePath "scp" -Arguments @($zipFullPath, $tempZipRemotePath)
-    Invoke-NativeCommand -FilePath "ssh" -Arguments @($remoteHost, "mv '$remoteDirectory/$zipFileName.tmp' '$remoteDirectory/$zipFileName'")
-    Invoke-NativeCommand -FilePath "scp" -Arguments @($versionJsonPath, "$remoteBasePath/version.json")
-}
-
-if (-not $SkipNetworkCopy) {
-    Copy-ToNetwork -SourcePath $installerFile.FullName -DestinationPath $NetworkDeployPath -Credential $NetworkCredential
-}
-
-Write-Host "Deploy concluido para versao $version"
-Write-Host "Pacote de atualizacao: $zipFullPath"
-Write-Host "JSON de atualizacao: $versionJsonPath"
-Write-Host "Instalador: $($installerFile.FullName)"

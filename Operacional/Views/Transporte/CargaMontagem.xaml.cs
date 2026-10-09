@@ -22,30 +22,44 @@ public partial class CargaMontagem : UserControl
     public CargaMontagem()
     {
         InitializeComponent();
+        PreviewKeyDown += AtualizarPorTecla;
         DataContext = new CargaMontagemViewModel();
     }
 
+    private bool carregado;
+    private bool atualizando;
+
     private async void UserControl_Loaded(object sender, RoutedEventArgs e)
     {
+        if (!carregado) await AtualizarAsync();
+    }
+
+    private async void AtualizarPorTecla(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.F5) return;
+        e.Handled = true;
+        if (e.IsRepeat || atualizando || !GridManualRefresh.PodeAtualizar(radGridView)) return;
+        await AtualizarAsync();
+    }
+
+    private async Task AtualizarAsync()
+    {
+        if (atualizando) return;
+        atualizando = true;
         try
         {
-            Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
-            CargaMontagemViewModel vm = (CargaMontagemViewModel)DataContext;
-            await vm.GetCargasMontagemAsync();
-            Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
-        }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx)
-        {
-            MessageBox.Show($"Erro do banco: {pgEx.MessageText}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-            Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+            await GridManualRefresh.AtualizarAsync(radGridView, async () =>
+            {
+                await ((CargaMontagemViewModel)DataContext).GetCargasMontagemAsync();
+            });
+            carregado = true;
         }
         catch (Exception ex)
         {
-            Operacional.ErrorDialog.Show(ex, "Erro inesperado");
-            Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+            Operacional.ErrorDialog.Show(ex, "Não foi possível atualizar a tela.");
         }
+        finally { atualizando = false; }
     }
-
     private async void RadGridView_RowEditEnded(object sender, GridViewRowEditEndedEventArgs e)
     {
         if (e.EditAction != GridViewEditAction.Commit)

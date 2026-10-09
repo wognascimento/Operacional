@@ -22,24 +22,44 @@ namespace Operacional.Views
         public TransporteMontagem()
         {
             InitializeComponent();
+            PreviewKeyDown += AtualizarPorTecla;
             this.DataContext = new TransporteMontagemViewModel();
         }
 
+        private bool carregado;
+        private bool atualizando;
+    
         private async void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
+            if (!carregado) await AtualizarAsync();
+        }
+    
+        private async void AtualizarPorTecla(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.F5) return;
+            e.Handled = true;
+            if (e.IsRepeat || atualizando || !GridManualRefresh.PodeAtualizar(radGridView)) return;
+            await AtualizarAsync();
+        }
+    
+        private async Task AtualizarAsync()
+        {
+            if (atualizando) return;
+            atualizando = true;
             try
             {
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
-                TransporteMontagemViewModel vm = (TransporteMontagemViewModel)DataContext;
-                vm.Transportes = await vm.GetTransportesAsync();
-
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                await GridManualRefresh.AtualizarAsync(radGridView, async () =>
+                {
+                    var vm = (TransporteMontagemViewModel)DataContext;
+                    vm.Transportes = await vm.GetTransportesAsync();
+                });
+                carregado = true;
             }
-            catch (DbUpdateException ex)
+            catch (Exception ex)
             {
-                Operacional.ErrorDialog.Show(ex, "Erro de banco de dados");
-                Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+                Operacional.ErrorDialog.Show(ex, "Não foi possível atualizar a tela.");
             }
+            finally { atualizando = false; }
         }
 
         private void RadGridView_RowValidating(object sender, GridViewRowValidatingEventArgs e)
@@ -278,6 +298,15 @@ namespace Operacional.Views
 
             await connection.OpenAsync();
             await using var transaction = await connection.BeginTransactionAsync();
+            var anterior = await connection.QuerySingleOrDefaultAsync<TransporteMontagemModel>(
+                @"SELECT transportadora AS Transportadora
+                  FROM operacional.t_transportes_mont
+                  WHERE siglaserv = @SiglaServ FOR UPDATE;",
+                new { transporteAtualizado.SiglaServ }, transaction);
+            if (anterior is null)
+                throw new InvalidOperationException("Transporte nao encontrado. Recarregue a tela.");
+            var transportadoraAlterada = !string.Equals(
+                anterior.Transportadora, transporteAtualizado.Transportadora, StringComparison.Ordinal);
             var dataAlteracao = await connection.QuerySingleOrDefaultAsync<DateTime?>(
                 sql,
                 transporteAtualizado,
@@ -288,9 +317,20 @@ namespace Operacional.Views
                 transporteAtualizado.SiglaServ,
                 transporteAtualizado.NumeroDeCaminhoes,
                 transporteAtualizado.DataDeExpedicao,
+                transporteAtualizado.Transportadora,
                 permitirReducao,
                 connection,
                 transaction);
+            if (transportadoraAlterada)
+            {
+                await connection.ExecuteAsync(
+                    @"UPDATE operacional.tbl_cargas_montagem
+                      SET trasnportadora = @Transportadora
+                      WHERE siglaserv = @SiglaServ
+                        AND trasnportadora IS DISTINCT FROM @Transportadora;",
+                    new { transporteAtualizado.SiglaServ, transporteAtualizado.Transportadora },
+                    transaction);
+            }
             await transaction.CommitAsync();
             return dataAlteracao.Value;
         }
@@ -299,6 +339,7 @@ namespace Operacional.Views
             string siglaServ,
             int totalCaminhoes,
             DateTime? data,
+            string? transportadora,
             bool permitirReducao,
             NpgsqlConnection connection,
             NpgsqlTransaction transaction)
@@ -328,13 +369,14 @@ namespace Operacional.Views
                         siglaserv = siglaServ,
                         num_caminhao = proximoNumero.ToString().PadLeft(2, '0'),
                         data = data?.AddDays(i - 1),
-                        placa_caminhao = null
+                        placa_caminhao = null,
+                        trasnportadora = transportadora
                     };
 
                     await connection.ExecuteAsync(
                         @"INSERT INTO operacional.tbl_cargas_montagem
-                              (siglaserv, num_caminhao, data, placa_caminhao)
-                              VALUES (@siglaserv, @num_caminhao, @data, @placa_caminhao);",
+                              (siglaserv, num_caminhao, data, placa_caminhao, trasnportadora)
+                              VALUES (@siglaserv, @num_caminhao, @data, @placa_caminhao, @trasnportadora);",
                         novoCaminhao,
                         transaction);
                 }

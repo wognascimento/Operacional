@@ -91,6 +91,8 @@ public partial class CadastroUsuario : UserControl
         string? pendente = null;
         string? idCriado = null;
         bool cadastroSolicitado = false;
+        bool vinculoSalvo = false;
+        bool cronogramaSolicitado = false;
         try
         {
             Mouse.OverrideCursor = Cursors.Wait;
@@ -100,12 +102,20 @@ public partial class CadastroUsuario : UserControl
                 throw new InvalidOperationException("Salve o usuario antes de enviar ao aplicativo.");
             // Read the persisted identity instead of submitting uncommitted grid edits.
             var usuario = await vm.GetUsuarioAplicativoAsync(usuarioSelecionado.id.Value);
+            var cronogramaService = new CronogramaAplicativoService();
+            var cronogramaJson = await cronogramaService.PrepararAsync(BaseSettings.ConnectionString, usuario.id_equipe);
             if (!string.IsNullOrWhiteSpace(usuarioSelecionado.id_aplicativo) || !string.IsNullOrWhiteSpace(usuario.id_aplicativo))
             {
                 var id = usuarioSelecionado.id_aplicativo ?? usuario.id_aplicativo!;
+                Mouse.OverrideCursor = null;
+                if (MessageBox.Show("Usuario ja cadastrado. Enviar o cronograma da equipe sem recadastrar o usuario nem reenviar o e-mail?",
+                    "Enviar Aplicativo", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+                Mouse.OverrideCursor = Cursors.Wait;
                 await vm.SalvarIdAplicativoAsync(usuario.id.Value, id);
                 usuarioSelecionado.id_aplicativo = id;
-                MessageBox.Show("Usuario ja cadastrado no aplicativo. ID: " + id, "Enviar Aplicativo");
+                cronogramaSolicitado = true;
+                await cronogramaService.EnviarAsync(cronogramaJson);
+                MessageBox.Show("Cronograma enviado. Usuario ja cadastrado no aplicativo. ID: " + id, "Enviar Aplicativo");
                 return;
             }
             if (string.IsNullOrWhiteSpace(usuario.nome) ||
@@ -118,7 +128,7 @@ public partial class CadastroUsuario : UserControl
             var clientes = await service.ConsultarPendentesAsync(BaseSettings.ConnectionString);
             Mouse.OverrideCursor = null;
             if (MessageBox.Show($"Solicitar cadastro de {usuario.nome} ({usuario.email}) com {vm.FuncoesAplicativo.Count} funcao(oes)?\n\nSe o e-mail ja existir com senha provisoria, a API reenviara a senha SEM atualizar funcoes ou clientes. Se houver duvida, cancele e confira o cadastro com o administrador.\n\nClientes novos: {clientes.Count(c => c.Novo)}, com coordenadas zero e raio 200. Clientes alterados: {clientes.Count(c => !c.Novo)}, preservando coordenadas e raio.",
-                "Enviar Aplicativo", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                "Enviar Aplicativo (inclui cronograma da equipe)", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
                 return;
             Mouse.OverrideCursor = Cursors.Wait;
             foreach (var cliente in clientes)
@@ -133,9 +143,12 @@ public partial class CadastroUsuario : UserControl
             idCriado = await new UsuarioAplicativoService().CadastrarAsync(usuario.nome, usuario.email, vm.FuncoesAplicativo, vm.ClienteIdsAplicativo);
             usuarioSelecionado.id_aplicativo = idCriado;
             await vm.SalvarIdAplicativoAsync(usuario.id.Value, idCriado);
+            vinculoSalvo = true;
+            cronogramaSolicitado = true;
+            await cronogramaService.EnviarAsync(cronogramaJson);
             var avisoCoordenadas = enviados.Count == 0 ? "" :
                 "\n\nCorrigir latitude e longitude das siglas cadastradas com coordenadas zero:\n" + string.Join(", ", enviados);
-            MessageBox.Show("Solicitacao aceita pela API. ID vinculado: " + idCriado +
+            MessageBox.Show("Cronograma enviado. Solicitacao aceita pela API. ID vinculado: " + idCriado +
                 "\nSe o usuario ja possuia senha provisoria, o e-mail foi reenviado e as funcoes/clientes anteriores foram mantidos. A resposta nao distingue esse caso de um novo cadastro." + avisoCoordenadas,
                 "Enviar Aplicativo", MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -145,10 +158,12 @@ public partial class CadastroUsuario : UserControl
                 "\n\nCadastros confirmados com latitude e longitude zero. Corrigir as coordenadas das siglas:\n" + string.Join(", ", enviados);
             if (pendente != null)
                 aviso += $"\n\nConfira o cadastro de {pendente} na API antes de tentar novamente: o resultado do envio nao foi confirmado.";
-            if (idCriado != null)
+            if (cronogramaSolicitado)
+                aviso += "\n\nO cadastro/vinculo do usuario foi preservado. Confira a importacao do cronograma na API antes de repetir; um reenvio nao recadastrara o usuario.";
+            if (idCriado != null && !vinculoSalvo)
                 aviso += "\n\nUsuario criado na API, mas o ID nao foi salvo localmente: " + idCriado +
                     ". Tente novamente nesta tela para salvar somente o vinculo, sem cadastrar novamente.";
-            else if (cadastroSolicitado)
+            else if (cadastroSolicitado && !vinculoSalvo)
                 aviso += "\n\nConfira se o usuario foi criado na API antes de reenviar, para evitar novo cadastro ou e-mail.";
             MessageBox.Show("Envio interrompido. " + ex.Message + aviso,
                 "Enviar Aplicativo", MessageBoxButton.OK, MessageBoxImage.Warning);

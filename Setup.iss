@@ -54,6 +54,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "{#PublishSourcePath}\*"; DestDir: "{app}"; Excludes: "Operacional.dll.config,Operacional.exe.config,App.config"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Bootstrap configuration for fresh installs only. Preserve existing workstation settings.
+Source: "Operacional\App.config"; DestDir: "{app}"; DestName: "Operacional.dll.config"; Flags: onlyifdoesntexist uninsneveruninstall
 #ifdef BundleRuntime
 Source: "{#DotNetRuntimeInstaller}"; DestDir: "{tmp}"; DestName: "windowsdesktop-runtime-10.0-win-x64.exe"; Flags: dontcopy
 #endif

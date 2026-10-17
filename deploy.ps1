@@ -114,7 +114,8 @@ try {
         }
         $assemblyVersion = [Reflection.AssemblyName]::GetAssemblyName((Join-Path $publishPath 'Operacional.dll')).Version.ToString()
         if ($assemblyVersion -ne $version) { throw "A DLL gerada tem versao $assemblyVersion; era esperada $version." }
-        # Local database settings must not be shipped or overwrite workstation settings.
+        # Keep local settings out of the update ZIP. Setup.iss installs the project's
+        # initial App.config separately, only when Operacional.dll.config is missing.
         foreach ($configName in @('Operacional.dll.config', 'Operacional.exe.config', 'App.config')) {
             $configPath = Join-Path $publishPath $configName
             if (Test-Path -LiteralPath $configPath) { Remove-Item -LiteralPath $configPath -Force }

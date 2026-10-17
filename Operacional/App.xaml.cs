@@ -22,7 +22,6 @@ namespace Operacional
 
         public App()
         {
-            BaseSettings.LoadFromConfiguration();
             DapperTypeHandlers.Register();
             GridFilterDefaults.Register();
             StyleManager.ApplicationTheme = new Office2016Theme();
@@ -37,6 +36,23 @@ namespace Operacional
 
         protected override async void OnStartup(StartupEventArgs e)
         {
+            try
+            {
+                BaseSettings.LoadFromConfiguration();
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or System.Configuration.ConfigurationErrorsException)
+            {
+                StartupUri = null;
+                MessageBox.Show(
+                    "Nao foi possivel carregar a configuracao do banco de dados.\n\n" +
+                    "Solicite ao suporte a configuracao local autorizada (Operacional.dll.config e, se utilizado, app.config) " +
+                    "ou as variaveis OPERACIONAL_DB_HOST, OPERACIONAL_DB_NAME, OPERACIONAL_DB_USER e OPERACIONAL_DB_PASSWORD.\n\n" +
+                    "Pasta da instalacao: " + AppContext.BaseDirectory + "\n\n" +
+                    "O instalador preserva a configuracao existente. Solicite ao suporte a verificacao das credenciais locais.",
+                    "Configuracao do Operacional", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Shutdown(1);
+                return;
+            }
             base.OnStartup(e);
 
             CultureInfo culture = new("pt-BR");

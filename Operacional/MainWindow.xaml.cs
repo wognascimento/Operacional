@@ -111,17 +111,17 @@ namespace Operacional
             return null;
         }
 
-        private void OnCadastroTransportadoraClick(object sender, RoutedEventArgs e)
+        private void OnCadastroTransportadoraClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new CadastroTransportadora(), "CADASTRO TRANSPORTADORA", "CADASTRO_TRANSPORTADORA");
         }
 
-        private void OnCartaInicioMontagemClick(object sender, RoutedEventArgs e)
+        private void OnCartaInicioMontagemClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new Views.Cartas.CartaInicioMontagem(), "CARTA - INÍCIO MONTAGEM", "CARTA_INICIO_MONTAGEM");
         }
 
-        private void OnCartaTransporteMontagemClick(object sender, RoutedEventArgs e)
+        private void OnCartaTransporteMontagemClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(
                 new Views.Cartas.CartaTransporteMontagem(),
@@ -129,39 +129,39 @@ namespace Operacional
                 "CARTA_TRANSPORTE_MONTAGEM");
         }
 
-        private void OnCartaApoioMontagemClick(object sender, RoutedEventArgs e)
+        private void OnCartaApoioMontagemClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new Views.Cartas.CartaApoioMontagem(), "CARTA - APOIO MONTAGEM", "CARTA_APOIO_MONTAGEM");
         }
 
-        private void OnTransporteMontagemClick(object sender, RoutedEventArgs e)
+        private void OnTransporteMontagemClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new TransporteMontagem(), "TRANSPORTES MONTAGEM", "TRANSPORTE_MONTAGEM");
         }
 
-        private void OnTransporteDesmontagemClick(object sender, RoutedEventArgs e)
+        private void OnTransporteDesmontagemClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new TransporteDesmontagem(), "TRANSPORTES DESMONTAGEM", "TRANSPORTE_DESMONTAGEM");
         }
 
-        private void OnCargaMontagemClick(object sender, RoutedEventArgs e)
+        private void OnCargaMontagemClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new CargaMontagem(), "CARGAS MONTAGEM", "CARGAS_MONTAGEM");
         }
 
 
-        private void OnCargaDesmontagemClick(object sender, RoutedEventArgs e)
+        private void OnCargaDesmontagemClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new CargaDesmontagem(), "CARGAS DESMONTAGEM", "CARGAS_DESMONTAGEM");
         }
 
 
-        private void OnDataEfetivaClick(object sender, RoutedEventArgs e)
+        private void OnDataEfetivaClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new DataEfetivaView(), "DATA EFETIVA", "DATA_EFETIVA");
         }
 
-        private async void OnQryCargaMontgemClick(object sender, RoutedEventArgs e)
+        private async void OnQryCargaMontgemClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             try
             {
@@ -194,7 +194,7 @@ namespace Operacional
             }
         }
 
-        private async void OnDataMontagemClick(object sender, RoutedEventArgs e)
+        private async void OnDataMontagemClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             try
             {
@@ -257,7 +257,7 @@ namespace Operacional
             }
         }
 
-        private async void OnQryCargaDesmontagemClick(object sender, RoutedEventArgs e)
+        private async void OnQryCargaDesmontagemClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             try
             {
@@ -286,32 +286,32 @@ namespace Operacional
             }
         }
 
-        private void OnOpenTiposRelatoriosClick(object sender, RoutedEventArgs e)
+        private void OnOpenTiposRelatoriosClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new TipoRelatorio(), "CADASTRO RELATÓRIOS", "CADASTRO_RELATORIOS");
         }
 
-        private void OnOpenCadastroFuncionarioClick(object sender, RoutedEventArgs e)
+        private void OnOpenCadastroFuncionarioClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new CadastroFuncionario(), "CADASTRO FUNCIONÁRIO", "CADASTRO_FUNCIONARIO");
         }
 
-        private void OnOpenCustosClick(object sender, RoutedEventArgs e)
+        private void OnOpenCustosClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new Custo(), "CUSTOS OPERACIONAL", "CUSTO_OPERACIONAL");
         }
 
-        private void OnOpenCadastroDespesaClick(object sender, RoutedEventArgs e)
+        private void OnOpenCadastroDespesaClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new CadastroDespesa(), "CADASTRO DESPESAS", "CADASTRO_DESPESAS");
         }
 
-        private void OnCronogramaClick(object sender, RoutedEventArgs e)
+        private void OnCronogramaClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new Cronograma(), "CRONOGRAMA", "CRONOGRAMA");
         }
 
-        private async void OnFuncoesCronogramaClick(object sender, RoutedEventArgs e)
+        private async void OnFuncoesCronogramaClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             try
             {
@@ -342,27 +342,27 @@ namespace Operacional
             }
         }
 
-        private void OnOpenCadastroEquipesClick(object sender, RoutedEventArgs e)
+        private void OnOpenCadastroEquipesClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new CadastroEquipe(), "CADASTRO DE EQUIPES", "CADASTRO_EQUIPES");
         }
 
-        private void OnOpenCadastroOrcamentoClick(object sender, RoutedEventArgs e)
+        private void OnOpenCadastroOrcamentoClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new CadastroOrcamento(), "CADASTRO DE ORÇAMENTO", "CADASTRO_ORCAMENTO");
         }
 
-        private void OnOpenUsuarioClick(object sender, RoutedEventArgs e)
+        private void OnOpenUsuarioClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new CadastroUsuario(), "CADASTRO DE USUÁRIOS", "CADASTRO_USUARIOS");
         }
 
-        private void OnContatoClick(object sender, RoutedEventArgs e)
+        private void OnContatoClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new Contato(), "CONTATOS", "EQUIPE_EXTERNA_CONTATOS");
         }
 
-        private async void OnRelatorioPrevisaoValoresClick(object sender, RoutedEventArgs e)
+        private async void OnRelatorioPrevisaoValoresClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new ValoresCronograma(), "PREVISÃO VALORES CRONOGRAMA", "PREVISAO_VALORES_CRONOGRAMA");
             
@@ -417,32 +417,32 @@ namespace Operacional
             */
         }
 
-        private void OnComparacaoPrevisaoRealizadoClick(object sender, RoutedEventArgs e)
+        private void OnComparacaoPrevisaoRealizadoClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new ComparacaoPrevisarLancamento(), "COMPARAÇÃO PREVISÃO REALIZADO", "COMPARACAO_PREVISAO_REALIZADO");
         }
 
-        private void OnOpenNotasPagamentoClick(object sender, RoutedEventArgs e)
+        private void OnOpenNotasPagamentoClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new NotaPagamento(), "NOTAS PARA PAGAMENTO LANÇAMENTO", "NOTAS_PAGAMENTO_LANCAMENTO");
         }
 
-        private void OnOpenNotasPagamentoConsultaClick(object sender, RoutedEventArgs e)
+        private void OnOpenNotasPagamentoConsultaClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new NotaPagamentoResumo(0), "NOTAS PARA PAGAMENTO RESUMO", "NOTAS_PAGAMENTO_RESUMO");
         }
 
-        private void OnOpenNotasDespesasClick(object sender, RoutedEventArgs e)
+        private void OnOpenNotasDespesasClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new NotaDespesa(), "NOTAS DE DESPESAS", "NOTAS_DESPESA");
         }
 
-        private void OnOpenProgramacaoClick(object sender, RoutedEventArgs e)
+        private void OnOpenProgramacaoClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new Programacao(), "PROGRAMAÇÃO MANUTENÇÃO", "PROGRAMACAO_MANUTENCAO");
         }
 
-        private async void OnOpenConsultaGeralClick(object sender, RoutedEventArgs e)
+        private async void OnOpenConsultaGeralClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             try
             {
@@ -520,22 +520,22 @@ namespace Operacional
             }
         }
 
-        private void OnRelatorioDiarioWebClick(object sender, RoutedEventArgs e)
+        private void OnRelatorioDiarioWebClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new RelatorioDiarioWeb(), "RELATÓRIO DIÁRIO WEB", "RELATORIO_DIARIO_WEB");
         }
 
-        private void OnRelatorioNoturnoDiarioClick(object sender, RoutedEventArgs e)
+        private void OnRelatorioNoturnoDiarioClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new RelatorioNoturnoDiario(), "RELATÓRIO NOTURNO DIÁRIO", "RELATORIO_NOTURNO_DIARIO");
         }
 
-        private void OnOpenControleDocumentoClick(object sender, RoutedEventArgs e)
+        private void OnOpenControleDocumentoClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new ControleDocumento(), "CONTROLE DOCUMENTOS", "CONTROLE_DOCUMENTOS");
         }
 
-        private async void OnControleDocumentoPreenchidosClick(object sender, RoutedEventArgs e)
+        private async void OnControleDocumentoPreenchidosClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             try
             {
@@ -602,6 +602,5 @@ namespace Operacional
                 Operacional.ErrorDialog.Show(ex, "Erro");
             }
         }
-
     }
 }

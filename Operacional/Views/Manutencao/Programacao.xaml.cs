@@ -838,7 +838,7 @@ public partial class ProgramacaoViewModel : ObservableObject
                 est = cliente?.est ?? "N/A",
                 tipo = registro.Tipo,
                 cadastrado_por = BaseSettings.Username,
-                data_cadastro = DateTimeOffset.Now
+                data_cadastro = DateTimeOffset.UtcNow
             };
 
             pSalva.id = await connection.ExecuteScalarAsync<int>(@"
@@ -908,7 +908,7 @@ public partial class ProgramacaoViewModel : ObservableObject
         if (model.id <= 0)
         {
             model.cadastrado_por = BaseSettings.Username;
-            model.data_cadastro = DateTimeOffset.Now;
+            model.data_cadastro = DateTimeOffset.UtcNow;
             model.id = await connection.ExecuteScalarAsync<int>(@"
                 INSERT INTO operacional.tbl_programacao_manutencao
                 (data, shopp, cidade, est, tipo, orientacao, qtde_pessoa, nome_equipe,
@@ -934,7 +934,7 @@ public partial class ProgramacaoViewModel : ObservableObject
         else
         {
             model.alterado_por = BaseSettings.Username;
-            model.data_alteracao = DateTimeOffset.Now;
+            model.data_alteracao = DateTimeOffset.UtcNow;
             await connection.ExecuteAsync(@"
                 UPDATE operacional.tbl_programacao_manutencao
                 SET

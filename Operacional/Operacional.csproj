@@ -7,9 +7,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>icones\logo.ico</ApplicationIcon>
-    <Version>2.0.0.10</Version>
-    <AssemblyVersion>2.0.0.10</AssemblyVersion>
-    <FileVersion>2.0.0.10</FileVersion>
+    <Version>2.0.0.11</Version>
+    <AssemblyVersion>2.0.0.11</AssemblyVersion>
+    <FileVersion>2.0.0.11</FileVersion>
     <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
   </PropertyGroup>
 

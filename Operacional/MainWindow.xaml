@@ -77,6 +77,7 @@
                 <telerik:RadMenuItem Header="Consultas">
                     <telerik:RadMenuItem Header="Previsão Valores Cronograma" Click="OnRelatorioPrevisaoValoresClick" />
                     <telerik:RadMenuItem Header="Comparação Previsão Realizado" Click="OnComparacaoPrevisaoRealizadoClick" />
+                    <telerik:RadMenuItem Header="Equipe Prevista x Realizada" Click="OnEquipePrevistaRealizadaClick" />
                 </telerik:RadMenuItem>
             </telerik:RadMenuItem>
 

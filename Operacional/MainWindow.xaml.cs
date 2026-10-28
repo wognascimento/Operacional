@@ -347,6 +347,41 @@ namespace Operacional
             adicionarFilho(new CadastroEquipe(), "CADASTRO DE EQUIPES", "CADASTRO_EQUIPES");
         }
 
+        private async void OnEquipePrevistaRealizadaClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
+        {
+            if (sender is not RadMenuItem menu || !menu.IsEnabled)
+                return;
+
+            menu.IsEnabled = false;
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                using var connection = new NpgsqlConnection(BaseSettings.ConnectionString);
+                using var reader = await connection.ExecuteReaderAsync(EquipePrevistaRealizadaSql.Consulta);
+                using var dados = new System.Data.DataTable();
+                dados.Load(reader);
+                if (dados.Rows.Count == 0)
+                {
+                    MessageBox.Show("Não existem dados de montagem até a data atual.",
+                        "Equipe Prevista x Realizada", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                var path = SistemaPathResolver.GetImpressosPath("EQUIPE-PREVISTA-REALIZADA.xlsx");
+                ConsultaExcelExporter.Exportar(dados, path, "EQUIPE PREVISTA X REALIZADA");
+                SistemaPathResolver.OpenFile(path);
+            }
+            catch (Exception ex)
+            {
+                Operacional.ErrorDialog.Show(ex, "Equipe Prevista x Realizada");
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+                menu.IsEnabled = true;
+            }
+        }
+
         private void OnOpenCadastroOrcamentoClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new CadastroOrcamento(), "CADASTRO DE ORÇAMENTO", "CADASTRO_ORCAMENTO");

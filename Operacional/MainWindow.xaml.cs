@@ -134,6 +134,11 @@ namespace Operacional
             adicionarFilho(new Views.Cartas.CartaApoioMontagem(), "CARTA - APOIO MONTAGEM", "CARTA_APOIO_MONTAGEM");
         }
 
+        private void OnCartaManutencaoClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
+        {
+            adicionarFilho(new Views.Cartas.CartaManutencao(), "CARTA - MANUTENÇÃO", "CARTA_MANUTENCAO");
+        }
+
         private void OnTransporteMontagemClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new TransporteMontagem(), "TRANSPORTES MONTAGEM", "TRANSPORTE_MONTAGEM");

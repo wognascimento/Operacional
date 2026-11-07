@@ -62,6 +62,7 @@
             </telerik:RadMenuItem>
 
             <telerik:RadMenuItem Header="Equipe Externa">
+                <telerik:RadMenuItem Header="Lançar Presença Manual" Click="OnPresencaManualClick"/>
                 <telerik:RadMenuItem Header="Cadastro de Equipe" Click="OnOpenCadastroEquipesClick"/>
                 <telerik:RadMenuItem Header="Cadastro de Orçamento" Click="OnOpenCadastroOrcamentoClick"/>
                 <telerik:RadMenuItem Header="Cadastro de Usuário" Click="OnOpenUsuarioClick"/>
@@ -106,6 +107,10 @@
                 </telerik:RadMenuItem>
             </telerik:RadMenuItem>
 
+            <telerik:RadMenuItem Header="Outros">
+                <telerik:RadMenuItem Header="Verificar atualizações" Click="OnVerificarAtualizacoesClick"/>
+                <telerik:RadMenuItem Header="Sobre o sistema" Click="OnSobreSistemaClick"/>
+            </telerik:RadMenuItem>
         </telerik:RadMenu>
 
         <telerik:RadDocking Grid.Row="1" x:Name="radDocking" HasDocumentHost="True">

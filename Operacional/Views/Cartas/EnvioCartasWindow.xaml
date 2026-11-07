@@ -1,0 +1,68 @@
+<Window x:Class="Operacional.Views.Cartas.EnvioCartasWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation"
+        Title="Envio de cartas" Width="1180" Height="760" MinWidth="660" MinHeight="480"
+        WindowStartupLocation="CenterOwner" Loaded="OnLoaded" Closing="OnClosing" Closed="OnClosed">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel x:Name="Configuracao">
+            <WrapPanel>
+                <StackPanel Margin="0,0,12,8">
+                    <TextBlock Text="Email do remetente"/>
+                    <TextBox x:Name="Remetente" Width="250" LostFocus="OnRemetenteLostFocus"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,12,8">
+                    <TextBlock Text="Senha"/>
+                    <PasswordBox x:Name="Senha" Width="190"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,12,8">
+                    <TextBlock Text="Responder para"/>
+                    <TextBox x:Name="Resposta" Width="250"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,0,8">
+                    <TextBlock Text="Pasta Enviados (vazio = automatica)"/>
+                    <TextBox x:Name="PastaEnviados" Width="240" Text="Sent"/>
+                </StackPanel>
+            </WrapPanel>
+            <TextBlock Text="Assunto"/>
+            <TextBox x:Name="Assunto" Margin="0,0,0,10"/>
+        </StackPanel>
+        <WrapPanel x:Name="Comandos" Grid.Row="1" Margin="0,0,0,8">
+            <telerik:RadButton Content="Atualizar" Click="OnAtualizar" Margin="0,0,6,6" Padding="10,5"/>
+            <telerik:RadButton Content="Selecionar pendentes" Click="OnSelecionarPendentes" Margin="0,0,6,6" Padding="10,5"/>
+            <telerik:RadButton Content="Desmarcar todos" Click="OnDesmarcar" Margin="0,0,6,6" Padding="10,5"/>
+            <telerik:RadButton Content="Conferir PDF" Click="OnPdf" Margin="0,0,6,6" Padding="10,5"/>
+            <telerik:RadButton Content="Conferir HTML" Click="OnHtml" Margin="0,0,6,6" Padding="10,5"/>
+            <telerik:RadButton Content="Enviar selecionados" Click="OnEnviar" Margin="0,0,6,6" Padding="10,5"/>
+            <telerik:RadButton Content="Salvar copia em Enviados" Click="OnSalvarCopia" Margin="0,0,6,6" Padding="10,5"/>
+            <telerik:RadButton Content="Historico" Click="OnHistorico" Margin="0,0,6,6" Padding="10,5"/>
+        </WrapPanel>
+        <telerik:RadGridView x:Name="Destinatarios" Grid.Row="2" AutoGenerateColumns="False"
+                            CanUserInsertRows="False" CanUserDeleteRows="False" ShowGroupPanel="False"
+                            SelectionMode="Single">
+            <telerik:RadGridView.Columns>
+                <telerik:GridViewCheckBoxColumn Header="Enviar" DataMemberBinding="{Binding Selecionado, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="65"/>
+                <telerik:GridViewDataColumn Header="Sigla" DataMemberBinding="{Binding Sigla}" IsReadOnly="True" Width="110"/>
+                <telerik:GridViewDataColumn Header="Contato" DataMemberBinding="{Binding Contato}" IsReadOnly="True" Width="160"/>
+                <telerik:GridViewDataColumn Header="Email origem" DataMemberBinding="{Binding Email}" IsReadOnly="True" Width="230"/>
+                <telerik:GridViewDataColumn Header="Destino do envio" DataMemberBinding="{Binding EmailEnvio}" IsReadOnly="True" Width="230"/>
+                <telerik:GridViewDataColumn Header="Status" DataMemberBinding="{Binding Status}" IsReadOnly="True" Width="90"/>
+                <telerik:GridViewDataColumn Header="Copia em Enviados" DataMemberBinding="{Binding Copia}" IsReadOnly="True" Width="130"/>
+                <telerik:GridViewDataColumn Header="Ultimo envio" DataMemberBinding="{Binding UltimoEnvio}" IsReadOnly="True" Width="155"/>
+                <telerik:GridViewDataColumn Header="Usuario" DataMemberBinding="{Binding Usuario}" IsReadOnly="True" Width="130"/>
+                <telerik:GridViewDataColumn Header="Detalhes" DataMemberBinding="{Binding Detalhe}" IsReadOnly="True" Width="400"/>
+            </telerik:RadGridView.Columns>
+        </telerik:RadGridView>
+        <DockPanel Grid.Row="3" Margin="0,10,0,0">
+            <telerik:RadButton x:Name="Parar" Content="Parar apos o atual" Click="OnParar"
+                               IsEnabled="False" DockPanel.Dock="Right" Padding="10,5"/>
+            <TextBlock x:Name="Situacao" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0"/>
+        </DockPanel>
+    </Grid>
+</Window>

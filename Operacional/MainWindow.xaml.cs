@@ -39,6 +39,17 @@ namespace Operacional
         }
 
 
+        private async void OnVerificarAtualizacoesClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
+        {
+            await ((App)Application.Current).CheckForUpdatesAsync(showUpToDate: true);
+        }
+
+        private void OnSobreSistemaClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
+        {
+            MessageBox.Show(this, $"Sistema Integrado de Gerenciamento - Operacional\n\nVersão instalada: {((App)Application.Current).CurrentVersion}",
+                "Sobre o sistema", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
         private void OnAlterarUsuario(object sender, MouseButtonEventArgs e)
         {
             Login window = new();
@@ -395,6 +406,12 @@ namespace Operacional
         private void OnOpenUsuarioClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
         {
             adicionarFilho(new CadastroUsuario(), "CADASTRO DE USUÁRIOS", "CADASTRO_USUARIOS");
+        }
+
+        private void OnPresencaManualClick(object sender, Telerik.Windows.RadRoutedEventArgs e)
+        {
+            adicionarFilho(new Views.EquipeExterna.PresencaManual(),
+                "LANÇAR PRESENÇA MANUAL", "PRESENCA_MANUAL");
         }
 
         private void OnContatoClick(object sender, Telerik.Windows.RadRoutedEventArgs e)

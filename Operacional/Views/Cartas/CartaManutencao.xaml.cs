@@ -35,8 +35,8 @@ public partial class CartaManutencao : UserControl
 
             pastaGerada = System.IO.Path.GetDirectoryName(resultado.Carta);
             Resultado.Text = $"{resultado.Registros} registro(s) exportado(s).\n{pastaGerada}";
-            try { SistemaPathResolver.OpenFile(resultado.Carta); }
-            catch (Exception ex) { ErrorDialog.Show(ex, "Arquivos gerados, mas nao foi possivel abrir o Word."); }
+            try { CartaAbertura.Abrir(resultado.Carta, resultado.Planilha, "MANUTENCAO"); }
+            catch (Exception ex) { ErrorDialog.Show(ex, "Arquivos gerados, mas nao foi possivel abrir o controle de envio."); }
         }
         catch (OperationCanceledException)
         {

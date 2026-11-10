@@ -36,8 +36,11 @@
                                      Padding="10,3" VerticalAlignment="Center" Margin="0,0,16,0"/>
             <Button Content="Salvar" Click="OnSalvar" Padding="12,4" VerticalAlignment="Center" Margin="0,0,8,0"/>
             <Button Content="Atualizar" Click="OnAtualizar" Padding="12,4" VerticalAlignment="Center"/>
+            <Button Content="Excluir selecionadas" Click="OnExcluirSelecionadas" Padding="12,4"
+                    Margin="8,0,0,0" VerticalAlignment="Center"/>
         </WrapPanel>
         <telerik:RadGridView x:Name="grid" AutoGenerateColumns="True" IsReadOnly="True"
+                             SelectionMode="Extended" SelectionUnit="FullRow"
                              CanUserInsertRows="False" CanUserDeleteRows="False"
                              IsFilteringAllowed="True" ShowGroupPanel="False"
                              GroupRenderMode="Flat" ClipboardCopyMode="Cells, Header"/>

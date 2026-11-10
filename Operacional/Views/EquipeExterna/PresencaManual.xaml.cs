@@ -13,8 +13,7 @@ public partial class PresencaManual : UserControl
     private bool inicializado;
     private bool salvando;
     private int versaoEquipe;
-    private static readonly string[] Fases =
-        ["MONTAGEM", "MANUTENÇÃO PROGRAMADA", "MANUTENÇÃO CORRETIVA", "DESMONTAGEM"];
+    private static readonly string[] Fases = ["MONTAGEM", "MANUTENÇÃO PROGRAMADA", "MANUTENÇÃO CORRETIVA", "DESMONTAGEM"];
 
     public PresencaManual()
     {
@@ -117,6 +116,54 @@ public partial class PresencaManual : UserControl
         if (salvando || equipe.SelectedItem is not EquipeOpcao selecionada) return;
         try { await CarregarGridAsync(selecionada.id_equipe, versaoEquipe); }
         catch (Exception ex) { MostrarErro(ex); }
+    }
+
+    private async void OnExcluirSelecionadas(object sender, RoutedEventArgs e)
+    {
+        if (salvando || grid.IsBusy || equipe.SelectedItem is not EquipeOpcao eq) return;
+        var ids = grid.SelectedItems.OfType<DataRowView>()
+            .Select(item => item.Row.Field<int>("id")).Distinct().ToArray();
+        if (ids.Length == 0)
+        {
+            MessageBox.Show("Selecione as presenças que deseja excluir.", "Presença manual");
+            return;
+        }
+        if (MessageBox.Show($"Excluir os registros selecionados da equipe {eq.equipe_e}?\n\nTotal: {ids.Length}",
+            "Excluir presenças", MessageBoxButton.YesNo, MessageBoxImage.Warning,
+            MessageBoxResult.No) != MessageBoxResult.Yes) return;
+
+        salvando = true;
+        formulario.IsEnabled = false;
+        grid.IsBusy = true;
+        var excluido = false;
+        try
+        {
+            await using var db = Conectar();
+            await db.OpenAsync();
+            await using (var transacao = await db.BeginTransactionAsync())
+            {
+                var linhas = await db.ExecuteAsync("""
+                    DELETE FROM equipe_externa.tbl_presenca_equipe
+                    WHERE id_equipe = @equipe AND id = ANY(@ids);
+                    """, new { equipe = eq.id_equipe, ids }, transacao);
+                if (linhas != ids.Length)
+                    throw new InvalidOperationException("A seleção mudou no banco. Atualize a lista antes de tentar novamente.");
+                await transacao.CommitAsync();
+            }
+            excluido = true;
+            await CarregarGridAsync(eq.id_equipe, versaoEquipe);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show((excluido ? "Registros excluídos. Atualize a lista." : "Não foi possível excluir a seleção.")
+                + "\n\n" + ex.Message, "Presença manual", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            salvando = false;
+            formulario.IsEnabled = true;
+            grid.IsBusy = false;
+        }
     }
 
     private async void OnSalvar(object sender, RoutedEventArgs e)

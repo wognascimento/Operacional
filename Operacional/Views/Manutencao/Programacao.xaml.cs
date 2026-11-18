@@ -483,6 +483,7 @@ public partial class Programacao : UserControl
 
         AdicionarFuncoes radWindow = new(programacao.id)
         {
+            Owner = Window.GetWindow(this) ?? Application.Current.MainWindow,
             Width = 600,
             Height = 400,
             ResizeMode = ResizeMode.NoResize,
@@ -502,6 +503,7 @@ public partial class Programacao : UserControl
 
         AdicionarSolicitacao radWindow = new(programacao.id)
         {
+            Owner = Window.GetWindow(this) ?? Application.Current.MainWindow,
             Width = 600,
             Height = 400,
             ResizeMode = ResizeMode.NoResize,

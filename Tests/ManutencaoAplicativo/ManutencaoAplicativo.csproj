@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+ <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
+ <ItemGroup>
+  <Reference Include="../../Operacional/bin/Release/net10.0-windows7.0/Dapper.dll"/>
+  <Reference Include="../../Operacional/bin/Release/net10.0-windows7.0/Npgsql.dll"/>
+  <Reference Include="../../Operacional/bin/Release/net10.0-windows7.0/Newtonsoft.Json.dll"/>
+  <Compile Include="../../Operacional/Views/Manutencao/ManutencaoAplicativoService.cs" Link="ManutencaoAplicativoService.cs"/>
+  <Compile Include="../../Operacional/Views/Manutencao/ManutencaoWebService.cs" Link="ManutencaoWebService.cs"/>
+ </ItemGroup>
+</Project>

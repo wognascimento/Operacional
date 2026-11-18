@@ -25,6 +25,80 @@ namespace Operacional.Views.Manutencao;
 public partial class Programacao : UserControl
 {
     DataBaseSettings BaseSettings = DataBaseSettings.Instance;
+    private readonly HashSet<Task> gravacoes = new();
+    private readonly HashSet<OperacionalProgramacaoManutencaoModel> errosGravacao = new();
+    private bool enviandoAoFechar;
+
+    internal bool EnviarAntesDeFechar(Window owner)
+    {
+        if (enviandoAoFechar) return false;
+        var vm = (ProgramacaoViewModel)DataContext;
+        if (vm.IsBusy)
+        {
+            MessageBox.Show(owner, "Aguarde a operação em andamento antes de fechar.", "Manutenção");
+            return false;
+        }
+        enviandoAoFechar = true;
+        var terminou = false;
+        var permitirFechamento = false;
+        var progresso = new Window
+        {
+            Owner = owner, Title = "Envio de manutenções", Width = 480, Height = 180,
+            ResizeMode = ResizeMode.NoResize, WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            WindowStyle = WindowStyle.None,
+            ShowInTaskbar = false,
+            Content = new System.Windows.Controls.Border
+            {
+                BorderBrush = System.Windows.Media.Brushes.LightGray,
+                BorderThickness = new Thickness(1),
+                Background = System.Windows.Media.Brushes.White,
+                Child = new Telerik.Windows.Controls.RadBusyIndicator
+                {
+                    IsBusy = true,
+                    IsIndeterminate = true,
+                    DisplayAfter = TimeSpan.Zero,
+                    BusyContent = new TextBlock
+                    {
+                        Text = "Enviando manutenções para as equipes.\nAguarde...",
+                        TextAlignment = TextAlignment.Center,
+                        TextWrapping = TextWrapping.Wrap,
+                        FontSize = 14,
+                        Margin = new Thickness(12)
+                    }
+                }
+            }
+        };
+        progresso.Closing += (_, e) => e.Cancel = !terminou;
+        progresso.Loaded += async (_, _) =>
+        {
+            var aplicativoEnviado = false;
+            try
+            {
+                if (!manutProgramacao.CommitEdit())
+                    throw new InvalidOperationException("Corrija a linha em edição antes de fechar.");
+                await Task.WhenAll(gravacoes.ToArray());
+                if (errosGravacao.Count > 0) throw new InvalidOperationException("Existem dados que não foram gravados. Corrija a linha antes de enviar.");
+                // Uma falha de sincronização não deve prender o usuário na tela.
+                permitirFechamento = true;
+                var web = new ManutencaoWebService();
+                var jsonWeb = await web.PrepararAsync(BaseSettings.ConnectionString);
+                await new ManutencaoAplicativoService().EnviarAsync(BaseSettings.ConnectionString);
+                aplicativoEnviado = true;
+                await web.EnviarAsync(jsonWeb);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(progresso, (permitirFechamento
+                    ? "O envio não foi concluído. Ao clicar em OK, a programação será fechada. Não haverá nova tentativa automática.\n\n"
+                    : "Existem dados não salvos. A programação permanecerá aberta para correção.\n\n") +
+                    (aplicativoEnviado ? "A etapa do aplicativo foi concluída. A etapa WEB não foi confirmada.\n\n" : "") + ex.Message,
+                    "Envio não concluído", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            finally { terminou = true; progresso.Close(); }
+        };
+        try { progresso.ShowDialog(); return permitirFechamento; }
+        finally { enviandoAoFechar = false; }
+    }
 
     public Programacao()
     {
@@ -53,16 +127,20 @@ public partial class Programacao : UserControl
     private async void EquipeRowValidated(object sender, Telerik.Windows.Controls.GridViewRowValidatedEventArgs e)
     {
         ProgramacaoViewModel vm = (ProgramacaoViewModel)DataContext;
+        if (e.Row.Item is not OperacionalProgramacaoManutencaoModel linha) return;
         try
         {
-            var linha = e.Row.Item as OperacionalProgramacaoManutencaoModel;
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = Cursors.Wait; });
-            await vm.AddProgramacaoAsync(linha);
+            var gravacao = vm.AddProgramacaoAsync(linha);
+            gravacoes.Add(gravacao);
+            try { await gravacao; errosGravacao.Remove(linha); }
+            finally { gravacoes.Remove(gravacao); }
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
         }
         catch (Exception ex)
         {
             Application.Current.Dispatcher.Invoke(() => { Mouse.OverrideCursor = null; });
+            errosGravacao.Add(linha);
             MessageBox.Show($"Erro ao validar a linha: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

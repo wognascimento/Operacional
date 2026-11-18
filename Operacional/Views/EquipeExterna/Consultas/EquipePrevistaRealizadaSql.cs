@@ -36,7 +36,8 @@ internal static class EquipePrevistaRealizadaSql
                      + COALESCE(r.externa_pessoas3, 0)) AS pessoas_realizadas
             FROM equipe_externa.tblrelatorio_diario r
             CROSS JOIN parametros par
-            WHERE r.fase = 'MONTAGEM'
+            WHERE r.fase ILIKE '%MONTAGEM%'
+              AND r.fase NOT ILIKE '%DESMONTAGEM%'
               AND r.data::date <= par.data_corte
             GROUP BY r.sigla_serv, r.data::date
         ), comparativo AS (

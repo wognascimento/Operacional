@@ -29,6 +29,18 @@ namespace Operacional
         public MainWindow()
         {
             InitializeComponent();
+            radDocking.PreviewClose += (_, e) =>
+            {
+                foreach (var pane in e.Panes)
+                    if (pane.Content is Programacao programacao && !programacao.EnviarAntesDeFechar(this))
+                    { e.Handled = true; break; }
+            };
+            Closing += (_, e) =>
+            {
+                foreach (var pane in documentGroup.Items.OfType<RadPane>().Where(p => !p.IsHidden))
+                    if (pane.Content is Programacao programacao && !programacao.EnviarAntesDeFechar(this))
+                    { e.Cancel = true; break; }
+            };
 
             //var appSettings = ConfigurationManager.GetSection("appSettings") as NameValueCollection;
             //if (appSettings[0].Length > 0)
